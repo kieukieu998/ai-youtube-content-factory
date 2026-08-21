@@ -294,6 +294,7 @@
     function toggleSelectAllJobs(master) {
         const isChecked = $(master).is(':checked');
         $('.job-row:visible .job-checkbox').prop('checked', isChecked);
+        $('.job-row:hidden .job-checkbox').prop('checked', false);
         updateSelectedJobsCount();
     }
 
@@ -302,8 +303,8 @@
         const statusFilter = $('#job_status_filter').val();
         
         $('.job-row').each(function() {
-            const name = $(this).attr('data-name') || '';
-            const status = $(this).attr('data-status') || '';
+            const name = ($(this).attr('data-name') || '').toLowerCase();
+            const status = ($(this).attr('data-status') || '').toLowerCase();
 
             const matchesQuery = !query || name.includes(query);
             const matchesStatus = (statusFilter === 'all') || (status === statusFilter);
@@ -315,11 +316,21 @@
                 $(this).find('.job-checkbox').prop('checked', false);
             }
         });
+
+        // Reset or sync master checkbox
+        const visibleCheckboxes = $('.job-row:visible .job-checkbox');
+        const checkedVisible = $('.job-row:visible .job-checkbox:checked');
+        if (visibleCheckboxes.length > 0 && visibleCheckboxes.length === checkedVisible.length) {
+            $('#select_all_jobs').prop('checked', true);
+        } else {
+            $('#select_all_jobs').prop('checked', false);
+        }
+
         updateSelectedJobsCount();
     }
 
     function updateSelectedJobsCount() {
-        const count = $('.job-checkbox:checked').length;
+        const count = $('.job-row:visible .job-checkbox:checked').length;
         $('#selected_jobs_count').text(count);
         if (count > 0) {
             $('#bulk_delete_jobs_btn').removeClass('hidden');
@@ -331,7 +342,7 @@
 
     function bulkDeleteJobs() {
         const ids = [];
-        $('.job-checkbox:checked').each(function() {
+        $('.job-row:visible .job-checkbox:checked').each(function() {
             ids.push(parseInt($(this).val()));
         });
 
@@ -355,11 +366,9 @@
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
                         ids.forEach(id => {
-                            $(`.job-row[data-id="${id}"]`).fadeOut(300, function() {
-                                $(this).remove();
-                                updateSelectedJobsCount();
-                            });
+                            $(`.job-row[data-id="${id}"]`).remove();
                         });
+                        filterJobs();
                         Toast.fire({
                             icon: 'success',
                             title: res.message || `Đã xóa ${ids.length} tác vụ thành công!`
@@ -373,25 +382,20 @@
         });
     }
 
-    // Tự động làm mới bảng hàng đợi mỗi 4 giây (giữ nguyên các mục đang check)
+    // Tự động làm mới bảng hàng đợi mỗi 5 giây (Tạm dừng khi đang chọn tác vụ để xóa)
     setInterval(function() {
-        const checkedIds = [];
-        $('.job-checkbox:checked').each(function() {
-            checkedIds.push($(this).val());
-        });
+        const checkedCount = $('.job-checkbox:checked').length;
+        // Nếu người dùng đang tick chọn mục thì không ghi đè DOM làm gián đoạn thao tác
+        if (checkedCount > 0) return;
 
         $.get('/jobs', function(html) {
             const newContent = $(html).find('#jobs_table_container').html();
             if (newContent) {
                 $('#jobs_table_container').html(newContent);
-                // Restore checked checkboxes
-                checkedIds.forEach(id => {
-                    $(`.job-checkbox[value="${id}"]`).prop('checked', true);
-                });
-                updateSelectedJobsCount();
+                filterJobs();
                 lucide.createIcons();
             }
         });
-    }, 4000);
+    }, 5000);
 </script>
 {% endblock %}
