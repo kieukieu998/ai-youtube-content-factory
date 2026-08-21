@@ -35,7 +35,7 @@
             <input type="checkbox" id="select_all_videos" onchange="toggleSelectAllVideos(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
             <span>Chọn tất cả</span>
         </label>
-        <span>Hiển thị <span id="visible_count" class="text-white font-bold">{{ videos|length }}</span> / {{ videos|length }} video</span>
+        <span>Hiển thị <span id="visible_count" class="text-white font-bold">{{ videos|length }}</span> / <span id="total_count_display">{{ videos|length }}</span> video</span>
     </div>
 
     <!-- Video Grid (Compact Mobile / Shorts Grid) -->
@@ -51,15 +51,10 @@
             <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden">
                 <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover" preload="metadata"></video>
                 
-                <!-- Modern Floating Circular Checkbox -->
-                <label class="absolute top-2.5 left-2.5 z-20 cursor-pointer select-none" title="Chọn video này">
-                    <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox peer sr-only" />
-                    <div class="w-6 h-6 rounded-full border-2 border-white/50 bg-black/40 backdrop-blur-md flex items-center justify-center transition-all duration-200 peer-checked:bg-gradient-to-tr peer-checked:from-indigo-600 peer-checked:to-purple-600 peer-checked:border-indigo-400 peer-checked:shadow-md peer-checked:shadow-indigo-500/50 hover:scale-110 hover:border-white hover:bg-black/60">
-                        <svg class="w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-150" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    </div>
-                </label>
+                <!-- Square Checkbox matching other pages -->
+                <div class="absolute top-2.5 left-2.5 z-20">
+                    <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-sm checkbox-primary rounded-md border-2 border-white/70 bg-black/60 backdrop-blur-md shadow-lg" title="Chọn video này" />
+                </div>
 
                 <!-- Hover overlay: ONLY Play button -->
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
@@ -103,52 +98,75 @@
         {% endfor %}
     </div>
 
-    <div id="no_search_results" class="hidden glass-card py-16 text-center text-slate-500 rounded-2xl">
-        <i data-lucide="search-x" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
-        Không tìm thấy video nào phù hợp với từ khóa.
+    <!-- Empty State -->
+    <div id="no_search_results" class="hidden py-16 text-center text-slate-500 glass-card rounded-2xl">
+        <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
+        <p class="text-sm">Không tìm thấy video nào phù hợp với bộ lọc hiện tại.</p>
     </div>
     {% else %}
-    <div class="glass-card py-20 text-center text-slate-500 rounded-2xl">
-        <i data-lucide="film" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
-        <p class="text-base">Chưa có video 9:16 nào được render.</p>
-        <p class="text-xs text-slate-500 mt-1">Hãy tạo kịch bản và kích hoạt lệnh Render tại mục <a href="/scripts" class="text-indigo-400 underline">Kịch Bản</a>.</p>
+    <div class="glass-card rounded-2xl p-12 text-center text-slate-500">
+        <i data-lucide="clapperboard" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
+        <h3 class="text-base font-bold text-slate-400 mb-1">Chưa Có Video Hoàn Thiện Nào</h3>
+        <p class="text-xs text-slate-500 mb-4">Hãy render kịch bản trong mục Kịch Bản để tạo video 9:16 đầu tiên.</p>
+        <a href="/scripts" class="btn btn-primary btn-sm gap-2">
+            <i data-lucide="file-text" class="w-4 h-4"></i> Tới Mục Kịch Bản
+        </a>
     </div>
     {% endif %}
 </div>
 
-<!-- Modal Video Player -->
+<!-- Modal Xem Video Dọc 9:16 -->
 <dialog id="player_modal" class="modal">
-    <div class="modal-box bg-slate-950 border border-slate-800 max-w-sm p-4 text-center">
-        <h3 class="font-bold text-sm text-white mb-2" id="player_title"></h3>
-        <div class="aspect-[9/16] bg-black rounded-xl overflow-hidden mb-3">
-            <video id="player_video" controls class="w-full h-full object-contain"></video>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-sm p-4 flex flex-col items-center">
+        <div class="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+            <h3 class="font-bold text-sm truncate text-white" id="modal_video_title">Xem Video Review</h3>
+            <button onclick="closePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
         </div>
-        <div class="modal-action justify-center">
-            <button type="button" onclick="closePlayer()" class="btn btn-sm btn-ghost">Đóng Trình Phát</button>
+        
+        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
+            <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+        </div>
+
+        <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
+            <a id="modal_download_btn" href="#" download class="btn btn-sm btn-outline btn-primary gap-1.5 flex-1 mr-2">
+                <i data-lucide="download" class="w-4 h-4"></i> Tải Về Máy
+            </a>
+            <button onclick="closePlayerModal()" class="btn btn-sm btn-ghost">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
-        <button onclick="closePlayer()">close</button>
+        <button onclick="closePlayerModal()">close</button>
     </form>
 </dialog>
 
 <script>
     function playVideo(videoId, title) {
-        $('#player_title').text(title);
-        const videoElement = document.getElementById('player_video');
-        videoElement.src = `/api/v1/videos/${videoId}/stream`;
-        videoElement.muted = false;
-        videoElement.volume = 1.0;
-        videoElement.play().catch(e => console.log('Autoplay audio allowed on user click:', e));
+        const streamUrl = `/api/v1/videos/${videoId}/stream`;
+        $('#modal_video_title').text(title);
+        $('#modal_video_element').attr('src', streamUrl);
+        $('#modal_download_btn').attr('href', streamUrl).attr('download', `video_${videoId}.mp4`);
         document.getElementById('player_modal').showModal();
+        document.getElementById('modal_video_element').play();
     }
 
-    function closePlayer() {
-        const videoElement = document.getElementById('player_video');
-        videoElement.pause();
-        videoElement.src = '';
+    function closePlayerModal() {
+        const video = document.getElementById('modal_video_element');
+        if (video) {
+            video.pause();
+            video.src = "";
+        }
         document.getElementById('player_modal').close();
     }
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2200,
+        timerProgressBar: true,
+        background: '#0f172a',
+        color: '#f8fafc'
+    });
 
     function deleteVideo(videoId, title) {
         Swal.fire({
@@ -166,7 +184,14 @@
                     url: `/api/v1/videos/${videoId}`,
                     type: 'DELETE',
                     success: function(res) {
-                        Swal.fire('Đã Xóa!', res.message, 'success').then(() => location.reload());
+                        $(`#video_card_${videoId}`).fadeOut(300, function() {
+                            $(this).remove();
+                            filterVideos();
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || 'Đã xóa video thành công!'
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa video', 'error');
@@ -236,7 +261,16 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
-                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                        ids.forEach(id => {
+                            $(`#video_card_${id}`).fadeOut(300, function() {
+                                $(this).remove();
+                                filterVideos();
+                            });
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || `Đã xóa ${ids.length} video thành công!`
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các video đã chọn', 'error');
@@ -250,6 +284,7 @@
         const query = ($('#video_search_input').val() || '').toLowerCase().trim();
         const qaFilter = $('#qa_filter_select').val();
         let visibleCount = 0;
+        const totalCount = $('.video-card').length;
 
         $('.video-card').each(function() {
             const title = $(this).attr('data-title') || '';
@@ -265,12 +300,14 @@
             } else {
                 $(this).addClass('hidden');
                 $(this).find('.video-checkbox').prop('checked', false);
+                $(this).removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
             }
         });
 
         $('#visible_count').text(visibleCount);
+        $('#total_count_display').text(totalCount);
         updateSelectedCount();
-        if (visibleCount === 0 && $('.video-card').length > 0) {
+        if (visibleCount === 0 && totalCount > 0) {
             $('#no_search_results').removeClass('hidden');
         } else {
             $('#no_search_results').addClass('hidden');
