@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Tổng Quan — AI Movie Content Factory{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-extrabold text-white tracking-tight">Trung Tâm Điều Khiển</h1>
+            <p class="text-slate-400 text-sm mt-1">Hệ thống AI tự động hóa sản xuất video review phim 9:16 cho TikTok.</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="document.getElementById('discover_modal').showModal()" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-indigo-600/30">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> Khám Phá Phim Mới (AI)
+            </button>
+            <a href="/scripts" class="btn btn-secondary btn-sm gap-2 shadow-lg shadow-purple-600/30">
+                <i data-lucide="pen-tool" class="w-4 h-4"></i> Tạo Kịch Bản
+            </a>
+        </div>
+    </div>
+
+    <!-- Metric Stat Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase font-semibold text-slate-400">Kho Phim</p>
+                <h3 class="text-3xl font-bold text-white mt-1">{{ movies_count }}</h3>
+            </div>
+            <div class="p-3 bg-rose-500/10 rounded-xl text-rose-400">
+                <i data-lucide="film" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase font-semibold text-slate-400">Kịch Bản Phim</p>
+                <h3 class="text-3xl font-bold text-white mt-1">{{ scripts_count }}</h3>
+            </div>
+            <div class="p-3 bg-amber-500/10 rounded-xl text-amber-400">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase font-semibold text-slate-400">Tập Đã Phân Cảnh</p>
+                <h3 class="text-3xl font-bold text-white mt-1">{{ episodes_count }}</h3>
+            </div>
+            <div class="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                <i data-lucide="list-ordered" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase font-semibold text-slate-400">Video 9:16 Đã Render</p>
+                <h3 class="text-3xl font-bold text-white mt-1">{{ videos_count }}</h3>
+            </div>
+            <div class="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Tasks & Quick Preview Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Job Queue Overview (2 cols) -->
+        <div class="lg:col-span-2 glass-card p-6 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="activity" class="w-5 h-5 text-indigo-400"></i> Tiến Trình Hàng Đợi Gần Đây
+                </h2>
+                <a href="/jobs" class="text-xs font-semibold text-indigo-400 hover:underline">Xem Tất Cả &rarr;</a>
+            </div>
+
+            {% if recent_jobs %}
+            <div id="dashboard_recent_jobs" class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead>
+                        <tr class="text-slate-400 border-slate-800">
+                            <th>ID</th>
+                            <th>Tác Vụ</th>
+                            <th>Trạng Thái</th>
+                            <th>Tiến Độ</th>
+                            <th>Thời Gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for j in recent_jobs %}
+                        <tr class="border-slate-800/50">
+                            <td class="font-mono text-xs">#{{ j.id }}</td>
+                            <td>
+                                <div class="font-medium text-white text-xs">{{ j.display_name }}</div>
+                                {% if j.sub_info %}
+                                <div class="text-[11px] text-slate-400">{{ j.sub_info }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if j.status == 'completed' %}
+                                <span class="badge badge-success badge-sm text-white">Hoàn thành</span>
+                                {% elif j.status == 'processing' %}
+                                <span class="badge badge-warning badge-sm animate-pulse">Đang xử lý</span>
+                                {% elif j.status == 'pending' %}
+                                <span class="badge badge-info badge-sm">Đang chờ</span>
+                                {% else %}
+                                <span class="badge badge-error badge-sm text-white">{{ j.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <progress class="progress progress-primary w-20" value="{{ j.progress }}" max="100"></progress>
+                            </td>
+                            <td class="text-xs text-slate-400">{{ j.created_at.strftime('%H:%M:%S') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-12 text-center text-slate-500">
+                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+                Chưa có tác vụ nào trong hàng đợi.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Mode & Status Card -->
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2 mb-3">
+                    <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i> Trạng Thái Hoạt Động
+                </h2>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between py-2 border-b border-slate-800">
+                        <span class="text-slate-400">Chế độ vận hành:</span>
+                        <span class="font-semibold text-indigo-400 uppercase">{{ operation_mode }}</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-800">
+                        <span class="text-slate-400">AI Provider:</span>
+                        <span class="font-semibold text-emerald-400">Gemini (Free)</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-slate-800">
+                        <span class="text-slate-400">Giọng đọc TTS:</span>
+                        <span class="font-semibold text-slate-200">Edge-TTS (Free)</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-slate-400">Định dạng render:</span>
+                        <span class="font-semibold text-slate-200">1080x1920 (9:16)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800">
+                <a href="/movies" class="btn btn-outline btn-block btn-sm">Quản Lý Nguồn Phim &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Discover Movies -->
+<dialog id="discover_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
+        <h3 class="font-bold text-lg text-white mb-4 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
+        </h3>
+        <form id="discover_form" onsubmit="handleDiscover(event)">
+            <div class="form-control mb-3">
+                <label class="label"><span class="label-text text-slate-300">Thể loại phim muốn làm review:</span></label>
+                <input type="text" id="genre_input" value="Hành Động, Kinh Dị, Twist Bất Ngờ" class="input input-bordered bg-slate-800 text-white w-full" required />
+            </div>
+            <div class="form-control mb-5">
+                <label class="label"><span class="label-text text-slate-300">Số lượng phim đề xuất:</span></label>
+                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-bordered bg-slate-800 text-white w-full" required />
+            </div>
+            <div class="modal-action">
+                <button type="button" onclick="document.getElementById('discover_modal').close()" class="btn btn-ghost">Hủy</button>
+                <button type="submit" class="btn btn-primary">Bắt Đầu Tìm Kiếm</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    function handleDiscover(e) {
+        e.preventDefault();
+        const genre = $('#genre_input').val();
+        const limit = $('#limit_input').val();
+
+        $.post('/api/v1/movies/discover', { genre: genre, limit: limit }, function(res) {
+            document.getElementById('discover_modal').close();
+            Swal.fire({
+                title: 'Đã Thêm Tác Vụ!',
+                text: res.message,
+                icon: 'success',
+                confirmButtonColor: '#6366f1'
+            }).then(() => location.reload());
+        }).fail(function(err) {
+            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
+        });
+    }
+
+    // Tự động làm mới bảng tiến trình mỗi 3 giây
+    setInterval(function() {
+        $.get('/', function(html) {
+            const newContent = $(html).find('#dashboard_recent_jobs').html();
+            if (newContent) {
+                $('#dashboard_recent_jobs').html(newContent);
+                lucide.createIcons();
+            }
+        });
+    }, 3000);
+</script>
+{% endblock %}

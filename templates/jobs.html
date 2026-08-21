@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Hàng Đợi Xử Lý (Job Queue) — AI Movie Content Factory{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Hàng Đợi Xử Lý Bất Đồng Bộ (Job Queue)</h1>
+            <p class="text-slate-400 text-sm">Theo dõi tiến trình xử lý ngầm của các Agent (Tìm phim, Viết kịch bản, Render FFmpeg).</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button id="bulk_delete_jobs_btn" onclick="bulkDeleteJobs()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_jobs_count">0</span>) tác vụ đã chọn
+            </button>
+            <button onclick="clearFinishedJobs()" class="btn btn-outline btn-slate-700 btn-sm text-slate-300 gap-1.5 hover:bg-slate-800" title="Xóa tất cả các tác vụ đã Hoàn thành, Đã hủy hoặc Thất bại">
+                <i data-lucide="trash" class="w-4 h-4 text-slate-400"></i> Dọn Tác Vụ Cũ
+            </button>
+            {% if emergency_stopped %}
+            <button onclick="resumeSystem()" class="btn btn-success btn-sm text-white gap-2">
+                <i data-lucide="play" class="w-4 h-4"></i> Khôi Phục Hệ Thống
+            </button>
+            {% else %}
+            <button onclick="emergencyStopAll()" class="btn btn-error btn-sm text-white gap-2">
+                <i data-lucide="octagon-alert" class="w-4 h-4"></i> STOP ALL
+            </button>
+            {% endif %}
+            <button onclick="location.reload()" class="btn btn-ghost btn-sm btn-circle" title="Tải lại trang">
+                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Queue Table -->
+    <div id="jobs_table_container" class="glass-card rounded-2xl overflow-hidden">
+        {% if jobs %}
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr class="text-slate-400 border-slate-800 bg-slate-900/40">
+                        <th class="w-10">
+                            <input type="checkbox" id="select_all_jobs" onchange="toggleSelectAllJobs(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
+                        </th>
+                        <th>ID</th>
+                        <th>Loại Tác Vụ</th>
+                        <th>Trạng Thái</th>
+                        <th>Tiến Độ</th>
+                        <th>Ghi Chú / Lỗi</th>
+                        <th>Khởi Tạo</th>
+                        <th class="text-right pr-6">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in jobs %}
+                    <tr class="job-row border-slate-800/50 hover:bg-slate-800/20" data-id="{{ j.id }}">
+                        <td>
+                            <input type="checkbox" value="{{ j.id }}" onchange="updateSelectedJobsCount()" class="job-checkbox checkbox checkbox-xs checkbox-primary rounded" />
+                        </td>
+                        <td class="font-mono text-xs text-slate-400">#{{ j.id }}</td>
+                        <td>
+                            <div class="font-bold text-white text-sm">{{ j.display_name }}</div>
+                            {% if j.sub_info %}
+                            <div class="text-xs text-slate-400 mt-0.5">{{ j.sub_info }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if j.status == 'completed' %}
+                            <span class="badge badge-success badge-sm text-white font-medium">Hoàn thành</span>
+                            {% elif j.status == 'processing' %}
+                            <span class="badge badge-warning badge-sm animate-pulse font-medium">Đang chạy...</span>
+                            {% elif j.status == 'pending' %}
+                            <span class="badge badge-info badge-sm font-medium">Đang chờ</span>
+                            {% elif j.status == 'cancelled' %}
+                            <span class="badge badge-neutral badge-sm">Đã hủy</span>
+                            {% else %}
+                            <span class="badge badge-error badge-sm text-white font-medium">Lỗi</span>
+                            {% endif %}
+                        </td>
+                        <td class="w-44">
+                            <div class="flex items-center gap-2">
+                                <progress class="progress progress-primary flex-1" value="{{ j.progress }}" max="100"></progress>
+                                <span class="text-xs font-mono text-slate-300 font-semibold">{{ j.progress }}%</span>
+                            </div>
+                        </td>
+                        <td class="text-xs text-slate-300 max-w-xs truncate font-medium">
+                            {{ j.error_message or j.result or '-' }}
+                        </td>
+                        <td class="text-xs text-slate-400 font-mono">
+                            {{ j.created_at.strftime('%H:%M:%S %d/%m') }}
+                        </td>
+                        <td class="text-right pr-4">
+                            <div class="flex items-center justify-end gap-1.5">
+                                {% if j.status in ['pending', 'processing'] %}
+                                <button onclick="cancelJob('{{ j.id }}')" class="btn btn-xs btn-outline btn-error gap-1" title="Hủy tác vụ này">
+                                    <i data-lucide="ban" class="w-3 h-3"></i> Hủy
+                                </button>
+                                {% elif j.status in ['failed', 'cancelled'] %}
+                                <button onclick="retryJob('{{ j.id }}')" class="btn btn-xs btn-outline btn-warning gap-1" title="Thử chạy lại">
+                                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Thử Lại
+                                </button>
+                                {% endif %}
+                                <button onclick="deleteJob('{{ j.id }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-error hover:bg-error/10 p-1" title="Xóa tác vụ khỏi danh sách">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-16 text-center text-slate-500">
+            <i data-lucide="layers" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
+            Chưa có tác vụ nào trong hàng đợi.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function cancelJob(jobId) {
+        Swal.fire({
+            title: `Hủy tác vụ #${jobId}?`,
+            text: 'Tác vụ sẽ bị dừng lại và chuyển sang trạng thái Đã hủy.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý hủy',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#ef4444'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post(`/api/v1/jobs/${jobId}/cancel`, function(res) {
+                    Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể hủy tác vụ', 'error');
+                });
+            }
+        });
+    }
+
+    function deleteJob(jobId) {
+        Swal.fire({
+            title: `Xóa tác vụ #${jobId}?`,
+            text: 'Tác vụ này sẽ bị xóa vĩnh viễn khỏi danh sách hàng đợi.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#ef4444'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/jobs/${jobId}`,
+                    type: 'DELETE',
+                    success: function(res) {
+                        Swal.fire('Đã xóa', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa tác vụ', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function clearFinishedJobs() {
+        Swal.fire({
+            title: 'Dọn dẹp hàng đợi?',
+            text: 'Tất cả các tác vụ đã Hoàn thành, Đã hủy hoặc Lỗi sẽ được xóa khỏi bảng.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Dọn dẹp ngay',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#6366f1'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/api/v1/jobs/clear-finished', function(res) {
+                    Swal.fire('Đã dọn dẹp', res.message, 'success').then(() => location.reload());
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể dọn dẹp', 'error');
+                });
+            }
+        });
+    }
+
+    function retryJob(jobId) {
+        $.post(`/api/v1/jobs/${jobId}/retry`, function(res) {
+            Swal.fire({
+                title: 'Đã Thêm Lại Vào Hàng Đợi!',
+                text: res.message,
+                icon: 'success',
+                confirmButtonColor: '#6366f1'
+            }).then(() => location.reload());
+        }).fail(function(err) {
+            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể thử lại tác vụ', 'error');
+        });
+    }
+
+    function emergencyStopAll() {
+        Swal.fire({
+            title: 'DỪNG KHẨN CẤP TẤT CẢ?',
+            text: 'Mọi tác vụ đang chờ và đang chạy sẽ bị dừng ngay lập tức.',
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonText: 'DỪNG NGAY',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/api/v1/jobs/emergency-stop', function(res) {
+                    Swal.fire('Đã dừng khẩn cấp', res.message, 'success').then(() => location.reload());
+                });
+            }
+        });
+    }
+
+    function resumeSystem() {
+        $.post('/api/v1/jobs/resume', function(res) {
+            Swal.fire('Đã Khôi Phục!', res.message, 'success').then(() => location.reload());
+        });
+    }
+
+    function toggleSelectAllJobs(master) {
+        const isChecked = $(master).is(':checked');
+        $('.job-row .job-checkbox').prop('checked', isChecked);
+        updateSelectedJobsCount();
+    }
+
+    function updateSelectedJobsCount() {
+        const count = $('.job-checkbox:checked').length;
+        $('#selected_jobs_count').text(count);
+        if (count > 0) {
+            $('#bulk_delete_jobs_btn').removeClass('hidden');
+        } else {
+            $('#bulk_delete_jobs_btn').addClass('hidden');
+            $('#select_all_jobs').prop('checked', false);
+        }
+    }
+
+    function bulkDeleteJobs() {
+        const ids = [];
+        $('.job-checkbox:checked').each(function() {
+            ids.push(parseInt($(this).val()));
+        });
+
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Xóa ${ids.length} tác vụ đã chọn?`,
+            text: 'Tất cả các tác vụ đã chọn sẽ bị xóa vĩnh viễn khỏi danh sách.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Đồng ý xóa (${ids.length})`,
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/v1/jobs/bulk-delete',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    success: function(res) {
+                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các tác vụ đã chọn', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    // Tự động làm mới bảng hàng đợi mỗi 4 giây (giữ nguyên các mục đang check)
+    setInterval(function() {
+        const checkedIds = [];
+        $('.job-checkbox:checked').each(function() {
+            checkedIds.push($(this).val());
+        });
+
+        $.get('/jobs', function(html) {
+            const newContent = $(html).find('#jobs_table_container').html();
+            if (newContent) {
+                $('#jobs_table_container').html(newContent);
+                // Restore checked checkboxes
+                checkedIds.forEach(id => {
+                    $(`.job-checkbox[value="${id}"]`).prop('checked', true);
+                });
+                updateSelectedJobsCount();
+                lucide.createIcons();
+            }
+        });
+    }, 4000);
+</script>
+{% endblock %}

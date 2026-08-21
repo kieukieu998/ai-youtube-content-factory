@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+
+{% block title %}Kịch Bản & Duyệt Hooks — AI Movie Content Factory{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Kịch Bản & Cổng Duyệt Hooks (Semi-Auto Gate)</h1>
+            <p class="text-slate-400 text-sm">Xem trước lời bình, chọn câu Hook giật gân nhất và duyệt trước khi render video.</p>
+        </div>
+    </div>
+
+    <!-- Pending Approval Section -->
+    {% if episodes_pending %}
+    <div class="space-y-4">
+        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+            <i data-lucide="clock-alert" class="w-5 h-5"></i> Các Tập Đang Chờ Bạn Duyệt ({{ episodes_pending|length }})
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {% for ep in episodes_pending %}
+            <div class="glass-card p-5 rounded-2xl border-amber-500/30 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="badge badge-warning font-semibold">Tập {{ ep.episode_number }}</span>
+                        <span class="text-xs text-slate-400">{{ ep.script.movie.title }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="text-xs font-semibold text-rose-400 uppercase">Câu Hook 1-3s (Mở Đầu):</label>
+                        <input type="text" id="hook_input_{{ ep.id }}" value="{{ ep.hook_text or '' }}" class="input input-sm input-bordered w-full bg-slate-900 text-white font-medium mt-1" />
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase">Lời Bình (Narrative Body):</label>
+                        <textarea id="content_input_{{ ep.id }}" rows="4" class="textarea textarea-sm textarea-bordered w-full bg-slate-900 text-slate-200 mt-1 leading-relaxed">{{ ep.content_text }}</textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                    <span class="text-xs text-slate-400">Điểm Hook: <strong class="text-amber-400">{{ "%.1f"|format(ep.hook_score) }}/100</strong></span>
+                    <button onclick="approveEpisode('{{ ep.id }}')" class="btn btn-sm btn-success text-white gap-1 shadow-lg shadow-emerald-600/30">
+                        <i data-lucide="check" class="w-4 h-4"></i> Duyệt Tập Này
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Scripts List -->
+    <div class="glass-card rounded-2xl p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <h2 class="text-lg font-bold text-white">Tất Cả Kịch Bản Đã Viết</h2>
+            <div class="flex flex-wrap items-center gap-3">
+                <button id="bulk_delete_scripts_btn" onclick="bulkDeleteScripts()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_scripts_count">0</span>) kịch bản đã chọn
+                </button>
+                <div class="relative">
+                    <input type="text" id="script_search_input" oninput="filterScripts()" placeholder="🔍 Tìm kịch bản, lời bình..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
+                    <i data-lucide="search" class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400"></i>
+                </div>
+            </div>
+        </div>
+
+        {% if scripts %}
+        <div class="flex items-center justify-between px-1 mb-3 text-xs text-slate-400">
+            <label class="flex items-center gap-2 cursor-pointer select-none hover:text-white">
+                <input type="checkbox" id="select_all_scripts" onchange="toggleSelectAllScripts(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
+                <span>Chọn tất cả kịch bản</span>
+            </label>
+        </div>
+
+        <div class="space-y-4">
+            {% for s in scripts %}
+            <div class="script-card bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden"
+                 data-id="{{ s.id }}"
+                 data-title="{{ s.title|lower }}"
+                 data-content="{% for ep in s.episodes %}{{ ep.content_text|lower }} {{ ep.hook_text|lower }} {% endfor %}">
+                <div class="p-4 flex items-center justify-between border-b border-slate-800/60 bg-slate-900/80">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" value="{{ s.id }}" onchange="updateSelectedScriptsCount()" class="script-checkbox checkbox checkbox-xs checkbox-primary rounded" />
+                        <div>
+                            <span class="font-bold text-slate-100 text-sm">{{ s.title }}</span>
+                            <span class="badge badge-sm badge-neutral ml-2">{{ s.episodes|length }} Tập</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="viewFullScript('{{ s.id }}')" class="btn btn-xs btn-outline btn-info gap-1" title="Đọc toàn bộ các tập của kịch bản này">
+                            <i data-lucide="book-open" class="w-3 h-3"></i> Đọc Cả Bộ
+                        </button>
+                        <span class="text-xs text-slate-400 font-mono hidden sm:inline ml-2">{{ s.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                        <button onclick="deleteScript('{{ s.id }}', '{{ s.title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-error hover:bg-error/10 p-1" title="Xóa kịch bản này">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 text-sm space-y-3">
+                    {% for ep in s.episodes %}
+                    <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/80 hover:border-slate-700/80 transition flex flex-col md:flex-row md:items-center justify-between gap-3"
+                         id="ep_container_{{ ep.id }}"
+                         data-movie="{{ s.movie.title if s.movie else s.title }}"
+                         data-ep-num="{{ ep.episode_number }}"
+                         data-hook="{{ ep.hook_text or '' }}"
+                         data-body="{{ ep.content_text }}"
+                         data-cta="{{ ep.call_to_action or '' }}"
+                         data-status="{{ ep.status }}">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="font-bold text-rose-400 text-xs flex items-center gap-2">
+                                <span class="badge badge-xs badge-error badge-outline font-semibold">Tập {{ ep.episode_number }}</span>
+                                <span>Hook: "{{ ep.hook_text }}"</span>
+                            </div>
+                            <p id="ep_text_{{ ep.id }}" onclick="toggleExpandText('{{ ep.id }}')" class="text-xs text-slate-300 line-clamp-2 cursor-pointer hover:text-white transition leading-relaxed" title="Bấm để mở rộng / thu gọn lời bình">
+                                {{ ep.content_text }}
+                            </p>
+                            <div class="flex items-center gap-3 pt-1">
+                                <button type="button" onclick="toggleExpandText('{{ ep.id }}')" id="expand_btn_{{ ep.id }}" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
+                                    [Xem toàn bộ lời bình]
+                                </button>
+                                <button type="button" onclick="openEpisodeModal('{{ ep.id }}')" class="text-[11px] text-slate-400 hover:text-slate-200 flex items-center gap-1">
+                                    <i data-lucide="eye" class="w-3 h-3"></i> Xem chi tiết & Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 self-end md:self-center">
+                            {% if ep.status == 'rendered' %}
+                            <span class="badge badge-success badge-sm text-white gap-1">
+                                <i data-lucide="check" class="w-3 h-3"></i> Đã Render Video
+                            </span>
+                            {% else %}
+                            <button onclick="renderEpisode('{{ ep.id }}')" class="btn btn-xs btn-primary gap-1 shadow-md shadow-indigo-600/30">
+                                <i data-lucide="video" class="w-3 h-3"></i> Render 9:16
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="py-12 text-center text-slate-500">
+            <i data-lucide="file-text" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+            Chưa có kịch bản nào. Hãy vào mục <a href="/movies" class="text-indigo-400 underline">Kho Phim</a> để tạo kịch bản đầu tiên.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Xem Chi Tiết 1 Tập Kịch Bản -->
+<dialog id="episode_detail_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div>
+                <h3 class="font-bold text-lg text-white" id="modal_ep_title">Chi Tiết Kịch Bản</h3>
+                <p class="text-xs text-indigo-400 font-mono" id="modal_movie_title"></p>
+            </div>
+            <button onclick="document.getElementById('episode_detail_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        </div>
+
+        <div class="space-y-4 text-sm">
+            <div class="bg-rose-950/30 p-3.5 rounded-xl border border-rose-800/40">
+                <label class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                    <i data-lucide="zap" class="w-4 h-4"></i> Câu Hook 1-3s (Mở Đầu Video):
+                </label>
+                <div class="text-white font-medium text-sm leading-relaxed" id="modal_ep_hook"></div>
+            </div>
+
+            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                <label class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Lời Bình Chi Tiết (Narrative Body):
+                </label>
+                <div class="text-slate-200 whitespace-pre-wrap leading-relaxed text-sm" id="modal_ep_body"></div>
+            </div>
+
+            <div class="bg-amber-950/20 p-3.5 rounded-xl border border-amber-800/40" id="modal_cta_box">
+                <label class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                    <i data-lucide="megaphone" class="w-4 h-4"></i> Kêu Gọi Hành Động (CTA):
+                </label>
+                <div class="text-amber-200/90 text-xs italic" id="modal_ep_cta"></div>
+            </div>
+        </div>
+
+        <div class="modal-action flex justify-between items-center mt-6 pt-3 border-t border-slate-800">
+            <button type="button" onclick="copyEpisodeText()" class="btn btn-sm btn-outline gap-1.5 text-slate-200 hover:bg-slate-800">
+                <i data-lucide="copy" class="w-4 h-4"></i> Copy Kịch Bản
+            </button>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('episode_detail_modal').close()" class="btn btn-sm btn-ghost">Đóng</button>
+                <button type="button" id="modal_render_btn" class="btn btn-sm btn-primary gap-1">
+                    <i data-lucide="video" class="w-4 h-4"></i> Render 9:16
+                </button>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Modal Đọc Toàn Bộ Các Tập Kịch Bản -->
+<dialog id="full_script_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-3xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div>
+                <h3 class="font-bold text-lg text-white" id="full_script_title">Toàn Bộ Kịch Bản</h3>
+                <p class="text-xs text-slate-400">Đầy đủ các tập và phân cảnh theo thứ tự.</p>
+            </div>
+            <button onclick="document.getElementById('full_script_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        </div>
+
+        <div class="overflow-y-auto space-y-4 pr-1 flex-1" id="full_script_content">
+            <!-- Rendered by JS -->
+        </div>
+
+        <div class="modal-action flex justify-between items-center mt-4 pt-3 border-t border-slate-800">
+            <button type="button" onclick="copyFullScript()" class="btn btn-sm btn-outline gap-1.5 text-slate-200">
+                <i data-lucide="copy" class="w-4 h-4"></i> Copy Toàn Bộ Các Tập
+            </button>
+            <button type="button" onclick="document.getElementById('full_script_modal').close()" class="btn btn-sm btn-primary">Đóng</button>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<script>
+    let currentModalText = '';
+    let currentFullScriptText = '';
+
+    function toggleExpandText(epId) {
+        const textEl = $(`#ep_text_${epId}`);
+        const btnEl = $(`#expand_btn_${epId}`);
+        if (textEl.hasClass('line-clamp-2')) {
+            textEl.removeClass('line-clamp-2');
+            btnEl.text('[Thu gọn lời bình]');
+        } else {
+            textEl.addClass('line-clamp-2');
+            btnEl.text('[Xem toàn bộ lời bình]');
+        }
+    }
+
+    function openEpisodeModal(epId) {
+        const container = $(`#ep_container_${epId}`);
+        const movie = container.attr('data-movie');
+        const epNum = container.attr('data-ep-num');
+        const hook = container.attr('data-hook');
+        const body = container.attr('data-body');
+        const cta = container.attr('data-cta');
+        const status = container.attr('data-status');
+
+        $('#modal_ep_title').text(`Kịch Bản Tập ${epNum}`);
+        $('#modal_movie_title').text(`Phim: ${movie}`);
+        $('#modal_ep_hook').text(hook);
+        $('#modal_ep_body').text(body);
+        
+        if (cta && cta.trim()) {
+            $('#modal_ep_cta').text(cta);
+            $('#modal_cta_box').removeClass('hidden');
+        } else {
+            $('#modal_cta_box').addClass('hidden');
+        }
+
+        currentModalText = `[TẬP ${epNum} - ${movie}]\n\n🔥 HOOK:\n${hook}\n\n📖 LỜI BÌNH:\n${body}\n\n📢 CTA:\n${cta}`;
+
+        const renderBtn = $('#modal_render_btn');
+        if (status === 'rendered') {
+            renderBtn.html('<i data-lucide="check" class="w-4 h-4"></i> Đã Render').addClass('btn-disabled');
+        } else {
+            renderBtn.html('<i data-lucide="video" class="w-4 h-4"></i> Render 9:16').removeClass('btn-disabled');
+            renderBtn.off('click').on('click', function() {
+                document.getElementById('episode_detail_modal').close();
+                renderEpisode(epId);
+            });
+        }
+
+        lucide.createIcons();
+        document.getElementById('episode_detail_modal').showModal();
+    }
+
+    function copyEpisodeText() {
+        if (navigator.clipboard && currentModalText) {
+            navigator.clipboard.writeText(currentModalText).then(() => {
+                Swal.fire({
+                    title: 'Đã Sao Chép!',
+                    text: 'Toàn bộ nội dung tập kịch bản đã được copy vào clipboard.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
+        }
+    }
+
+    function viewFullScript(scriptId) {
+        const card = $(`.script-card[data-id="${scriptId}"]`);
+        const title = card.find('.font-bold.text-slate-100').text();
+        $('#full_script_title').text(title);
+
+        let html = '';
+        let fullCopy = `${title}\n\n`;
+
+        card.find('[id^="ep_container_"]').each(function() {
+            const epNum = $(this).attr('data-ep-num');
+            const hook = $(this).attr('data-hook');
+            const body = $(this).attr('data-body');
+            const cta = $(this).attr('data-cta');
+
+            fullCopy += `====================\nTẬP ${epNum}\nHOOK: ${hook}\nLỜI BÌNH: ${body}\nCTA: ${cta}\n\n`;
+
+            html += `
+                <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="badge badge-primary badge-sm font-bold">Tập ${epNum}</span>
+                    </div>
+                    <div class="text-rose-400 font-semibold text-xs">
+                        🔥 Hook: "${hook}"
+                    </div>
+                    <p class="text-slate-200 text-xs whitespace-pre-wrap leading-relaxed">
+                        ${body}
+                    </p>
+                    ${cta ? `<div class="text-amber-300 text-[11px] italic">📢 ${cta}</div>` : ''}
+                </div>
+            `;
+        });
+
+        currentFullScriptText = fullCopy;
+        $('#full_script_content').html(html);
+        document.getElementById('full_script_modal').showModal();
+    }
+
+    function copyFullScript() {
+        if (navigator.clipboard && currentFullScriptText) {
+            navigator.clipboard.writeText(currentFullScriptText).then(() => {
+                Swal.fire({
+                    title: 'Đã Sao Chép!',
+                    text: 'Toàn bộ các tập của kịch bản đã được copy vào clipboard.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
+        }
+    }
+
+    function approveEpisode(episodeId) {
+        const hookText = $(`#hook_input_${episodeId}`).val();
+        const contentText = $(`#content_input_${episodeId}`).val();
+
+        $.post(`/api/v1/episodes/${episodeId}/approve`, {
+            hook_text: hookText,
+            content_text: contentText
+        }, function(res) {
+            Swal.fire({
+                title: 'Đã Duyệt Kịch Bản!',
+                text: res.message,
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#475569',
+                confirmButtonText: '🎬 Render Video 9:16 Ngay',
+                cancelButtonText: 'Đóng',
+                background: '#0f172a',
+                color: '#f8fafc'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    renderEpisode(episodeId);
+                } else {
+                    location.reload();
+                }
+            });
+        });
+    }
+
+    function renderEpisode(episodeId) {
+        $.post('/api/v1/videos/render', { episode_id: episodeId }, function(res) {
+            Swal.fire({
+                title: 'Đã Bắt Đầu Render!',
+                text: res.message,
+                icon: 'success',
+                confirmButtonColor: '#6366f1',
+                confirmButtonText: 'Xem Tiến Độ Render (Queue)',
+                background: '#0f172a',
+                color: '#f8fafc'
+            }).then(() => {
+                window.location.href = '/jobs';
+            });
+        });
+    }
+
+    function deleteScript(scriptId, title) {
+        Swal.fire({
+            title: `Xóa "${title}"?`,
+            text: 'Toàn bộ các tập của kịch bản này sẽ bị xóa khỏi hệ thống.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/scripts/${scriptId}`,
+                    type: 'DELETE',
+                    success: function(res) {
+                        Swal.fire('Đã Xóa!', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa kịch bản', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function toggleSelectAllScripts(master) {
+        const isChecked = $(master).is(':checked');
+        $('.script-card:visible .script-checkbox').prop('checked', isChecked);
+        updateSelectedScriptsCount();
+    }
+
+    function updateSelectedScriptsCount() {
+        const count = $('.script-checkbox:checked').length;
+        $('#selected_scripts_count').text(count);
+        if (count > 0) {
+            $('#bulk_delete_scripts_btn').removeClass('hidden');
+        } else {
+            $('#bulk_delete_scripts_btn').addClass('hidden');
+            $('#select_all_scripts').prop('checked', false);
+        }
+    }
+
+    function bulkDeleteScripts() {
+        const ids = [];
+        $('.script-checkbox:checked').each(function() {
+            ids.push(parseInt($(this).val()));
+        });
+
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Xóa ${ids.length} kịch bản đã chọn?`,
+            text: 'Toàn bộ các kịch bản và tập phim đã chọn sẽ bị xóa vĩnh viễn.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Đồng ý xóa (${ids.length})`,
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/v1/scripts/bulk-delete',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    success: function(res) {
+                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các kịch bản đã chọn', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function filterScripts() {
+        const query = ($('#script_search_input').val() || '').toLowerCase().trim();
+        $('.script-card').each(function() {
+            const title = $(this).attr('data-title') || '';
+            const content = $(this).attr('data-content') || '';
+            if (!query || title.includes(query) || content.includes(query)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+                $(this).find('.script-checkbox').prop('checked', false);
+            }
+        });
+        updateSelectedScriptsCount();
+    }
+</script>
+{% endblock %}

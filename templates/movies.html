@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Kho Phim & Nguồn Media — AI Movie Content Factory{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white">Kho Phim & Nguồn Media</h1>
+            <p class="text-slate-400 text-sm">Danh sách các bộ phim đã được AI khám phá và nạp file video gốc.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <button id="bulk_delete_movies_btn" onclick="bulkDeleteMovies()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_movies_count">0</span>) phim đã chọn
+            </button>
+            <div class="relative">
+                <input type="text" id="movie_search_input" oninput="filterMovies()" placeholder="🔍 Tìm tên phim, thể loại..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
+                <i data-lucide="search" class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400"></i>
+            </div>
+            <button onclick="document.getElementById('discover_modal').showModal()" class="btn btn-primary btn-sm gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> Khám Phá Phim
+            </button>
+        </div>
+    </div>
+
+    <!-- Movies Table -->
+    <div class="glass-card rounded-2xl overflow-hidden">
+        {% if movies %}
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr class="text-slate-400 border-slate-800 bg-slate-900/40">
+                        <th class="w-10">
+                            <input type="checkbox" id="select_all_movies" onchange="toggleSelectAllMovies(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
+                        </th>
+                        <th>Tên Phim</th>
+                        <th>Thể Loại / Năm</th>
+                        <th>Điểm Tiềm Năng</th>
+                        <th>Nguồn Video Gốc</th>
+                        <th>Trạng Thái</th>
+                        <th class="text-right pr-6">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in movies %}
+                    <tr class="movie-row border-slate-800/50 hover:bg-slate-800/30"
+                        data-id="{{ m.id }}"
+                        data-title="{{ m.title|lower }}"
+                        data-orig="{{ (m.original_title or '')|lower }}"
+                        data-genre="{{ (m.genre or '')|lower }}">
+                        <td>
+                            <input type="checkbox" value="{{ m.id }}" onchange="updateSelectedMoviesCount()" class="movie-checkbox checkbox checkbox-xs checkbox-primary rounded" />
+                        </td>
+                        <td>
+                            <div class="font-bold text-white flex items-center gap-2">
+                                {{ m.title }}
+                                <a href="https://www.google.com/search?q={{ m.title }}+{{ m.original_title or '' }}+movie" target="_blank" class="text-indigo-400 hover:text-indigo-300" title="Tra cứu nguồn gốc phim trên Google/IMDb">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                            <div class="text-xs text-slate-400 font-mono">{{ m.original_title or '' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge badge-neutral badge-sm">{{ m.genre or 'Chưa phân loại' }}</span>
+                            <span class="text-xs text-slate-400 ml-1">{{ m.release_year or '' }}</span>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-rose-400">{{ "%.1f"|format(m.potential_score) }}</span>
+                                <progress class="progress progress-error w-16" value="{{ m.potential_score }}" max="100"></progress>
+                            </div>
+                        </td>
+                        <td>
+                            {% if m.sources %}
+                            <span class="badge badge-success badge-sm text-white gap-1">
+                                <i data-lucide="check" class="w-3 h-3"></i> Đã có video
+                            </span>
+                            {% else %}
+                            <div class="flex gap-1.5">
+                                <button onclick="autoFetchTrailer('{{ m.id }}', '{{ m.title }}')" class="btn btn-xs btn-primary gap-1 shadow-md shadow-indigo-600/30" title="AI tự tìm và tải trailer YouTube">
+                                    <i data-lucide="youtube" class="w-3.5 h-3.5 text-red-400"></i> Kéo Trailer
+                                </button>
+                                <button onclick="openUploadModal('{{ m.id }}', '{{ m.title }}')" class="btn btn-xs btn-outline btn-ghost" title="Tải file từ máy tính">
+                                    <i data-lucide="upload" class="w-3 h-3"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if m.status == 'scripted' %}
+                            <span class="badge badge-info badge-sm">Đã có kịch bản</span>
+                            {% else %}
+                            <span class="badge badge-ghost badge-sm text-slate-400">{{ m.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right pr-4">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button onclick="generateScript('{{ m.id }}', '{{ m.title }}')" class="btn btn-xs btn-secondary gap-1" title="Viết kịch bản review">
+                                    <i data-lucide="pen-tool" class="w-3 h-3"></i> Viết Kịch Bản
+                                </button>
+                                <button onclick="deleteMovie('{{ m.id }}', '{{ m.title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-error hover:bg-error/10 p-1" title="Xóa phim này">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <div class="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-900/30">
+            <span class="text-xs text-slate-400">Hiển thị <span class="text-white font-bold">{{ movies|length }}</span> bộ phim</span>
+            <div class="join">
+                <button class="join-item btn btn-xs btn-outline">«</button>
+                <button class="join-item btn btn-xs btn-primary font-bold">1</button>
+                <button class="join-item btn btn-xs btn-outline">»</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="py-16 text-center text-slate-500">
+            <i data-lucide="film" class="w-12 h-12 mx-auto mb-3 opacity-40"></i>
+            <p class="text-base">Chưa có phim nào trong kho dữ liệu.</p>
+            <button onclick="document.getElementById('discover_modal').showModal()" class="btn btn-primary btn-sm mt-4">
+                Bấm vào đây để AI tìm phim ngay
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Upload Media Source -->
+<dialog id="upload_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
+        <h3 class="font-bold text-lg text-white mb-2 flex items-center gap-2">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-400"></i> Tải Lên Video Gốc Đã Cấp Phép
+        </h3>
+        <p class="text-xs text-slate-400 mb-4" id="upload_movie_title"></p>
+        <form id="upload_form" onsubmit="handleUpload(event)">
+            <input type="hidden" id="upload_movie_id" />
+            <div class="form-control mb-4">
+                <input type="file" id="source_file_input" accept="video/mp4,video/mkv,video/webm" class="file-input file-input-bordered file-input-primary w-full bg-slate-800" required />
+            </div>
+            <div class="modal-action">
+                <button type="button" onclick="document.getElementById('upload_modal').close()" class="btn btn-ghost">Đóng</button>
+                <button type="submit" class="btn btn-primary">Tải Lên</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Modal Discover Movies -->
+<dialog id="discover_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
+        <h3 class="font-bold text-lg text-white mb-4 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
+        </h3>
+        <form onsubmit="handleDiscover(event)">
+            <div class="form-control mb-3">
+                <label class="label"><span class="label-text text-slate-300">Thể loại phim:</span></label>
+                <input type="text" id="genre_input" value="Hành Động, Trinh Thám, Twist Đỉnh Cao" class="input input-bordered bg-slate-800 text-white w-full" required />
+            </div>
+            <div class="form-control mb-5">
+                <label class="label"><span class="label-text text-slate-300">Số lượng phim:</span></label>
+                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-bordered bg-slate-800 text-white w-full" required />
+            </div>
+            <div class="modal-action">
+                <button type="button" onclick="document.getElementById('discover_modal').close()" class="btn btn-ghost">Hủy</button>
+                <button type="submit" class="btn btn-primary">Bắt Đầu</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    function autoFetchTrailer(movieId, title) {
+        Swal.fire({
+            title: 'Kéo Trailer YouTube Tự Động?',
+            text: `Hệ thống sẽ tự động tìm trailer chính thức của phim "${title}" trên YouTube và tải về làm nguồn video cắt cảnh.`,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#475569',
+            confirmButtonText: '🚀 Tải Trailer Tự Động',
+            cancelButtonText: 'Hủy Bỏ'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang tìm kiếm & tải trailer...',
+                    text: 'Quá trình này mất khoảng 5-15 giây tùy độ dài trailer.',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                $.post(`/api/v1/movies/${movieId}/fetch-trailer`, {}, function(res) {
+                    Swal.fire({
+                        title: 'Thành Công!',
+                        text: res.message,
+                        icon: 'success',
+                        confirmButtonColor: '#10b981'
+                    }).then(() => location.reload());
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải trailer', 'error');
+                });
+            }
+        });
+    }
+
+    function openUploadModal(movieId, title) {
+        $('#upload_movie_id').val(movieId);
+        $('#upload_movie_title').text('Phim: ' + title);
+        document.getElementById('upload_modal').showModal();
+    }
+
+    function handleUpload(e) {
+        e.preventDefault();
+        const movieId = $('#upload_movie_id').val();
+        const fileInput = document.getElementById('source_file_input');
+        if (!fileInput.files[0]) return;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        Swal.fire({ title: 'Đang tải lên...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        $.ajax({
+            url: `/api/v1/movies/${movieId}/upload-source`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                document.getElementById('upload_modal').close();
+                Swal.fire('Thành công!', res.message, 'success').then(() => location.reload());
+            },
+            error: function(err) {
+                Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải file lên', 'error');
+            }
+        });
+    }
+
+    function generateScript(movieId, title) {
+        Swal.fire({
+            title: 'Tạo Kịch Bản?',
+            text: `Bạn muốn AI viết kịch bản review ngắn cho phim "${title}"?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#475569',
+            confirmButtonText: '✨ Viết Kịch Bản Ngay',
+            cancelButtonText: 'Hủy Bỏ',
+            background: '#0f172a',
+            color: '#f8fafc'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Đang khởi tạo...',
+                    text: 'Vui lòng chờ trong giây lát',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                $.post('/api/v1/scripts/generate', { movie_id: movieId }, function(res) {
+                    Swal.fire({
+                        title: 'Đã Thêm Vào Hàng Đợi!',
+                        text: res.message,
+                        icon: 'success',
+                        confirmButtonColor: '#6366f1',
+                        confirmButtonText: 'Đi Đến Hàng Đợi (Queue)'
+                    }).then(() => {
+                        window.location.href = '/jobs';
+                    });
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo kịch bản', 'error');
+                });
+            }
+        });
+    }
+
+    function handleDiscover(e) {
+        e.preventDefault();
+        const genre = $('#genre_input').val();
+        const limit = $('#limit_input').val();
+        $.post('/api/v1/movies/discover', { genre: genre, limit: limit }, function(res) {
+            document.getElementById('discover_modal').close();
+            Swal.fire('Đã Gửi Yêu Cầu!', res.message, 'success').then(() => location.reload());
+        });
+    }
+
+    function filterMovies() {
+        const query = ($('#movie_search_input').val() || '').toLowerCase().trim();
+        $('.movie-row').each(function() {
+            const title = $(this).attr('data-title') || '';
+            const orig = $(this).attr('data-orig') || '';
+            const genre = $(this).attr('data-genre') || '';
+            if (!query || title.includes(query) || orig.includes(query) || genre.includes(query)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+                $(this).find('.movie-checkbox').prop('checked', false);
+            }
+        });
+        updateSelectedMoviesCount();
+    }
+
+    function deleteMovie(movieId, title) {
+        Swal.fire({
+            title: `Xóa phim "${title}"?`,
+            text: 'Phim và các file video nguồn liên quan sẽ bị xóa khỏi hệ thống.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/movies/${movieId}`,
+                    type: 'DELETE',
+                    success: function(res) {
+                        Swal.fire('Đã Xóa!', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa phim', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function toggleSelectAllMovies(master) {
+        const isChecked = $(master).is(':checked');
+        $('.movie-row:visible .movie-checkbox').prop('checked', isChecked);
+        updateSelectedMoviesCount();
+    }
+
+    function updateSelectedMoviesCount() {
+        const count = $('.movie-checkbox:checked').length;
+        $('#selected_movies_count').text(count);
+        if (count > 0) {
+            $('#bulk_delete_movies_btn').removeClass('hidden');
+        } else {
+            $('#bulk_delete_movies_btn').addClass('hidden');
+            $('#select_all_movies').prop('checked', false);
+        }
+    }
+
+    function bulkDeleteMovies() {
+        const ids = [];
+        $('.movie-checkbox:checked').each(function() {
+            ids.push(parseInt($(this).val()));
+        });
+
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Xóa ${ids.length} bộ phim đã chọn?`,
+            text: 'Tất cả các bộ phim đã chọn sẽ bị xóa vĩnh viễn khỏi Database và ổ cứng.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Đồng ý xóa (${ids.length})`,
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/v1/movies/bulk-delete',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    success: function(res) {
+                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các phim đã chọn', 'error');
+                    }
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}

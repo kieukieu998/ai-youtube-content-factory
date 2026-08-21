@@ -1,0 +1,41 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.production
+
+# Database & Cache
+*.db
+*.sqlite3
+data/*.db
+data/*.sqlite3
+
+# Media Files & Working Temporary Dirs
+media/source/*
+!media/source/.gitkeep
+media/working/*
+!media/working/.gitkeep
+media/output/*
+!media/output/.gitkeep
+media/archive/*
+!media/archive/.gitkeep
+media/bgm/*
+!media/bgm/.gitkeep
+
+# System Logs
+logs/*.log
+logs/*
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

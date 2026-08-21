@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Movie Content Factory{% endblock %}</title>
+    <!-- Tailwind CSS & DaisyUI CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SweetAlert2 Dark Theme -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+
+        /* SweetAlert2 High-Contrast Premium Dark Styling */
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 1.25rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+        }
+        div:where(.swal2-container) .swal2-title {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 1.35rem !important;
+        }
+        div:where(.swal2-container) .swal2-html-container {
+            color: #cbd5e1 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.6 !important;
+        }
+        div:where(.swal2-container) .swal2-actions {
+            gap: 14px !important;
+            margin-top: 1.5rem !important;
+        }
+        div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+            background-color: #6366f1 !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            padding: 10px 24px !important;
+            border-radius: 0.75rem !important;
+            border: none !important;
+            font-size: 0.9rem !important;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm:hover {
+            background-color: #4f46e5 !important;
+        }
+        div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel {
+            background-color: #334155 !important;
+            color: #f1f5f9 !important;
+            font-weight: 600 !important;
+            padding: 10px 20px !important;
+            border-radius: 0.75rem !important;
+            border: none !important;
+            font-size: 0.9rem !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel:hover {
+            background-color: #475569 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 sticky top-0 z-50">
+        <div class="flex-1 gap-3 items-center">
+            <!-- Mobile Menu Dropdown -->
+            <div class="dropdown md:hidden">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-circle btn-sm">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[100] menu p-2 shadow-2xl bg-slate-900 border border-slate-800 rounded-2xl w-56 mt-3 text-sm">
+                    <li><a href="/"><i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-400"></i> Tổng Quan</a></li>
+                    <li><a href="/movies"><i data-lucide="film" class="w-4 h-4 text-rose-400"></i> Kho Phim & Nguồn</a></li>
+                    <li><a href="/scripts"><i data-lucide="file-text" class="w-4 h-4 text-amber-400"></i> Kịch Bản & Hooks</a></li>
+                    <li><a href="/videos"><i data-lucide="video" class="w-4 h-4 text-emerald-400"></i> Video 9:16 Render</a></li>
+                    <li><a href="/jobs"><i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i> Hàng Đợi (Queue)</a></li>
+                    <li><a href="/settings"><i data-lucide="sliders" class="w-4 h-4 text-purple-400"></i> Cấu Hình</a></li>
+                </ul>
+            </div>
+
+            <div class="p-2 bg-gradient-to-tr from-rose-500 to-indigo-600 rounded-xl text-white shadow-lg shadow-rose-500/20">
+                <i data-lucide="clapperboard" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <a href="/" class="text-xl font-bold bg-gradient-to-r from-rose-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                    AI Movie Content Factory
+                </a>
+                <span class="badge badge-sm badge-outline badge-primary ml-2 font-mono font-bold">v{{ get_app_version() }}</span>
+            </div>
+        </div>
+        <div class="flex-none gap-3">
+            <button onclick="emergencyStopAll()" class="btn btn-error btn-sm gap-2 text-white font-semibold shadow-lg shadow-rose-600/30">
+                <i data-lucide="octagon-alert" class="w-4 h-4"></i> STOP ALL
+            </button>
+            <a href="/settings" class="btn btn-ghost btn-circle btn-sm" title="Cài Đặt">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main App Layout with Sidebar -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 p-4 flex flex-col justify-between hidden md:flex shrink-0">
+            <ul id="sidebar_nav" class="menu gap-1 text-sm font-medium">
+                <li class="menu-title text-xs uppercase tracking-wider text-slate-400">Điều Khiển</li>
+                <li>
+                    <a href="/" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 text-indigo-400"></i> Tổng Quan
+                    </a>
+                </li>
+                <li>
+                    <a href="/movies" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="film" class="w-5 h-5 text-rose-400"></i> Kho Phim & Nguồn
+                    </a>
+                </li>
+                <li>
+                    <a href="/scripts" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="file-text" class="w-5 h-5 text-amber-400"></i> Kịch Bản & Hooks
+                    </a>
+                </li>
+                <li>
+                    <a href="/videos" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="video" class="w-5 h-5 text-emerald-400"></i> Video 9:16 Render
+                    </a>
+                </li>
+                <li>
+                    <a href="/jobs" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="layers" class="w-5 h-5 text-cyan-400"></i> Hàng Đợi (Queue)
+                    </a>
+                </li>
+                <li>
+                    <a href="/settings" class="flex items-center gap-3 py-3 rounded-xl hover:bg-slate-800 transition">
+                        <i data-lucide="sliders" class="w-5 h-5 text-purple-400"></i> Cấu Hình Hệ Thống
+                    </a>
+                </li>
+            </ul>
+
+            <div class="glass-card p-4 rounded-2xl">
+                <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                    <span class="flex items-center gap-1.5 text-emerald-400">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Sẵn Sàng
+                    </span>
+                    <span class="badge badge-xs badge-neutral font-mono text-indigo-400 font-bold">v{{ get_app_version() }}</span>
+                </div>
+                <p class="text-[11px] text-slate-400">AI: Gemini Free Tier<br>TTS: Edge-TTS (0đ)</p>
+            </div>
+        </aside>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-6 md:p-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Tự động highlight menu hiện tại theo URL
+        $(document).ready(function() {
+            const currentPath = window.location.pathname;
+            $('#sidebar_nav a, .dropdown-content a').each(function() {
+                const href = $(this).attr('href');
+                if (href === currentPath || (href !== '/' && currentPath.startsWith(href))) {
+                    $(this).addClass('bg-indigo-600/20 text-indigo-400 font-bold border-l-4 border-indigo-500');
+                }
+            });
+        });
+
+        function emergencyStopAll() {
+            Swal.fire({
+                title: 'DỪNG KHẨN CẤP?',
+                text: 'Bạn có chắc chắn muốn ngắt mọi tiến trình render và hủy toàn bộ tác vụ đang chờ?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#475569',
+                confirmButtonText: 'Dừng Ngay Lập Tức!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/api/v1/jobs/emergency-stop', function(res) {
+                        Swal.fire('Đã Dừng!', res.message, 'success').then(() => location.reload());
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
