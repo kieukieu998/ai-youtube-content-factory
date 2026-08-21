@@ -98,15 +98,15 @@
                                 <div class="text-[11px] text-slate-400">{{ j.sub_info }}</div>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="whitespace-nowrap">
                                 {% if j.status == 'completed' %}
-                                <span class="badge badge-success badge-sm text-white">Hoàn thành</span>
+                                <span class="badge badge-success badge-sm text-white whitespace-nowrap font-medium">Hoàn thành</span>
                                 {% elif j.status == 'processing' %}
-                                <span class="badge badge-warning badge-sm animate-pulse">Đang xử lý</span>
+                                <span class="badge badge-warning badge-sm animate-pulse whitespace-nowrap font-medium">Đang xử lý</span>
                                 {% elif j.status == 'pending' %}
-                                <span class="badge badge-info badge-sm">Đang chờ</span>
+                                <span class="badge badge-info badge-sm whitespace-nowrap font-medium">Đang chờ</span>
                                 {% else %}
-                                <span class="badge badge-error badge-sm text-white">{{ j.status }}</span>
+                                <span class="badge badge-error badge-sm text-white whitespace-nowrap font-medium">{{ j.status }}</span>
                                 {% endif %}
                             </td>
                             <td>

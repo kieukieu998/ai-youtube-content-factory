@@ -57,9 +57,9 @@
                 <button id="bulk_delete_scripts_btn" onclick="bulkDeleteScripts()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_scripts_count">0</span>) kịch bản đã chọn
                 </button>
-                <div class="relative">
-                    <input type="text" id="script_search_input" oninput="filterScripts()" placeholder="🔍 Tìm kịch bản, lời bình..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
-                    <i data-lucide="search" class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400"></i>
+                <div class="relative flex items-center">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                    <input type="text" id="script_search_input" oninput="filterScripts()" placeholder="Tìm kịch bản, lời bình..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
                 </div>
             </div>
         </div>

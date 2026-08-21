@@ -22,6 +22,41 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
 
+        /* Fix DaisyUI Badge wrapping & text baseline */
+        .badge {
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+            font-weight: 600 !important;
+        }
+        .badge-sm {
+            padding: 0.25rem 0.6rem !important;
+            min-height: 1.4rem !important;
+            height: auto !important;
+            font-size: 0.75rem !important;
+        }
+        .badge-xs {
+            padding: 0.15rem 0.45rem !important;
+            min-height: 1.15rem !important;
+            height: auto !important;
+            font-size: 0.68rem !important;
+        }
+
+        /* Fix Select Box vertical text alignment */
+        select.select, select.select-sm {
+            display: inline-flex !important;
+            align-items: center !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            line-height: 2rem !important;
+            height: 2rem !important;
+            min-height: 2rem !important;
+            vertical-align: middle !important;
+        }
+
         /* SweetAlert2 High-Contrast Premium Dark Styling */
         div:where(.swal2-container) div:where(.swal2-popup) {
             background: #0f172a !important;

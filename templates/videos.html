@@ -16,11 +16,11 @@
                 <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_count">0</span>) đã chọn
             </button>
             
-            <div class="relative">
-                <input type="text" id="video_search_input" oninput="filterVideos()" placeholder="🔍 Tìm video, tên phim..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
-                <i data-lucide="search" class="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400"></i>
+            <div class="relative flex items-center">
+                <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                <input type="text" id="video_search_input" oninput="filterVideos()" placeholder="Tìm video, tên phim..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
             </div>
-            <select id="qa_filter_select" onchange="filterVideos()" class="select select-sm select-bordered bg-slate-900 text-white border-slate-700">
+            <select id="qa_filter_select" onchange="filterVideos()" class="select select-sm select-bordered bg-slate-900 text-white border-slate-700 font-medium">
                 <option value="all">Tất cả QA</option>
                 <option value="passed">Đạt chuẩn (Pass)</option>
                 <option value="failed">Lỗi (Fail)</option>
