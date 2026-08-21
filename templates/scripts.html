@@ -72,26 +72,40 @@
             </label>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-5">
             {% for s in scripts %}
-            <div class="script-card bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden"
+            <div class="script-card glass-card border border-slate-800 rounded-2xl overflow-hidden shadow-lg transition hover:border-slate-700"
+                 id="script_card_{{ s.id }}"
                  data-id="{{ s.id }}"
                  data-title="{{ s.title|lower }}"
                  data-content="{% for ep in s.episodes %}{{ ep.content_text|lower }} {{ ep.hook_text|lower }} {% endfor %}">
-                <div class="p-4 flex items-center justify-between border-b border-slate-800/60 bg-slate-900/80">
+                
+                <!-- Script Folder Header -->
+                <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-900/90">
                     <div class="flex items-center gap-3">
                         <input type="checkbox" value="{{ s.id }}" onchange="updateSelectedScriptsCount()" class="script-checkbox checkbox checkbox-xs checkbox-primary rounded" />
+                        <div class="p-2 bg-gradient-to-tr from-amber-500 to-rose-500 rounded-xl text-white shadow-md">
+                            <i data-lucide="folder" class="w-4 h-4"></i>
+                        </div>
                         <div>
-                            <span class="font-bold text-slate-100 text-sm">{{ s.title }}</span>
-                            <span class="badge badge-sm badge-neutral ml-2">{{ s.episodes|length }} Tập</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-100 text-sm">{{ s.title }}</span>
+                                <span class="badge badge-sm badge-neutral font-semibold">{{ s.episodes|length }} Tập</span>
+                                {% if s.movie and s.movie.genre %}
+                                <span class="badge badge-xs badge-ghost text-slate-400">{{ s.movie.genre }}</span>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    
+                    <div class="flex items-center gap-2 self-end sm:self-center">
+                        <button onclick="renderAllEpisodes('{{ s.id }}', '{{ s.title }}')" class="btn btn-xs btn-primary gap-1.5 shadow-md shadow-indigo-600/30 font-semibold" title="Render tự động toàn bộ các tập 9:16 chưa render">
+                            <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Render Toàn Bộ ({{ s.episodes|length }}) Tập
+                        </button>
                         <button onclick="viewFullScript('{{ s.id }}')" class="btn btn-xs btn-outline btn-info gap-1" title="Đọc toàn bộ các tập của kịch bản này">
                             <i data-lucide="book-open" class="w-3 h-3"></i> Đọc Cả Bộ
                         </button>
-                        <span class="text-xs text-slate-400 font-mono hidden sm:inline ml-2">{{ s.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
-                        <button onclick="deleteScript('{{ s.id }}', '{{ s.title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-error hover:bg-error/10 p-1" title="Xóa kịch bản này">
+                        <button onclick="deleteScript('{{ s.id }}', '{{ s.title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-error hover:bg-error/10 p-1" title="Xóa toàn bộ kịch bản này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -388,6 +402,43 @@
             }).then(() => {
                 window.location.href = '/jobs';
             });
+        });
+    }
+
+    function renderAllEpisodes(scriptId, title) {
+        Swal.fire({
+            title: `Render Toàn Bộ Tập?`,
+            text: `Hệ thống sẽ tự động thêm tất cả các tập của "${title}" vào hàng đợi render video 9:16.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Bắt đầu Render',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/scripts/${scriptId}/render-all`,
+                    type: 'POST',
+                    success: function(res) {
+                        Swal.fire({
+                            title: 'Thành công!',
+                            text: res.message,
+                            icon: 'success',
+                            confirmButtonText: 'Tới Hàng Đợi Xem Tiến Độ',
+                            showCancelButton: true,
+                            cancelButtonText: 'Ở Lại Trang Này'
+                        }).then((choice) => {
+                            if (choice.isConfirmed) {
+                                window.location.href = '/jobs';
+                            }
+                        });
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể render toàn bộ kịch bản', 'error');
+                    }
+                });
+            }
         });
     }
 

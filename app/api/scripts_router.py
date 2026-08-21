@@ -98,5 +98,30 @@ async def bulk_delete_scripts(req: BulkDeleteScriptRequest, db: Session = Depend
             db.delete(ep)
         db.delete(s)
         
+@router.post("/api/v1/scripts/{script_id}/render-all")
+async def render_all_script_episodes(script_id: int, db: Session = Depends(get_db)):
+    import json
+    script = db.query(Script).filter(Script.id == script_id).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản")
+        
+    episodes = db.query(Episode).filter(Episode.script_id == script_id).all()
+    if not episodes:
+        raise HTTPException(status_code=400, detail="Kịch bản không có tập nào")
+        
+    queued_count = 0
+    for ep in episodes:
+        if ep.status != "rendered":
+            job = Job(
+                job_type="RenderEpisodeJob",
+                status="pending",
+                payload=json.dumps({"episode_id": ep.id})
+            )
+            db.add(job)
+            queued_count += 1
+            
     db.commit()
-    return JSONResponse({"status": "success", "message": f"Đã xóa thành công {count} kịch bản!"})
+    return JSONResponse({
+        "status": "success", 
+        "message": f"Đã thêm {queued_count} tập vào hàng đợi render video 9:16!" if queued_count > 0 else "Tất cả các tập đã được render trước đó!"
+    })

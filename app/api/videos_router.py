@@ -12,13 +12,51 @@ router = APIRouter()
 
 @router.get("/videos", response_class=HTMLResponse)
 async def videos_page(request: Request, db: Session = Depends(get_db)):
+    from collections import defaultdict
+    from app.database.models import Movie, Script
+    
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
     approved_episodes = db.query(Episode).filter(Episode.status.in_(["approved", "draft"])).all()
+    
+    # Group videos by Movie Folder
+    movie_dict = defaultdict(list)
+    for v in videos:
+        if v.episode and v.episode.script and v.episode.script.movie:
+            movie_id = v.episode.script.movie.id
+            movie_dict[movie_id].append(v)
+        else:
+            movie_dict[0].append(v)
+            
+    movie_folders = []
+    for movie_id, v_list in movie_dict.items():
+        if movie_id != 0:
+            movie = db.query(Movie).filter(Movie.id == movie_id).first()
+            v_list_sorted = sorted(v_list, key=lambda x: x.episode.episode_number if x.episode else 0)
+            script = db.query(Script).filter(Script.movie_id == movie_id).first()
+            total_eps = len(script.episodes) if script else len(v_list)
+            
+            movie_folders.append({
+                "movie": movie,
+                "videos": v_list_sorted,
+                "rendered_count": len(v_list_sorted),
+                "total_episodes": total_eps,
+                "is_complete": len(v_list_sorted) >= total_eps and total_eps > 0
+            })
+        else:
+            movie_folders.append({
+                "movie": None,
+                "videos": v_list,
+                "rendered_count": len(v_list),
+                "total_episodes": len(v_list),
+                "is_complete": True
+            })
+            
     return templates.TemplateResponse(
         request=request, 
         name="videos.html",
         context={
             "videos": videos,
+            "movie_folders": movie_folders,
             "approved_episodes": approved_episodes
         }
     )
