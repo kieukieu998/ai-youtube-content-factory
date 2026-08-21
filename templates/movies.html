@@ -67,8 +67,10 @@
                         </td>
                         <td>
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-rose-400">{{ "%.1f"|format(m.potential_score) }}</span>
-                                <progress class="progress progress-error w-16" value="{{ m.potential_score }}" max="100"></progress>
+                                <span class="font-bold text-rose-400 text-xs font-mono">{{ "%.1f"|format(m.potential_score) }}</span>
+                                <div class="animated-progress-bar w-16">
+                                    <div class="animated-progress-fill bg-gradient-to-r from-amber-500 to-rose-500 shadow-sm" style="width: {{ m.potential_score }}%;"></div>
+                                </div>
                             </div>
                         </td>
                         <td>

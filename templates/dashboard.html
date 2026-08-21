@@ -109,10 +109,19 @@
                                 <span class="badge badge-error badge-sm text-white whitespace-nowrap font-medium">{{ j.status }}</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <progress class="progress progress-primary w-20" value="{{ j.progress }}" max="100"></progress>
+                            <td class="w-36">
+                                <div class="flex items-center gap-2">
+                                    <div class="animated-progress-bar flex-1">
+                                        <div class="animated-progress-fill {% if j.status == 'processing' %}progress-active{% elif j.status == 'completed' %}progress-completed{% elif j.status == 'failed' %}progress-failed{% else %}progress-pending{% endif %}"
+                                             style="width: {{ j.progress if j.progress > 0 else (10 if j.status == 'processing' else 0) }}%;">
+                                        </div>
+                                    </div>
+                                    <span class="text-xs font-mono font-bold whitespace-nowrap {% if j.status == 'completed' %}text-emerald-400{% elif j.status == 'processing' %}text-purple-300 animate-pulse{% elif j.status == 'failed' %}text-rose-400{% else %}text-slate-400{% endif %}">
+                                        {{ j.progress }}%
+                                    </span>
+                                </div>
                             </td>
-                            <td class="text-xs text-slate-400">{{ j.created_at.strftime('%H:%M:%S') }}</td>
+                            <td class="text-xs text-slate-400 font-mono">{{ j.created_at.strftime('%H:%M:%S') }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
