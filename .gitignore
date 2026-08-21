@@ -39,3 +39,13 @@ logs/*
 .idea/
 .DS_Store
 Thumbs.db
+*.code-workspace
+
+# Agent & AI tool configurations
+.agents/
+scratch/
+test_*.mp3
+test_*.mp4
+*.mp3
+*.mp4
+
