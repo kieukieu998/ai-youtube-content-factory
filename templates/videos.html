@@ -41,7 +41,8 @@
     <!-- Video Grid (Compact Mobile / Shorts Grid) -->
     <div id="video_grid_container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {% for v in videos %}
-        <div class="video-card glass-card rounded-xl overflow-hidden flex flex-col justify-between border-slate-800 hover:border-indigo-500/50 transition-all hover:scale-[1.02] shadow-lg group relative"
+        <div class="video-card glass-card rounded-xl overflow-hidden flex flex-col justify-between border border-slate-800/80 hover:border-indigo-500/50 transition-all duration-200 hover:scale-[1.02] shadow-lg group relative"
+             id="video_card_{{ v.id }}"
              data-id="{{ v.id }}"
              data-title="{{ v.episode.script.movie.title|lower }}"
              data-hook="{{ (v.episode.hook_text or '')|lower }}"
@@ -50,26 +51,31 @@
             <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden">
                 <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover" preload="metadata"></video>
                 
-                <!-- Checkbox in top-left corner -->
-                <div class="absolute top-2 left-2 z-10 bg-slate-950/70 p-1 rounded-md border border-slate-700/60 backdrop-blur">
-                    <input type="checkbox" value="{{ v.id }}" onchange="updateSelectedCount()" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded" />
-                </div>
+                <!-- Modern Floating Circular Checkbox -->
+                <label class="absolute top-2.5 left-2.5 z-20 cursor-pointer select-none" title="Chọn video này">
+                    <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox peer sr-only" />
+                    <div class="w-6 h-6 rounded-full border-2 border-white/50 bg-black/40 backdrop-blur-md flex items-center justify-center transition-all duration-200 peer-checked:bg-gradient-to-tr peer-checked:from-indigo-600 peer-checked:to-purple-600 peer-checked:border-indigo-400 peer-checked:shadow-md peer-checked:shadow-indigo-500/50 hover:scale-110 hover:border-white hover:bg-black/60">
+                        <svg class="w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-150" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                </label>
 
                 <!-- Hover overlay: ONLY Play button -->
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <button onclick="playVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')" class="btn btn-circle btn-primary btn-md shadow-xl" title="Xem video">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
+                    <button onclick="playVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')" class="btn btn-circle btn-primary btn-md shadow-2xl pointer-events-auto hover:scale-110 transition" title="Xem video">
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                     </button>
                 </div>
 
-                <div class="absolute top-2 right-2">
+                <div class="absolute top-2.5 right-2.5 z-10">
                     {% if v.qa_status == 'passed' %}
-                    <span class="badge badge-success badge-xs text-white font-semibold">Pass</span>
+                    <span class="badge badge-success badge-xs text-white font-semibold shadow-md">Pass</span>
                     {% else %}
-                    <span class="badge badge-error badge-xs text-white font-semibold">Fail</span>
+                    <span class="badge badge-error badge-xs text-white font-semibold shadow-md">Fail</span>
                     {% endif %}
                 </div>
-                <div class="absolute bottom-2 left-2 bg-black/80 px-1.5 py-0.5 rounded text-[11px] text-white font-mono">
+                <div class="absolute bottom-2 left-2 bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-[11px] text-white font-mono z-10">
                     {{ "%.1f"|format(v.duration_seconds) }}s
                 </div>
             </div>
@@ -170,9 +176,26 @@
         });
     }
 
+    function onVideoCheckChange(checkbox) {
+        const card = $(checkbox).closest('.video-card');
+        if ($(checkbox).is(':checked')) {
+            card.addClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+        } else {
+            card.removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+        }
+        updateSelectedCount();
+    }
+
     function toggleSelectAllVideos(master) {
         const isChecked = $(master).is(':checked');
-        $('.video-card:not(.hidden) .video-checkbox').prop('checked', isChecked);
+        $('.video-card:not(.hidden) .video-checkbox').prop('checked', isChecked).each(function() {
+            const card = $(this).closest('.video-card');
+            if (isChecked) {
+                card.addClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+            } else {
+                card.removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+            }
+        });
         updateSelectedCount();
     }
 
