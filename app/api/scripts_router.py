@@ -111,17 +111,16 @@ async def render_all_script_episodes(script_id: int, db: Session = Depends(get_d
         
     queued_count = 0
     for ep in episodes:
-        if ep.status != "rendered":
-            job = Job(
-                job_type="RenderEpisodeJob",
-                status="pending",
-                payload=json.dumps({"episode_id": ep.id})
-            )
-            db.add(job)
-            queued_count += 1
-            
+        job = Job(
+            job_type="RenderEpisodeJob",
+            status="pending",
+            payload=json.dumps({"episode_id": ep.id})
+        )
+        db.add(job)
+        queued_count += 1
+        
     db.commit()
     return JSONResponse({
         "status": "success", 
-        "message": f"Đã thêm {queued_count} tập vào hàng đợi render video 9:16!" if queued_count > 0 else "Tất cả các tập đã được render trước đó!"
+        "message": f"Đã thêm thành công trọn bộ {queued_count} tập vào hàng đợi render video 9:16!"
     })
