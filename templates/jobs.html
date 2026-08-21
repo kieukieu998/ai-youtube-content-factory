@@ -13,12 +13,27 @@
             <button id="bulk_delete_jobs_btn" onclick="bulkDeleteJobs()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
                 <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_jobs_count">0</span>) tác vụ đã chọn
             </button>
+            
+            <div class="relative flex items-center">
+                <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                <input type="text" id="job_search_input" oninput="filterJobs()" placeholder="Tìm tác vụ, ID..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-44 border-slate-700 focus:border-indigo-500 focus:outline-none" />
+            </div>
+
+            <select id="job_status_filter" onchange="filterJobs()" class="select select-sm select-bordered bg-slate-900 text-white border-slate-700 font-medium">
+                <option value="all">Tất cả Trạng Thái</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="processing">Đang chạy</option>
+                <option value="pending">Đang chờ</option>
+                <option value="failed">Lỗi</option>
+                <option value="cancelled">Đã hủy</option>
+            </select>
+
             <button onclick="clearFinishedJobs()" class="btn btn-outline btn-slate-700 btn-sm text-slate-300 gap-1.5 hover:bg-slate-800" title="Xóa tất cả các tác vụ đã Hoàn thành, Đã hủy hoặc Thất bại">
                 <i data-lucide="trash" class="w-4 h-4 text-slate-400"></i> Dọn Tác Vụ Cũ
             </button>
             {% if emergency_stopped %}
             <button onclick="resumeSystem()" class="btn btn-success btn-sm text-white gap-2">
-                <i data-lucide="play" class="w-4 h-4"></i> Khôi Phục Hệ Thống
+                <i data-lucide="play" class="w-4 h-4"></i> Khôi Phục
             </button>
             {% else %}
             <button onclick="emergencyStopAll()" class="btn btn-error btn-sm text-white gap-2">
@@ -52,7 +67,10 @@
                 </thead>
                 <tbody>
                     {% for j in jobs %}
-                    <tr class="job-row border-slate-800/50 hover:bg-slate-800/20" data-id="{{ j.id }}">
+                    <tr class="job-row border-slate-800/50 hover:bg-slate-800/20" 
+                        data-id="{{ j.id }}"
+                        data-status="{{ j.status }}"
+                        data-name="{{ j.display_name|lower }} {{ j.sub_info|lower if j.sub_info else '' }} {{ j.id }}">
                         <td>
                             <input type="checkbox" value="{{ j.id }}" onchange="updateSelectedJobsCount()" class="job-checkbox checkbox checkbox-xs checkbox-primary rounded" />
                         </td>
@@ -275,7 +293,28 @@
 
     function toggleSelectAllJobs(master) {
         const isChecked = $(master).is(':checked');
-        $('.job-row .job-checkbox').prop('checked', isChecked);
+        $('.job-row:visible .job-checkbox').prop('checked', isChecked);
+        updateSelectedJobsCount();
+    }
+
+    function filterJobs() {
+        const query = ($('#job_search_input').val() || '').toLowerCase().trim();
+        const statusFilter = $('#job_status_filter').val();
+        
+        $('.job-row').each(function() {
+            const name = $(this).attr('data-name') || '';
+            const status = $(this).attr('data-status') || '';
+
+            const matchesQuery = !query || name.includes(query);
+            const matchesStatus = (statusFilter === 'all') || (status === statusFilter);
+
+            if (matchesQuery && matchesStatus) {
+                $(this).show();
+            } else {
+                $(this).hide();
+                $(this).find('.job-checkbox').prop('checked', false);
+            }
+        });
         updateSelectedJobsCount();
     }
 
