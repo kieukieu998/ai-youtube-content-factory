@@ -62,10 +62,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from starlette.responses import FileResponse
+
 # Mount Static Files & Media
 static_path = Path(__file__).resolve().parent / "static"
 static_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(static_path / "favicon.ico")
 
 media_path = settings.MEDIA_DIR
 app.mount("/media", StaticFiles(directory=str(media_path)), name="media")

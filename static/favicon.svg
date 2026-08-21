@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Rounded Square with Gradient Glow -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bgGrad)" />
+  
+  <!-- Clapperboard Body -->
+  <rect x="10" y="22" width="44" height="30" rx="6" fill="url(#bodyGrad)" stroke="#334155" stroke-width="1.5" />
+  
+  <!-- Clapperboard Top Bar with Rose Color -->
+  <rect x="10" y="12" width="44" height="9" rx="3" fill="#f43f5e" />
+  
+  <!-- Clapperboard White Stripes -->
+  <polygon points="16,12 21,12 18,21 13,21" fill="#ffffff" />
+  <polygon points="28,12 33,12 30,21 25,21" fill="#ffffff" />
+  <polygon points="40,12 45,12 42,21 37,21" fill="#ffffff" />
+  
+  <!-- Play Icon in Center -->
+  <polygon points="28,29 42,37 28,45" fill="#ffffff" />
+</svg>
