@@ -48,29 +48,31 @@
              data-hook="{{ (v.episode.hook_text or '')|lower }}"
              data-qa="{{ v.qa_status }}">
             
-            <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden">
-                <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover" preload="metadata"></video>
+            <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
+                 onclick="playVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')"
+                 title="Bấm để xem video">
+                <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
                 
                 <!-- Standard Checkbox matching other pages -->
-                <div class="absolute top-2.5 left-2.5 z-20">
+                <div class="absolute top-2.5 left-2.5 z-20" onclick="event.stopPropagation()">
                     <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded" title="Chọn video này" />
                 </div>
 
-                <!-- Hover overlay: ONLY Play button -->
+                <!-- Hover overlay: Play button icon -->
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
-                    <button onclick="playVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')" class="btn btn-circle btn-primary btn-md shadow-2xl pointer-events-auto hover:scale-110 transition" title="Xem video">
+                    <div class="btn btn-circle btn-primary btn-md shadow-2xl group-hover:scale-110 transition pointer-events-none">
                         <i data-lucide="play" class="w-5 h-5 fill-current"></i>
-                    </button>
+                    </div>
                 </div>
 
-                <div class="absolute top-2.5 right-2.5 z-10">
+                <div class="absolute top-2.5 right-2.5 z-10" onclick="event.stopPropagation()">
                     {% if v.qa_status == 'passed' %}
                     <span class="badge badge-success badge-xs text-white font-semibold shadow-md">Pass</span>
                     {% else %}
                     <span class="badge badge-error badge-xs text-white font-semibold shadow-md">Fail</span>
                     {% endif %}
                 </div>
-                <div class="absolute bottom-2 left-2 bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-[11px] text-white font-mono z-10">
+                <div class="absolute bottom-2 left-2 bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-[11px] text-white font-mono z-10 pointer-events-none">
                     {{ "%.1f"|format(v.duration_seconds) }}s
                 </div>
             </div>
