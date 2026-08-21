@@ -51,9 +51,9 @@
             <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden">
                 <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover" preload="metadata"></video>
                 
-                <!-- Square Checkbox matching other pages -->
+                <!-- Standard Checkbox matching other pages -->
                 <div class="absolute top-2.5 left-2.5 z-20">
-                    <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-sm checkbox-primary rounded-md border-2 border-white/70 bg-black/60 backdrop-blur-md shadow-lg" title="Chọn video này" />
+                    <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded" title="Chọn video này" />
                 </div>
 
                 <!-- Hover overlay: ONLY Play button -->

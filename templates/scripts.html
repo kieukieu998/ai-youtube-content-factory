@@ -391,6 +391,16 @@
         });
     }
 
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2200,
+        timerProgressBar: true,
+        background: '#0f172a',
+        color: '#f8fafc'
+    });
+
     function deleteScript(scriptId, title) {
         Swal.fire({
             title: `Xóa "${title}"?`,
@@ -407,7 +417,14 @@
                     url: `/api/v1/scripts/${scriptId}`,
                     type: 'DELETE',
                     success: function(res) {
-                        Swal.fire('Đã Xóa!', res.message, 'success').then(() => location.reload());
+                        $(`.script-card[data-id="${scriptId}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            filterScripts();
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || 'Đã xóa kịch bản thành công!'
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa kịch bản', 'error');
@@ -459,7 +476,16 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
-                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                        ids.forEach(id => {
+                            $(`.script-card[data-id="${id}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                filterScripts();
+                            });
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || `Đã xóa ${ids.length} kịch bản thành công!`
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các kịch bản đã chọn', 'error');

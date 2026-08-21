@@ -44,6 +44,7 @@
                 <tbody>
                     {% for m in movies %}
                     <tr class="movie-row border-slate-800/50 hover:bg-slate-800/30"
+                        id="movie_row_{{ m.id }}"
                         data-id="{{ m.id }}"
                         data-title="{{ m.title|lower }}"
                         data-orig="{{ (m.original_title or '')|lower }}"
@@ -303,6 +304,16 @@
         updateSelectedMoviesCount();
     }
 
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2200,
+        timerProgressBar: true,
+        background: '#0f172a',
+        color: '#f8fafc'
+    });
+
     function deleteMovie(movieId, title) {
         Swal.fire({
             title: `Xóa phim "${title}"?`,
@@ -319,7 +330,14 @@
                     url: `/api/v1/movies/${movieId}`,
                     type: 'DELETE',
                     success: function(res) {
-                        Swal.fire('Đã Xóa!', res.message, 'success').then(() => location.reload());
+                        $(`#movie_row_${movieId}`).fadeOut(300, function() {
+                            $(this).remove();
+                            filterMovies();
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || 'Đã xóa phim thành công!'
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa phim', 'error');
@@ -371,7 +389,16 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
-                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                        ids.forEach(id => {
+                            $(`#movie_row_${id}`).fadeOut(300, function() {
+                                $(this).remove();
+                                filterMovies();
+                            });
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || `Đã xóa ${ids.length} bộ phim thành công!`
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các phim đã chọn', 'error');

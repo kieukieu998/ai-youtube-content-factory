@@ -119,6 +119,16 @@
 </div>
 
 <script>
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2200,
+        timerProgressBar: true,
+        background: '#0f172a',
+        color: '#f8fafc'
+    });
+
     function cancelJob(jobId) {
         Swal.fire({
             title: `Hủy tác vụ #${jobId}?`,
@@ -127,11 +137,22 @@
             showCancelButton: true,
             confirmButtonText: 'Đồng ý hủy',
             cancelButtonText: 'Đóng',
-            confirmButtonColor: '#ef4444'
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
         }).then((result) => {
             if (result.isConfirmed) {
                 $.post(`/api/v1/jobs/${jobId}/cancel`, function(res) {
-                    Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || 'Đã hủy tác vụ!'
+                    });
+                    $.get('/jobs', function(html) {
+                        const newContent = $(html).find('#jobs_table_container').html();
+                        if (newContent) {
+                            $('#jobs_table_container').html(newContent);
+                            lucide.createIcons();
+                        }
+                    });
                 }).fail(function(err) {
                     Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể hủy tác vụ', 'error');
                 });
@@ -142,19 +163,27 @@
     function deleteJob(jobId) {
         Swal.fire({
             title: `Xóa tác vụ #${jobId}?`,
-            text: 'Tác vụ này sẽ bị xóa vĩnh viễn khỏi danh sách hàng đợi.',
-            icon: 'question',
+            text: 'Tác vụ này sẽ bị gỡ bỏ khỏi danh sách hàng đợi.',
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Xóa',
-            cancelButtonText: 'Đóng',
-            confirmButtonColor: '#ef4444'
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
                     url: `/api/v1/jobs/${jobId}`,
                     type: 'DELETE',
                     success: function(res) {
-                        Swal.fire('Đã xóa', res.message, 'success').then(() => location.reload());
+                        $(`.job-row[data-id="${jobId}"]`).fadeOut(300, function() {
+                            $(this).remove();
+                            updateSelectedJobsCount();
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || 'Đã xóa tác vụ thành công!'
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa tác vụ', 'error');
@@ -172,11 +201,23 @@
             showCancelButton: true,
             confirmButtonText: 'Dọn dẹp ngay',
             cancelButtonText: 'Đóng',
-            confirmButtonColor: '#6366f1'
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#475569'
         }).then((result) => {
             if (result.isConfirmed) {
                 $.post('/api/v1/jobs/clear-finished', function(res) {
-                    Swal.fire('Đã dọn dẹp', res.message, 'success').then(() => location.reload());
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || 'Đã dọn dẹp tác vụ cũ!'
+                    });
+                    // Refresh table container dynamically
+                    $.get('/jobs', function(html) {
+                        const newContent = $(html).find('#jobs_table_container').html();
+                        if (newContent) {
+                            $('#jobs_table_container').html(newContent);
+                            lucide.createIcons();
+                        }
+                    });
                 }).fail(function(err) {
                     Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể dọn dẹp', 'error');
                 });
@@ -186,12 +227,17 @@
 
     function retryJob(jobId) {
         $.post(`/api/v1/jobs/${jobId}/retry`, function(res) {
-            Swal.fire({
-                title: 'Đã Thêm Lại Vào Hàng Đợi!',
-                text: res.message,
+            Toast.fire({
                 icon: 'success',
-                confirmButtonColor: '#6366f1'
-            }).then(() => location.reload());
+                title: res.message || 'Đã thêm lại tác vụ vào hàng đợi!'
+            });
+            $.get('/jobs', function(html) {
+                const newContent = $(html).find('#jobs_table_container').html();
+                if (newContent) {
+                    $('#jobs_table_container').html(newContent);
+                    lucide.createIcons();
+                }
+            });
         }).fail(function(err) {
             Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể thử lại tác vụ', 'error');
         });
@@ -263,7 +309,16 @@
                     contentType: 'application/json',
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
-                        Swal.fire('Thành công', res.message, 'success').then(() => location.reload());
+                        ids.forEach(id => {
+                            $(`.job-row[data-id="${id}"]`).fadeOut(300, function() {
+                                $(this).remove();
+                                updateSelectedJobsCount();
+                            });
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || `Đã xóa ${ids.length} tác vụ thành công!`
+                        });
                     },
                     error: function(err) {
                         Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các tác vụ đã chọn', 'error');
