@@ -208,10 +208,10 @@
     </header>
 
     <!-- Main App Layout with Sidebar -->
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 min-h-0 relative">
         
-        <!-- Sidebar Navigation -->
-        <aside class="w-64 bg-slate-900/50 border-r border-slate-800 p-4 flex flex-col justify-between hidden md:flex shrink-0">
+        <!-- Sidebar Navigation (Fixed Sticky on Desktop) -->
+        <aside class="w-64 bg-slate-900/60 border-r border-slate-800 p-4 flex flex-col justify-between hidden md:flex shrink-0 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto z-30">
             <ul id="sidebar_nav" class="menu gap-1 text-sm font-medium">
                 <li class="menu-title text-xs uppercase tracking-wider text-slate-400">Điều Khiển</li>
                 <li>
@@ -258,7 +258,7 @@
         </aside>
 
         <!-- Page Content -->
-        <main class="flex-1 overflow-y-auto p-6 md:p-8">
+        <main class="flex-1 p-6 md:p-8 min-w-0">
             {% block content %}{% endblock %}
         </main>
     </div>
