@@ -281,13 +281,18 @@ class JobWorker:
                 logger.warning(f"Could not auto-fetch trailer on-the-fly: {e}")
 
         if source_media and os.path.exists(source_media):
-            logger.info(f"Using source video for scene slicing: {source_media}")
+            logger.info(f"Using source video for timeline scene slicing: {source_media}")
+            total_eps = len(episode.script.episodes) if (episode.script and episode.script.episodes) else 3
             sliced_clips = await asyncio.to_thread(
                 SceneSlicer.slice_scenes_with_ffmpeg,
-                source_media, 
-                str(working_dir / "slices")
+                source_video_path=source_media, 
+                output_dir=str(working_dir / "slices"),
+                target_clip_len=2.2,
+                max_clips=25,
+                episode_number=episode.episode_number,
+                total_episodes=total_eps
             )
-            selected_clips = SceneSelectorAgent.select_clips_for_duration(sliced_clips, duration)
+            selected_clips = SceneSelectorAgent.select_clips_for_duration(sliced_clips, duration, avg_clip_len=2.2)
         else:
             # Fallback dynamic motion cinematic background
             logger.info("Generating dynamic cinematic background...")

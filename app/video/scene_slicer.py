@@ -1,12 +1,12 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from loguru import logger
 from app.core.config import settings
 
 class SceneSlicer:
-    """Extracts crisp, keyframe-aligned 2.5s scene clips from source movie video."""
+    """Extracts crisp, keyframe-aligned, timeline-aware scene clips from source movie video."""
     
     @staticmethod
     def get_video_duration(video_path: str) -> float:
@@ -28,28 +28,53 @@ class SceneSlicer:
         cls,
         source_video_path: str,
         output_dir: str,
-        target_clip_len: float = 2.5,
-        max_clips: int = 25
+        target_clip_len: float = 2.2,
+        max_clips: int = 25,
+        episode_number: int = 1,
+        total_episodes: int = 3
     ) -> List[str]:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
         total_duration = cls.get_video_duration(source_video_path)
         
-        # Skip first 15% (logos) and last 15% (credits/outro)
-        start_sec = max(5.0, total_duration * 0.15)
-        end_sec = max(start_sec + 10.0, total_duration * 0.85)
+        # Calculate timeline window matching the story arc of the current episode
+        if total_episodes <= 1:
+            start_ratio, end_ratio = 0.05, 0.95
+        elif total_episodes == 3:
+            if episode_number == 1:
+                # Act 1: Introduction & Inciting incident
+                start_ratio, end_ratio = 0.05, 0.38
+            elif episode_number == 2:
+                # Act 2: Rising action & Conflict
+                start_ratio, end_ratio = 0.35, 0.70
+            else:
+                # Act 3: Climax & Grand Twist Resolution
+                start_ratio, end_ratio = 0.65, 0.95
+        else:
+            seg_len = 0.90 / total_episodes
+            start_ratio = max(0.02, 0.05 + (episode_number - 1) * seg_len - 0.03)
+            end_ratio = min(0.98, start_ratio + seg_len + 0.05)
+
+        start_sec = max(2.0, total_duration * start_ratio)
+        end_sec = min(total_duration - 2.0, total_duration * end_ratio)
+        if end_sec <= start_sec + 5.0:
+            start_sec = 2.0
+            end_sec = total_duration - 2.0
+
         core_duration = end_sec - start_sec
-        
         step = max(target_clip_len, core_duration / max_clips)
         generated_clips = []
         
-        logger.info(f"Extracting high-energy action clips from {start_sec:.1f}s to {end_sec:.1f}s of {source_video_path}...")
+        logger.info(
+            f"[Episode {episode_number}/{total_episodes}] Slicing distinct timeline scenes "
+            f"from {start_sec:.1f}s to {end_sec:.1f}s (duration: {core_duration:.1f}s) of {source_video_path}..."
+        )
         
         current_time = start_sec
         idx = 0
         while current_time + target_clip_len <= end_sec and idx < max_clips:
-            clip_file = str(output_path / f"scene_{idx:03d}.mp4")
+            clip_file = str(output_path / f"ep_{episode_number}_scene_{idx:03d}.mp4")
             
             cmd = [
                 settings.FFMPEG_PATH,
@@ -58,6 +83,7 @@ class SceneSlicer:
                 "-t", f"{target_clip_len:.2f}",
                 "-i", str(source_video_path),
                 "-c:v", "libx264",
+                "-preset", "veryfast",
                 "-pix_fmt", "yuv420p",
                 "-r", "30",
                 "-g", "30",
@@ -75,5 +101,5 @@ class SceneSlicer:
                 
             current_time += step
 
-        logger.info(f"Successfully generated {len(generated_clips)} vibrant movie action clips in {output_dir}")
+        logger.info(f"Successfully generated {len(generated_clips)} distinct action clips for Episode {episode_number}")
         return generated_clips
