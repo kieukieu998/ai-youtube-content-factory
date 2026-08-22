@@ -133,9 +133,14 @@
                     <span class="font-semibold text-amber-400 flex items-center gap-1">
                         <i data-lucide="layers" class="w-3.5 h-3.5"></i> {{ s.episodes|length }} Tập Phim
                     </span>
-                    <span class="text-[11px] text-slate-400 group-hover:text-amber-300 flex items-center gap-0.5">
-                        Mở thư mục <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="event.stopPropagation(); deleteScript('{{ s.id }}', '{{ s.title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1 rounded-lg" title="Xóa kịch bản này">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <span class="text-[11px] text-slate-400 group-hover:text-amber-300 flex items-center gap-0.5">
+                            Mở <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                        </span>
+                    </div>
                 </div>
             </div>
             {% endfor %}

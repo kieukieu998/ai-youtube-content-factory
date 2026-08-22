@@ -84,9 +84,14 @@
                 <span class="font-semibold {% if folder.is_complete %}text-emerald-400{% else %}text-amber-400{% endif %} flex items-center gap-1">
                     <i data-lucide="film" class="w-3.5 h-3.5"></i> {{ folder.rendered_count }} Video
                 </span>
-                <span class="text-[11px] text-slate-400 group-hover:text-indigo-300 flex items-center gap-0.5">
-                    Mở thư mục <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-                </span>
+                <div class="flex items-center gap-2">
+                    <button onclick="event.stopPropagation(); deleteSpecificFolder('{{ f_id }}', '{{ f_title }}')" class="btn btn-xs btn-ghost text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1 rounded-lg" title="Xóa toàn bộ video của phim này">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <span class="text-[11px] text-slate-400 group-hover:text-indigo-300 flex items-center gap-0.5">
+                        Mở <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </span>
+                </div>
             </div>
         </div>
         {% endfor %}
