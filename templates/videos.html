@@ -184,8 +184,10 @@
                             <span class="text-slate-300 flex items-center gap-1 font-semibold">
                                 <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> {{ v.duration_seconds|format_duration }}
                             </span>
-                            <span class="text-slate-600">•</span>
-                            <span class="text-[10px] text-slate-400 font-mono">{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB</span>
+                            <span class="text-slate-700 font-bold">|</span>
+                            <span class="text-slate-400 flex items-center gap-1">
+                                <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-amber-400"></i> {{ (v.file_size_bytes / (1024*1024))|round(1) }} MB
+                            </span>
                         </div>
                         <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="text-slate-500 hover:text-rose-400 p-0.5 rounded transition" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -219,16 +221,35 @@
 <dialog id="player_modal" class="modal">
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-sm flex flex-col items-center p-4">
         <div class="flex items-center justify-between w-full mb-3">
-            <h3 class="font-bold text-sm truncate text-white" id="modal_video_title">Xem Video Review</h3>
+            <div class="flex items-center gap-2 truncate flex-1 mr-2">
+                <span id="modal_video_index" class="badge badge-primary badge-xs font-mono">1/1</span>
+                <h3 class="font-bold text-sm truncate text-white" id="modal_video_title">Xem Video Review</h3>
+            </div>
             <button onclick="closePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
         </div>
         
-        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
+        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800 group">
             <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+
+            <!-- Floating Next/Prev Arrow Buttons -->
+            <button id="modal_floating_prev" onclick="prevVideo()" class="btn btn-circle btn-sm bg-slate-950/80 hover:bg-indigo-600 text-white border-0 absolute left-2 top-1/2 -translate-y-1/2 shadow-xl transition-all opacity-75 hover:opacity-100 disabled:hidden z-20" title="Video trước (Phím ←)">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <button id="modal_floating_next" onclick="nextVideo()" class="btn btn-circle btn-sm bg-slate-950/80 hover:bg-indigo-600 text-white border-0 absolute right-2 top-1/2 -translate-y-1/2 shadow-xl transition-all opacity-75 hover:opacity-100 disabled:hidden z-20" title="Video tiếp theo (Phím →)">
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
         </div>
 
-        <div class="modal-action w-full flex justify-end items-center mt-3 pt-2 border-t border-slate-800">
-            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-6">Đóng</button>
+        <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
+            <div class="flex items-center gap-1.5">
+                <button onclick="prevVideo()" id="modal_btn_prev" class="btn btn-sm btn-outline gap-1 text-xs px-3" title="Video trước (Phím ←)">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> Trước
+                </button>
+                <button onclick="nextVideo()" id="modal_btn_next" class="btn btn-sm btn-outline gap-1 text-xs px-3" title="Video tiếp theo (Phím →)">
+                    Sau <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-5">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -237,12 +258,69 @@
 </dialog>
 
 <script>
+    let currentPlaylist = [];
+    let currentVideoIdx = 0;
+
+    function buildCurrentPlaylist() {
+        currentPlaylist = [];
+        const container = (currentFolderId === 'root' || !currentFolderId)
+            ? $('.video-card:visible') 
+            : $(`#folder_content_${currentFolderId} .video-card:visible`);
+        
+        container.each(function() {
+            const vId = $(this).attr('data-id');
+            const title = $(this).attr('data-title') || $(this).find('p span.font-bold').text().trim() || 'Video';
+            if (vId) {
+                currentPlaylist.push({ id: vId, title: title });
+            }
+        });
+    }
+
     function playVideo(videoId, title) {
-        const streamUrl = `/api/v1/videos/${videoId}/stream`;
-        $('#modal_video_title').text(title);
-        $('#modal_video_element').attr('src', streamUrl);
+        buildCurrentPlaylist();
+        currentVideoIdx = currentPlaylist.findIndex(item => String(item.id) === String(videoId));
+        if (currentVideoIdx === -1) {
+            currentPlaylist = [{ id: videoId, title: title }];
+            currentVideoIdx = 0;
+        }
+        loadVideoAtCurrentIndex();
         document.getElementById('player_modal').showModal();
-        document.getElementById('modal_video_element').play();
+    }
+
+    function loadVideoAtCurrentIndex() {
+        if (currentPlaylist.length === 0) return;
+        const cur = currentPlaylist[currentVideoIdx];
+        const streamUrl = `/api/v1/videos/${cur.id}/stream`;
+
+        $('#modal_video_title').text(cur.title);
+        $('#modal_video_index').text(`${currentVideoIdx + 1}/${currentPlaylist.length}`);
+        
+        const videoEl = document.getElementById('modal_video_element');
+        videoEl.src = streamUrl;
+        videoEl.play().catch(() => {});
+
+        // Update Prev / Next buttons state
+        const hasPrev = currentVideoIdx > 0;
+        const hasNext = currentVideoIdx < currentPlaylist.length - 1;
+
+        $('#modal_btn_prev, #modal_floating_prev').prop('disabled', !hasPrev);
+        $('#modal_btn_next, #modal_floating_next').prop('disabled', !hasNext);
+
+        lucide.createIcons();
+    }
+
+    function prevVideo() {
+        if (currentVideoIdx > 0) {
+            currentVideoIdx--;
+            loadVideoAtCurrentIndex();
+        }
+    }
+
+    function nextVideo() {
+        if (currentVideoIdx < currentPlaylist.length - 1) {
+            currentVideoIdx++;
+            loadVideoAtCurrentIndex();
+        }
     }
 
     function closePlayerModal() {
@@ -253,6 +331,18 @@
         }
         document.getElementById('player_modal').close();
     }
+
+    // Keyboard navigation (← and → arrow keys)
+    $(document).on('keydown', function(e) {
+        const modal = document.getElementById('player_modal');
+        if (modal && modal.open) {
+            if (e.key === 'ArrowLeft') {
+                prevVideo();
+            } else if (e.key === 'ArrowRight') {
+                nextVideo();
+            }
+        }
+    });
 
     const Toast = Swal.mixin({
         toast: true,
