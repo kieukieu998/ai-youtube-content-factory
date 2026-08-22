@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.ai.provider_factory import get_ai_provider
 
@@ -11,8 +11,8 @@ class SEOMetadata(BaseModel):
 class SEOAgent:
     """Agent 10: Tối ưu hóa tiêu đề, mô tả và hashtag trending cho TikTok."""
     
-    def __init__(self, provider_type: str = "gemini_free"):
-        self.provider = get_ai_provider(provider_type)
+    def __init__(self, provider_type: Optional[str] = None):
+        self.provider = get_ai_provider(provider_type=provider_type, stage="render")
 
     async def generate_seo_pack(
         self, 

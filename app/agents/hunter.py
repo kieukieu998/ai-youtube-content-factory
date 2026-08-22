@@ -17,8 +17,8 @@ class HunterCandidatesList(BaseModel):
 class MovieHunterAgent:
     """Agent 1: Tìm kiếm, gợi ý phim hấp dẫn và chấm điểm tiềm năng viral."""
     
-    def __init__(self, provider_type: str = "gemini_free"):
-        self.provider = get_ai_provider(provider_type)
+    def __init__(self, provider_type: Optional[str] = None):
+        self.provider = get_ai_provider(provider_type=provider_type, stage="discovery")
 
     async def discover_movies(
         self, 

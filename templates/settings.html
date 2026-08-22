@@ -12,36 +12,95 @@
     <form id="settings_form" onsubmit="saveSettings(event)" class="space-y-6">
         
         <!-- AI Engine Settings -->
-        <div class="glass-card p-6 rounded-2xl space-y-4">
+        <div class="glass-card p-6 rounded-2xl space-y-5">
             <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-                <i data-lucide="brain" class="w-5 h-5 text-indigo-400"></i> AI Provider & API Keys
+                <i data-lucide="brain" class="w-5 h-5 text-indigo-400"></i> Cấu Hình AI Engine & Tùy Chọn Theo Công Đoạn
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-control">
-                    <label class="label"><span class="label-text text-slate-300 font-semibold">AI Provider Mặc Định:</span></label>
+                    <label class="label"><span class="label-text text-slate-300 font-semibold">AI Provider Tổng Mặc Định:</span></label>
                     <select name="default_ai_provider" class="select select-bordered bg-slate-900 text-white w-full">
-                        <option value="gemini_free" {% if settings.default_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini (Gói Miễn Phí Free Tier 100%)</option>
+                        <option value="gemini_free" {% if settings.default_ai_provider == 'gemini_free' or not settings.default_ai_provider %}selected{% endif %}>Google Gemini (Gói Free Tier 100%)</option>
                         <option value="deepseek" {% if settings.default_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek API (Mở rộng)</option>
-                        <option value="openai" {% if settings.default_ai_provider == 'openai' %}selected{% endif %}>OpenAI ChatGPT (Mở rộng)</option>
+                        <option value="openai" {% if settings.default_ai_provider == 'openai' %}selected{% endif %}>OpenAI ChatGPT (GPT-4o)</option>
                     </select>
                 </div>
 
                 <div class="form-control">
                     <label class="label"><span class="label-text text-slate-300 font-semibold">Chế Độ Vận Hành:</span></label>
                     <select name="operation_mode" class="select select-bordered bg-slate-900 text-white w-full">
-                        <option value="semi_auto" {% if settings.operation_mode == 'semi_auto' %}selected{% endif %}>Semi-Auto (Bán tự động — Duyệt Hook trước khi render)</option>
+                        <option value="semi_auto" {% if settings.operation_mode == 'semi_auto' or not settings.operation_mode %}selected{% endif %}>Semi-Auto (Bán tự động — Duyệt Hook trước khi render)</option>
                         <option value="full_auto" {% if settings.operation_mode == 'full_auto' %}selected{% endif %}>Full-Auto (Tự động 100% từ A-Z)</option>
                     </select>
                 </div>
             </div>
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text text-slate-300 font-semibold">Google Gemini API Key:</span>
-                    <a href="https://aistudio.google.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">Lấy Key miễn phí tại Google AI Studio &rarr;</a>
-                </label>
-                <input type="password" name="gemini_api_key" value="{{ gemini_api_key }}" placeholder="AIzaSy..." class="input input-bordered bg-slate-900 text-white font-mono w-full" />
+            <!-- Specific Stage AI Providers -->
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                    <i data-lucide="sliders" class="w-4 h-4"></i> Cấu Hình Riêng Cho Từng Công Đoạn (Tùy Chọn)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="form-control">
+                        <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">1. Khám Phá Phim:</span></label>
+                        <select name="discovery_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                            <option value="inherit" {% if not settings.discovery_ai_provider or settings.discovery_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
+                            <option value="gemini_free" {% if settings.discovery_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
+                            <option value="deepseek" {% if settings.discovery_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
+                            <option value="openai" {% if settings.discovery_ai_provider == 'openai' %}selected{% endif %}>OpenAI GPT-4o</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">2. Viết Kịch Bản & Hook:</span></label>
+                        <select name="script_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                            <option value="inherit" {% if not settings.script_ai_provider or settings.script_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
+                            <option value="gemini_free" {% if settings.script_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
+                            <option value="deepseek" {% if settings.script_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
+                            <option value="openai" {% if settings.script_ai_provider == 'openai' %}selected{% endif %}>OpenAI GPT-4o</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">3. Render & SEO/QA:</span></label>
+                        <select name="render_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                            <option value="inherit" {% if not settings.render_ai_provider or settings.render_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
+                            <option value="gemini_free" {% if settings.render_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
+                            <option value="deepseek" {% if settings.render_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
+                            <option value="openai" {% if settings.render_ai_provider == 'openai' %}selected{% endif %}>OpenAI GPT-4o</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Keys Section -->
+            <div class="space-y-3 pt-2">
+                <div class="form-control">
+                    <label class="label py-1">
+                        <span class="label-text text-slate-300 text-xs font-semibold">Google Gemini API Key:</span>
+                        <a href="https://aistudio.google.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">Lấy Key miễn phí tại Google AI Studio &rarr;</a>
+                    </label>
+                    <input type="password" name="gemini_api_key" value="{{ gemini_api_key }}" placeholder="AIzaSy..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="form-control">
+                        <label class="label py-1">
+                            <span class="label-text text-slate-300 text-xs font-semibold">DeepSeek API Key:</span>
+                            <a href="https://platform.deepseek.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">DeepSeek Platform &rarr;</a>
+                        </label>
+                        <input type="password" name="deepseek_api_key" value="{{ deepseek_api_key }}" placeholder="sk-..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label py-1">
+                            <span class="label-text text-slate-300 text-xs font-semibold">OpenAI API Key:</span>
+                            <a href="https://platform.openai.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">OpenAI Platform &rarr;</a>
+                        </label>
+                        <input type="password" name="openai_api_key" value="{{ openai_api_key }}" placeholder="sk-..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                    </div>
+                </div>
             </div>
         </div>
 
