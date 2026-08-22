@@ -737,10 +737,14 @@
                     url: `/api/v1/scripts/${scriptId}`,
                     type: 'DELETE',
                     success: function(res) {
-                        $(`.script-card[data-id="${scriptId}"]`).fadeOut(300, function() {
+                        $(`#script_tile_${scriptId}, .script-folder-tile[data-id="${scriptId}"]`).fadeOut(300, function() {
                             $(this).remove();
-                            filterScripts();
+                            filterScriptFolders();
                         });
+                        $(`#script_content_${scriptId}`).remove();
+                        if (currentScriptFolderId === String(scriptId)) {
+                            navigateScriptFolder('root');
+                        }
                         Toast.fire({
                             icon: 'success',
                             title: res.message || 'Đã xóa kịch bản thành công!'
@@ -756,7 +760,7 @@
 
     function toggleSelectAllScripts(master) {
         const isChecked = $(master).is(':checked');
-        $('.script-card:visible .script-checkbox').prop('checked', isChecked);
+        $('.script-folder-tile:visible .script-checkbox').prop('checked', isChecked);
         updateSelectedScriptsCount();
     }
 
@@ -797,10 +801,11 @@
                     data: JSON.stringify({ ids: ids }),
                     success: function(res) {
                         ids.forEach(id => {
-                            $(`.script-card[data-id="${id}"]`).fadeOut(300, function() {
+                            $(`#script_tile_${id}, .script-folder-tile[data-id="${id}"]`).fadeOut(300, function() {
                                 $(this).remove();
-                                filterScripts();
+                                filterScriptFolders();
                             });
+                            $(`#script_content_${id}`).remove();
                         });
                         Toast.fire({
                             icon: 'success',
