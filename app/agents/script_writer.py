@@ -63,3 +63,37 @@ class ScriptWriterAgent:
         )
         result.total_episodes = len(result.episodes)
         return result
+
+    async def rewrite_single_episode(
+        self,
+        movie_title: str,
+        episode_number: int,
+        total_episodes: int,
+        current_hook: str,
+        current_content: str,
+        style: str = "dramatic",
+        custom_instruction: Optional[str] = None
+    ) -> EpisodeScript:
+        prompt = (
+            f"Tên Phim: {movie_title}\n"
+            f"Tập cần viết lại: Tập {episode_number} trên tổng số {total_episodes} tập.\n"
+            f"Phong cách yêu cầu: {style}\n"
+            f"Nội dung hiện tại của tập {episode_number}:\n"
+            f"- Hook cũ: {current_hook}\n"
+            f"- Lời bình cũ: {current_content}\n\n"
+            f"Yêu cầu bổ sung của người dùng: {custom_instruction or 'Làm cho nội dung kịch tính, lôi cuốn, giàu hình ảnh và sắc sảo hơn'}\n\n"
+            f"YÊU CẦU ĐẦU RA:\n"
+            f"1. Viết lại hoàn toàn mới cho riêng Tập {episode_number}.\n"
+            f"2. Hook: Câu mở đầu cực kỳ giật gân, cuốn hút trong 1-3s đầu.\n"
+            f"3. Narrative Body: Lời bình sắc sảo, dồn dập, khoảng 180-300 từ.\n"
+            f"4. CTA: Câu kết thúc ấn tượng, kêu gọi tương tác."
+        )
+        system_prompt = (
+            "Bạn là Chuyên Gia Biên Kịch Review Phim Triệu View trên TikTok. "
+            "Hãy viết lại tập này với phong cách cực kỳ lôi cuốn, gay cấn và cuốn hút."
+        )
+        return await self.provider.generate_structured(
+            prompt=prompt,
+            schema=EpisodeScript,
+            system_prompt=system_prompt
+        )

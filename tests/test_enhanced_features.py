@@ -219,3 +219,55 @@ def test_scene_slicing_distinct_windows_and_versioning(tmp_path):
 
         assert ep1_end <= ep2_start
         assert ep2_end <= ep3_start
+
+def test_ai_rewrite_single_episode(client, db_session):
+    """Test AI single episode rewriting endpoint."""
+    from unittest.mock import AsyncMock
+    from app.agents.script_writer import EpisodeScript
+
+    movie = Movie(title="Test Rewrite Movie", status="discovered")
+    db_session.add(movie)
+    db_session.commit()
+
+    script = Script(movie_id=movie.id, title="Kịch Bản Rewrite Test", target_episodes=2)
+    db_session.add(script)
+    db_session.commit()
+
+    episode = Episode(
+        script_id=script.id,
+        episode_number=1,
+        hook_text="Hook ban đầu",
+        content_text="Lời bình ban đầu",
+        call_to_action="CTA ban đầu",
+        status="approval_pending"
+    )
+    db_session.add(episode)
+    db_session.commit()
+    db_session.refresh(episode)
+
+    mock_script = EpisodeScript(
+        episode_number=1,
+        title="Tập 1 Mới",
+        hook_draft="Hook siêu giật gân viết bởi AI!",
+        narrative_body="Lời bình mới toanh cực kỳ kịch tính và sắc nét.",
+        call_to_action="Nhớ follow để đón xem tập 2!"
+    )
+
+    with patch("app.agents.script_writer.ScriptWriterAgent.rewrite_single_episode", new_callable=AsyncMock) as mock_rewrite:
+        mock_rewrite.return_value = mock_script
+        res = client.post(
+            f"/api/v1/episodes/{episode.id}/ai-rewrite",
+            data={
+                "style": "suspense",
+                "custom_instruction": "Tăng độ kịch tính lên mức tối đa"
+            }
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "success"
+        assert data["episode"]["hook_text"] == "Hook siêu giật gân viết bởi AI!"
+        assert data["episode"]["content_text"] == "Lời bình mới toanh cực kỳ kịch tính và sắc nét."
+
+        # Verify DB updated
+        db_session.refresh(episode)
+        assert episode.hook_text == "Hook siêu giật gân viết bởi AI!"

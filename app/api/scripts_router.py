@@ -90,6 +90,58 @@ async def update_episode(
         }
     })
 
+@router.post("/api/v1/episodes/{episode_id}/ai-rewrite")
+async def ai_rewrite_episode(
+    episode_id: int,
+    style: str = Form("dramatic"),
+    custom_instruction: str = Form(None),
+    ai_provider: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    import logging
+    from app.agents.script_writer import ScriptWriterAgent
+
+    logger = logging.getLogger("api.scripts")
+    episode = db.query(Episode).filter(Episode.id == episode_id).first()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tập phim")
+
+    movie_title = episode.script.movie.title if (episode.script and episode.script.movie) else (episode.script.title if episode.script else "Bộ Phim")
+    total_episodes = len(episode.script.episodes) if (episode.script and episode.script.episodes) else 1
+
+    try:
+        writer = ScriptWriterAgent(provider_type=ai_provider)
+        rewritten = await writer.rewrite_single_episode(
+            movie_title=movie_title,
+            episode_number=episode.episode_number,
+            total_episodes=total_episodes,
+            current_hook=episode.hook_text or "",
+            current_content=episode.content_text or "",
+            style=style,
+            custom_instruction=custom_instruction
+        )
+
+        episode.hook_text = rewritten.hook_draft
+        episode.content_text = rewritten.narrative_body
+        if rewritten.call_to_action:
+            episode.call_to_action = rewritten.call_to_action
+
+        db.commit()
+        return JSONResponse({
+            "status": "success",
+            "message": f"AI đã viết lại kịch bản Tập {episode.episode_number} thành công!",
+            "episode": {
+                "id": episode.id,
+                "episode_number": episode.episode_number,
+                "hook_text": episode.hook_text,
+                "content_text": episode.content_text,
+                "call_to_action": episode.call_to_action
+            }
+        })
+    except Exception as e:
+        logger.error(f"Failed to AI rewrite episode {episode_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Lỗi AI viết lại: {str(e)}")
+
 @router.post("/api/v1/scripts/{script_id}/update")
 async def update_script(
     script_id: int,
