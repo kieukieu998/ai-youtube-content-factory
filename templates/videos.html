@@ -121,15 +121,22 @@
              id="folder_content_{{ f_id }}"
              data-title="{{ f_title }}">
             {% for v in folder.videos %}
+            {% set ep_num = v.episode.episode_number if v.episode else 1 %}
+            {% set ep_hook = (v.episode.hook_text or '') if v.episode else '' %}
+            {% set mv_title = (v.episode.script.movie.title or '') if (v.episode and v.episode.script and v.episode.script.movie) else f_title %}
+            {% set search_blob = "tập " ~ ep_num ~ " tap " ~ ep_num ~ " ep " ~ ep_num ~ " v" ~ (v.render_version or 1) ~ " " ~ mv_title ~ " " ~ ep_hook ~ " " ~ v.qa_status %}
             <div class="video-card glass-card rounded-xl overflow-hidden flex flex-col justify-between border border-slate-800/80 hover:border-indigo-500/50 transition-all duration-200 hover:scale-[1.02] shadow-lg group relative"
                  id="video_card_{{ v.id }}"
                  data-id="{{ v.id }}"
-                 data-title="{{ v.episode.script.movie.title|lower }}"
-                 data-hook="{{ (v.episode.hook_text or '')|lower }}"
-                 data-qa="{{ v.qa_status }}">
+                 data-title="{{ mv_title|lower }}"
+                 data-ep-num="{{ ep_num }}"
+                 data-version="v{{ v.render_version or 1 }}"
+                 data-hook="{{ ep_hook|lower }}"
+                 data-qa="{{ v.qa_status }}"
+                 data-search="{{ search_blob|lower }}">
                 
                 <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
-                     onclick="playVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')"
+                     onclick="playVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')"
                      title="Bấm để xem video">
                     <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
                     
@@ -160,7 +167,7 @@
                 <div class="p-3 space-y-1.5">
                     <div class="font-bold text-white text-xs line-clamp-1 title-text flex items-center justify-between">
                         <span class="flex items-center gap-1">
-                            Tập {{ v.episode.episode_number }}
+                            Tập {{ ep_num }}
                             {% if v.render_version %}
                             <span class="badge {% if v.render_version > 1 %}badge-warning{% else %}badge-info{% endif %} badge-xs font-mono font-bold">v{{ v.render_version }}</span>
                             {% endif %}
@@ -168,13 +175,13 @@
                         <span class="text-[10px] text-slate-500 font-mono">{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB</span>
                     </div>
                     <p class="text-[11px] text-slate-400 line-clamp-2 hook-text">
-                        Hook: "{{ v.episode.hook_text }}"
+                        Hook: "{{ ep_hook }}"
                     </p>
                     <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                        <a href="/api/v1/videos/{{ v.id }}/stream" download="video_ep_{{ v.episode.episode_number }}_v{{ v.render_version or 1 }}.mp4" class="text-slate-400 hover:text-indigo-400 flex items-center gap-1" title="Tải video">
+                        <a href="/api/v1/videos/{{ v.id }}/stream" download="video_ep_{{ ep_num }}_v{{ v.render_version or 1 }}.mp4" class="text-slate-400 hover:text-indigo-400 flex items-center gap-1" title="Tải video">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải Về
                         </a>
-                        <button onclick="deleteVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }} (v{{ v.render_version or 1 }})')" class="text-slate-400 hover:text-rose-400" title="Xóa video này">
+                        <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="text-slate-400 hover:text-rose-400" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -452,16 +459,56 @@
         });
     }
 
+    function normalizeVietnameseText(str) {
+        if (!str) return '';
+        return str.toString().toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'd')
+            .trim();
+    }
+
+    function isMatch(targetStr, rawQ, normQ) {
+        if (!rawQ) return true;
+        const raw = (targetStr || '').toString().toLowerCase();
+        const norm = normalizeVietnameseText(raw);
+        return raw.includes(rawQ) || norm.includes(normQ);
+    }
+
     function filterFoldersAndVideos() {
-        const query = ($('#video_search_input').val() || '').toLowerCase().trim();
+        const rawQuery = ($('#video_search_input').val() || '').toLowerCase().trim();
+        const normQuery = normalizeVietnameseText(rawQuery);
         const qaFilter = $('#qa_filter_select').val();
 
         if (currentFolderId === 'root') {
             let visibleFolders = 0;
             $('.explorer-folder-tile').each(function() {
+                const folderId = $(this).attr('data-id');
                 const title = $(this).attr('data-title') || '';
                 const genre = $(this).attr('data-genre') || '';
-                if (!query || title.includes(query) || genre.includes(query)) {
+                const fullText = $(this).text() || '';
+
+                // Also check if any video inside this folder matches
+                let innerVideoMatch = false;
+                if (rawQuery) {
+                    const innerContainer = $(`#folder_content_${folderId}`);
+                    innerContainer.find('.video-card').each(function() {
+                        const searchBlob = $(this).attr('data-search') || '';
+                        const cardText = $(this).text() || '';
+                        if (isMatch(searchBlob, rawQuery, normQuery) || isMatch(cardText, rawQuery, normQuery)) {
+                            innerVideoMatch = true;
+                            return false; // break loop
+                        }
+                    });
+                }
+
+                const matches = isMatch(title, rawQuery, normQuery) || 
+                                isMatch(genre, rawQuery, normQuery) || 
+                                isMatch(fullText, rawQuery, normQuery) || 
+                                innerVideoMatch;
+
+                if (matches) {
                     $(this).removeClass('hidden');
                     visibleFolders++;
                 } else {
@@ -479,11 +526,17 @@
             const activeContent = $(`#folder_content_${currentFolderId}`);
             let visibleVideos = 0;
             activeContent.find('.video-card').each(function() {
+                const searchBlob = $(this).attr('data-search') || '';
                 const title = $(this).attr('data-title') || '';
                 const hook = $(this).attr('data-hook') || '';
                 const qa = $(this).attr('data-qa') || '';
+                const cardText = $(this).text() || '';
 
-                const matchesQuery = !query || title.includes(query) || hook.includes(query);
+                const matchesQuery = isMatch(searchBlob, rawQuery, normQuery) || 
+                                     isMatch(title, rawQuery, normQuery) || 
+                                     isMatch(hook, rawQuery, normQuery) || 
+                                     isMatch(cardText, rawQuery, normQuery);
+
                 const matchesQA = (qaFilter === 'all') || (qa === qaFilter);
 
                 if (matchesQuery && matchesQA) {

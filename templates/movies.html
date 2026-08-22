@@ -618,19 +618,68 @@
         });
     }
 
+    function normalizeVietnameseText(str) {
+        if (!str) return '';
+        return str.toString().toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'd')
+            .trim();
+    }
+
+    function isMatch(targetStr, rawQ, normQ) {
+        if (!rawQ) return true;
+        const raw = (targetStr || '').toString().toLowerCase();
+        const norm = normalizeVietnameseText(raw);
+        return raw.includes(rawQ) || norm.includes(normQ);
+    }
+
     function filterMovies() {
-        const query = ($('#movie_search_input').val() || '').toLowerCase().trim();
+        const rawQuery = ($('#movie_search_input').val() || '').toLowerCase().trim();
+        const normQuery = normalizeVietnameseText(rawQuery);
+        let visibleCount = 0;
+
         $('.movie-row').each(function() {
             const title = $(this).attr('data-title') || '';
             const orig = $(this).attr('data-orig') || '';
             const genre = $(this).attr('data-genre') || '';
-            if (!query || title.includes(query) || orig.includes(query) || genre.includes(query)) {
+            const year = $(this).attr('data-year') || '';
+            const synopsis = $(this).attr('data-synopsis') || '';
+            const rowText = $(this).text() || '';
+
+            const matches = isMatch(title, rawQuery, normQuery) || 
+                            isMatch(orig, rawQuery, normQuery) || 
+                            isMatch(genre, rawQuery, normQuery) || 
+                            isMatch(year, rawQuery, normQuery) || 
+                            isMatch(synopsis, rawQuery, normQuery) || 
+                            isMatch(rowText, rawQuery, normQuery);
+
+            if (matches) {
                 $(this).show();
+                visibleCount++;
             } else {
                 $(this).hide();
                 $(this).find('.movie-checkbox').prop('checked', false);
             }
         });
+
+        if (visibleCount === 0 && $('.movie-row').length > 0) {
+            if ($('#no_movie_search_row').length === 0) {
+                $('tbody').append(`
+                    <tr id="no_movie_search_row">
+                        <td colspan="7" class="py-12 text-center text-slate-500">
+                            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            <p class="text-sm">Không tìm thấy bộ phim nào phù hợp với từ khóa "${rawQuery}".</p>
+                        </td>
+                    </tr>
+                `);
+                lucide.createIcons();
+            }
+        } else {
+            $('#no_movie_search_row').remove();
+        }
+
         updateSelectedMoviesCount();
     }
 

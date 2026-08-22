@@ -741,25 +741,77 @@
         filterScriptFolders();
     }
 
+    function normalizeVietnameseText(str) {
+        if (!str) return '';
+        return str.toString().toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'd')
+            .trim();
+    }
+
+    function isMatch(targetStr, rawQ, normQ) {
+        if (!rawQ) return true;
+        const raw = (targetStr || '').toString().toLowerCase();
+        const norm = normalizeVietnameseText(raw);
+        return raw.includes(rawQ) || norm.includes(normQ);
+    }
+
     function filterScriptFolders() {
-        const query = ($('#script_search_input').val() || '').toLowerCase().trim();
+        const rawQuery = ($('#script_search_input').val() || '').toLowerCase().trim();
+        const normQuery = normalizeVietnameseText(rawQuery);
+
         if (currentScriptFolderId === 'root') {
+            let visibleCount = 0;
             $('.script-folder-tile').each(function() {
+                const scriptId = $(this).attr('data-id');
                 const title = $(this).attr('data-title') || '';
                 const genre = $(this).attr('data-genre') || '';
-                if (!query || title.includes(query) || genre.includes(query)) {
+                const fullText = $(this).text() || '';
+
+                // Also check if any episode in this script matches
+                let innerEpisodeMatch = false;
+                if (rawQuery) {
+                    const innerContainer = $(`#script_content_${scriptId}`);
+                    innerContainer.find('[id^="ep_container_"]').each(function() {
+                        const epNum = $(this).attr('data-ep-num') || '';
+                        const hook = $(this).attr('data-hook') || '';
+                        const body = $(this).attr('data-body') || '';
+                        const epSearch = `tập ${epNum} tap ${epNum} ep ${epNum} ${hook} ${body}`;
+                        if (isMatch(epSearch, rawQuery, normQuery)) {
+                            innerEpisodeMatch = true;
+                            return false;
+                        }
+                    });
+                }
+
+                const matches = isMatch(title, rawQuery, normQuery) || 
+                                isMatch(genre, rawQuery, normQuery) || 
+                                isMatch(fullText, rawQuery, normQuery) || 
+                                innerEpisodeMatch;
+
+                if (matches) {
                     $(this).removeClass('hidden');
+                    visibleCount++;
                 } else {
                     $(this).addClass('hidden');
                 }
             });
         } else {
             const activeContent = $(`#script_content_${currentScriptFolderId}`);
+            let visibleCount = 0;
             activeContent.find('[id^="ep_container_"]').each(function() {
-                const hook = ($(this).attr('data-hook') || '').toLowerCase();
-                const body = ($(this).attr('data-body') || '').toLowerCase();
-                if (!query || hook.includes(query) || body.includes(query)) {
+                const epNum = $(this).attr('data-ep-num') || '';
+                const movie = $(this).attr('data-movie') || '';
+                const hook = $(this).attr('data-hook') || '';
+                const body = $(this).attr('data-body') || '';
+                const cta = $(this).attr('data-cta') || '';
+                const epSearch = `tập ${epNum} tap ${epNum} ep ${epNum} ${movie} ${hook} ${body} ${cta} ${$(this).text()}`;
+
+                if (isMatch(epSearch, rawQuery, normQuery)) {
                     $(this).removeClass('hidden');
+                    visibleCount++;
                 } else {
                     $(this).addClass('hidden');
                 }

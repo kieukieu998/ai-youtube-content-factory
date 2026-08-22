@@ -298,24 +298,66 @@
         updateSelectedJobsCount();
     }
 
+    function normalizeVietnameseText(str) {
+        if (!str) return '';
+        return str.toString().toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'd')
+            .trim();
+    }
+
+    function isMatch(targetStr, rawQ, normQ) {
+        if (!rawQ) return true;
+        const raw = (targetStr || '').toString().toLowerCase();
+        const norm = normalizeVietnameseText(raw);
+        return raw.includes(rawQ) || norm.includes(normQ);
+    }
+
     function filterJobs() {
-        const query = ($('#job_search_input').val() || '').toLowerCase().trim();
+        const rawQuery = ($('#job_search_input').val() || '').toLowerCase().trim();
+        const normQuery = normalizeVietnameseText(rawQuery);
         const statusFilter = $('#job_status_filter').val();
+        let visibleCount = 0;
         
         $('.job-row').each(function() {
-            const name = ($(this).attr('data-name') || '').toLowerCase();
-            const status = ($(this).attr('data-status') || '').toLowerCase();
+            const name = $(this).attr('data-name') || '';
+            const status = $(this).attr('data-status') || '';
+            const id = $(this).attr('data-id') || '';
+            const rowText = $(this).text() || '';
 
-            const matchesQuery = !query || name.includes(query);
+            const matchesQuery = isMatch(name, rawQuery, normQuery) || 
+                                 isMatch(id, rawQuery, normQuery) || 
+                                 isMatch(`#${id}`, rawQuery, normQuery) || 
+                                 isMatch(rowText, rawQuery, normQuery);
+
             const matchesStatus = (statusFilter === 'all') || (status === statusFilter);
 
             if (matchesQuery && matchesStatus) {
                 $(this).show();
+                visibleCount++;
             } else {
                 $(this).hide();
                 $(this).find('.job-checkbox').prop('checked', false);
             }
         });
+
+        if (visibleCount === 0 && $('.job-row').length > 0) {
+            if ($('#no_job_search_row').length === 0) {
+                $('tbody').append(`
+                    <tr id="no_job_search_row">
+                        <td colspan="7" class="py-12 text-center text-slate-500">
+                            <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            <p class="text-sm">Không tìm thấy tác vụ nào phù hợp với từ khóa "${rawQuery}".</p>
+                        </td>
+                    </tr>
+                `);
+                lucide.createIcons();
+            }
+        } else {
+            $('#no_job_search_row').remove();
+        }
 
         // Reset or sync master checkbox
         const visibleCheckboxes = $('.job-row:visible .job-checkbox');
