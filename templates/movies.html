@@ -939,6 +939,7 @@
 
         $('#add_source_yt_input').val('');
         Swal.fire({
+            target: document.getElementById('source_player_modal') || 'body',
             title: 'Đang tải thêm video...',
             text: 'Vui lòng chờ giây lát trong khi AI tải clip YouTube này về kho media.',
             allowOutsideClick: false,
@@ -947,6 +948,7 @@
 
         $.post(`/api/v1/movies/${currentPreviewMovie.id}/sources/add-youtube`, { youtube_url: ytUrl }, function(res) {
             Swal.fire({
+                target: document.getElementById('source_player_modal') || 'body',
                 title: 'Thành Công!',
                 text: res.message,
                 icon: 'success',
@@ -954,7 +956,12 @@
             });
             loadMovieSourcesPlaylist(currentPreviewMovie.id);
         }).fail(function(err) {
-            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải thêm video từ YouTube', 'error');
+            Swal.fire({
+                target: document.getElementById('source_player_modal') || 'body',
+                title: 'Lỗi',
+                text: err.responseJSON?.detail || 'Không thể tải thêm video từ YouTube',
+                icon: 'error'
+            });
         });
     }
 
@@ -965,6 +972,7 @@
         formData.append('file', file);
 
         Swal.fire({
+            target: document.getElementById('source_player_modal') || 'body',
             title: 'Đang tải lên...',
             text: `Đang tải file ${file.name} lên server...`,
             allowOutsideClick: false,
@@ -979,6 +987,7 @@
             contentType: false,
             success: function(res) {
                 Swal.fire({
+                    target: document.getElementById('source_player_modal') || 'body',
                     title: 'Thành Công!',
                     text: res.message,
                     icon: 'success',
@@ -987,7 +996,12 @@
                 loadMovieSourcesPlaylist(currentPreviewMovie.id);
             },
             error: function(err) {
-                Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải file lên', 'error');
+                Swal.fire({
+                    target: document.getElementById('source_player_modal') || 'body',
+                    title: 'Lỗi',
+                    text: err.responseJSON?.detail || 'Không thể tải file lên',
+                    icon: 'error'
+                });
             }
         });
     }
@@ -997,6 +1011,7 @@
         if (!currentPreviewMovie.id) return;
 
         Swal.fire({
+            target: document.getElementById('source_player_modal') || 'body',
             title: 'Xóa nguồn video này?',
             text: 'File video này sẽ bị xóa khỏi bộ nhớ máy tính.',
             icon: 'warning',
@@ -1007,6 +1022,16 @@
             cancelButtonText: 'Hủy'
         }).then((result) => {
             if (result.isConfirmed) {
+                if (activeSourceId === sourceId) {
+                    const vid = document.getElementById('modal_source_video_element');
+                    if (vid) {
+                        vid.pause();
+                        vid.currentTime = 0;
+                        vid.removeAttribute('src');
+                        vid.load();
+                    }
+                }
+
                 $.ajax({
                     url: `/api/v1/movies/${currentPreviewMovie.id}/sources/${sourceId}`,
                     type: 'DELETE',
@@ -1015,7 +1040,12 @@
                         loadMovieSourcesPlaylist(currentPreviewMovie.id);
                     },
                     error: function(err) {
-                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa nguồn này', 'error');
+                        Swal.fire({
+                            target: document.getElementById('source_player_modal') || 'body',
+                            title: 'Lỗi',
+                            text: err.responseJSON?.detail || 'Không thể xóa nguồn này',
+                            icon: 'error'
+                        });
                     }
                 });
             }
