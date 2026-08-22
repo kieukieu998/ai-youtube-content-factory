@@ -155,6 +155,10 @@ class JobWorker:
             raise ValueError(f"Movie ID {movie_id} not found")
 
         # 1. Analyst
+        job.progress = 20
+        job.result = "Đang phân tích cốt truyện & cao trào phim..."
+        db.commit()
+
         analyst = MovieAnalystAgent(provider_type=ai_provider)
         analysis = await analyst.analyze_movie(
             title=movie.title, 
@@ -162,7 +166,8 @@ class JobWorker:
             genre=movie.genre or "",
             target_episodes=target_episodes
         )
-        job.progress = 40
+        job.progress = 50
+        job.result = f"Đang viết {target_episodes} tập kịch bản ({target_duration_seconds // 60} phút)..."
         db.commit()
 
         # 2. Script Writer
@@ -174,39 +179,30 @@ class JobWorker:
             target_episodes=target_episodes,
             target_duration_seconds=target_duration_seconds
         )
-        job.progress = 70
+        job.progress = 85
+        job.result = "Đang lưu kịch bản và phân cảnh vào cơ sở dữ liệu..."
         db.commit()
 
         # 3. Create Script entity
         script = Script(
             movie_id=movie.id,
-            title=f"Kịch Bản Review - {movie.title}",
-            target_episodes=len(script_pkg.episodes),
-            full_script=json.dumps([ep.model_dump() for ep in script_pkg.episodes], ensure_ascii=False),
-            style=style or analysis.tone_style
+            title=f"Kịch Bản Review – {movie.title}",
+            style=style,
+            target_episodes=len(script_pkg.episodes)
         )
         db.add(script)
         db.flush()
 
-        # 4. Generate Hooks for each episode
-        hook_gen = HookGeneratorAgent(provider_type=ai_provider)
-        for ep in script_pkg.episodes:
-            hooks_result = await hook_gen.generate_hooks(ep.narrative_body, movie.title)
-            selected_hook = hooks_result.recommended_best_hook or ep.hook_draft
-            
-            # Read operation mode
-            mode_setting = db.query(Setting).filter(Setting.key == "operation_mode").first()
-            op_mode = mode_setting.value if mode_setting else "semi_auto"
-            
-            episode_status = "approved" if op_mode == "full_auto" else "approval_pending"
+        auto_mode = settings.OPERATION_MODE == "auto"
+        episode_status = "approved" if auto_mode else "approval_pending"
 
+        for ep_data in script_pkg.episodes:
             episode = Episode(
                 script_id=script.id,
-                episode_number=ep.episode_number,
-                hook_text=selected_hook,
-                hook_score=hooks_result.options[0].hook_score if hooks_result.options else 85.0,
-                content_text=ep.narrative_body,
-                call_to_action=ep.call_to_action,
+                episode_number=ep_data.episode_number,
+                hook_text=ep_data.hook_draft,
+                content_text=ep_data.narrative_body,
+                call_to_action=ep_data.call_to_action,
                 status=episode_status
             )
             db.add(episode)
@@ -214,7 +210,7 @@ class JobWorker:
         movie.status = "scripted"
         job.status = "completed"
         job.progress = 100
-        job.result = json.dumps({"script_id": script.id, "episodes_count": len(script_pkg.episodes)}, ensure_ascii=False)
+        job.result = f"Hoàn thành {len(script_pkg.episodes)} tập kịch bản (Đã đưa vào danh sách chờ duyệt)"
         db.commit()
         logger.info(f"Job #{job.id} completed. Generated {len(script_pkg.episodes)} episodes for Movie {movie.title}")
 
@@ -229,13 +225,18 @@ class JobWorker:
         working_dir.mkdir(parents=True, exist_ok=True)
         
         # 1. Voiceover Generation
+        job.progress = 20
+        job.result = "Đang tạo giọng đọc AI (TTS) truyền cảm..."
+        db.commit()
+
         full_narration = f"{episode.hook_text}. {episode.content_text} {episode.call_to_action or ''}".strip()
         voice_path, words, duration = await VoiceAgent.create_voiceover(
             text=full_narration,
             output_audio_path=str(working_dir / "voice_raw.mp3"),
             voice=settings.DEFAULT_TTS_VOICE
         )
-        job.progress = 30
+        job.progress = 40
+        job.result = "Đang hòa âm nhạc nền kịch tính (Audio Ducking)..."
         db.commit()
 
         # 1.1 Mix with Background Music (Audio Ducking) in thread
@@ -260,13 +261,19 @@ class JobWorker:
             final_audio_path = voice_path
 
         # 2. Subtitle Agent (Kinetic ASS + SRT)
+        job.progress = 55
+        job.result = "Đang tạo phụ đề động chuẩn xác từng mili-giây..."
+        db.commit()
+
         ass_file = str(working_dir / "subs.ass")
         srt_file = str(working_dir / "subs.srt")
         SubtitleAgent.generate_subtitles(words, ass_file, srt_file)
-        job.progress = 55
-        db.commit()
 
         # 3. Scene slicing & selection
+        job.progress = 70
+        job.result = "Đang chọn lọc phân cảnh video hành động ăn khớp..."
+        db.commit()
+
         movie = episode.script.movie
         source_media = movie.sources[0].file_path if (movie.sources and os.path.exists(movie.sources[0].file_path)) else None
         
@@ -326,10 +333,11 @@ class JobWorker:
             )
             selected_clips = [dummy_clip]
 
-        job.progress = 75
+        # 4. Render 9:16 Video in background thread with versioning (v1, v2, v3...)
+        job.progress = 85
+        job.result = "Đang xử lý FFmpeg render video dọc 9:16 (1080x1920)..."
         db.commit()
 
-        # 4. Render 9:16 Video in background thread with versioning (v1, v2, v3...)
         existing_video_count = db.query(Video).filter(Video.episode_id == episode.id).count()
         render_version = existing_video_count + 1
         output_video = str(settings.OUTPUT_MEDIA_DIR / f"video_ep_{episode.id}_v{render_version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4")
@@ -342,10 +350,12 @@ class JobWorker:
             subtitle_ass_path=ass_file,
             enable_anti_shadowban=True
         )
-        job.progress = 90
+        
+        # 5. QA Check in background thread
+        job.progress = 95
+        job.result = "Đang kiểm định chất lượng video (QA)..."
         db.commit()
 
-        # 5. QA Check in background thread
         qa_result = await asyncio.to_thread(QAAgent.inspect_video, output_video)
         
         # 6. Save Video record
@@ -362,6 +372,6 @@ class JobWorker:
         
         job.status = "completed"
         job.progress = 100
-        job.result = json.dumps({"video_path": output_video, "qa_passed": qa_result.passed}, ensure_ascii=False)
+        job.result = f"Render video 9:16 thành công (v{render_version}, {duration:.1f}s)!"
         db.commit()
-        logger.info(f"Job #{job.id} completed. Video rendered at {output_video}")
+        logger.info(f"Job #{job.id} render completed successfully for Episode {episode.id} -> {output_video}")

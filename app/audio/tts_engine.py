@@ -43,6 +43,32 @@ class TTSEngine:
                 return max(1.0, size_kb / 16.0) # ~16KB/s for 128kbps mp3
             return 5.0
 
+    @staticmethod
+    def _split_text_into_chunks(text: str, max_chars: int = 1200) -> List[str]:
+        """Split long narrative into sentence-aligned chunks for reliable Edge-TTS streaming."""
+        paragraphs = text.split("\n")
+        chunks = []
+        current_chunk = []
+        current_len = 0
+
+        for p in paragraphs:
+            p = p.strip()
+            if not p:
+                continue
+            sentences = [s.strip() for s in p.replace("? ", "?|").replace("! ", "!|").replace(". ", ".|").split("|") if s.strip()]
+            for s in sentences:
+                if current_len + len(s) + 1 > max_chars and current_chunk:
+                    chunks.append(" ".join(current_chunk))
+                    current_chunk = [s]
+                    current_len = len(s)
+                else:
+                    current_chunk.append(s)
+                    current_len += len(s) + 1
+
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
+        return chunks if chunks else [text]
+
     @classmethod
     async def generate_speech_with_timestamps(
         cls,
@@ -54,33 +80,55 @@ class TTSEngine:
     ) -> Tuple[str, List[WordTimestamp], float]:
         """
         Generate audio mp3 and calculate word-level timestamps.
-        Returns: (output_audio_path, list of WordTimestamp, duration_seconds)
+        Supports seamless chunking for large 10-20 minute narrations.
         """
         clean_text = text.strip()
         if not clean_text:
             clean_text = "Nội dung phim đang được cập nhật."
 
-        Path(output_audio_path).parent.mkdir(parents=True, exist_ok=True)
+        out_path = Path(output_audio_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Try primary voice and fallbacks
-        voices_to_try = [voice, "vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"]
-        success = False
-        last_err = None
+        chunks = cls._split_text_into_chunks(clean_text, max_chars=1200)
+        temp_chunk_files = []
 
-        for v in dict.fromkeys(voices_to_try):
-            try:
-                communicate = edge_tts.Communicate(clean_text, v, rate=rate, pitch=pitch)
-                await communicate.save(output_audio_path)
-                if os.path.exists(output_audio_path) and os.path.getsize(output_audio_path) > 0:
-                    success = True
-                    break
-            except Exception as e:
-                last_err = e
-                logger.warning(f"Voice {v} failed: {e}. Trying fallback voice...")
-                await asyncio.sleep(1.0)
+        try:
+            for idx, chunk in enumerate(chunks):
+                chunk_file = str(out_path.parent / f"tts_chunk_{idx}_{out_path.name}")
+                voices_to_try = [voice, "vi-VN-HoaiMyNeural", "vi-VN-NamMinhNeural"]
+                success = False
+                last_err = None
 
-        if not success:
-            raise RuntimeError(f"Edge-TTS failed with all voices: {last_err}")
+                for v in dict.fromkeys(voices_to_try):
+                    try:
+                        communicate = edge_tts.Communicate(chunk, v, rate=rate, pitch=pitch)
+                        await communicate.save(chunk_file)
+                        if os.path.exists(chunk_file) and os.path.getsize(chunk_file) > 0:
+                            success = True
+                            temp_chunk_files.append(chunk_file)
+                            break
+                    except Exception as e:
+                        last_err = e
+                        logger.warning(f"Voice {v} on chunk {idx} failed: {e}")
+                        await asyncio.sleep(0.5)
+
+                if not success:
+                    raise RuntimeError(f"Edge-TTS failed on chunk {idx}: {last_err}")
+
+            # Concatenate chunks into final output file
+            with open(output_audio_path, "wb") as outfile:
+                for c_file in temp_chunk_files:
+                    with open(c_file, "rb") as infile:
+                        outfile.write(infile.read())
+
+        finally:
+            # Clean up temporary chunk files
+            for c_file in temp_chunk_files:
+                try:
+                    if os.path.exists(c_file) and c_file != output_audio_path:
+                        os.remove(c_file)
+                except Exception:
+                    pass
 
         # Get exact duration of generated audio
         duration_seconds = cls.get_audio_duration(output_audio_path)
