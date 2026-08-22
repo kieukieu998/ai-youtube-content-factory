@@ -85,14 +85,9 @@
                         </td>
                         <td>
                             {% if m.sources %}
-                            <div class="flex items-center gap-1.5">
-                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20 font-medium" title="Bấm để xem danh sách các video nguồn">
-                                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video ({{ m.sources|length }})
-                                </button>
-                                <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="btn btn-ghost btn-xs text-slate-400 hover:text-white p-1" title="Đổi / Kéo lại video nguồn khác">
-                                    <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-                                </button>
-                            </div>
+                            <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="btn btn-xs btn-success text-white gap-1.5 hover:brightness-110 shadow-sm shadow-emerald-500/20 font-medium" title="Bấm để xem và quản lý các video nguồn">
+                                <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video ({{ m.sources|length }})
+                            </button>
                             {% else %}
                             <div class="flex gap-1.5">
                                 <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="btn btn-xs btn-primary gap-1 shadow-md shadow-indigo-600/30" title="Kéo Trailer YouTube">
