@@ -174,12 +174,15 @@
                             <p id="ep_text_{{ ep.id }}" onclick="toggleExpandText('{{ ep.id }}')" class="text-xs text-slate-300 line-clamp-2 cursor-pointer hover:text-white transition leading-relaxed" title="Bấm để mở rộng / thu gọn lời bình">
                                 {{ ep.content_text }}
                             </p>
-                            <div class="flex items-center gap-3 pt-1">
+                            <div class="flex flex-wrap items-center gap-3 pt-1">
                                 <button type="button" onclick="toggleExpandText('{{ ep.id }}')" id="expand_btn_{{ ep.id }}" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
                                     [Xem toàn bộ lời bình]
                                 </button>
                                 <button type="button" onclick="openEpisodeModal('{{ ep.id }}')" class="text-[11px] text-slate-400 hover:text-slate-200 flex items-center gap-1">
                                     <i data-lucide="eye" class="w-3 h-3"></i> Xem chi tiết & Copy
+                                </button>
+                                <button type="button" onclick="openEditEpisodeModal('{{ ep.id }}')" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold">
+                                    <i data-lucide="edit-3" class="w-3 h-3"></i> Chỉnh Sửa
                                 </button>
                             </div>
                         </div>
@@ -247,9 +250,14 @@
         </div>
 
         <div class="modal-action flex justify-between items-center mt-6 pt-3 border-t border-slate-800">
-            <button type="button" onclick="copyEpisodeText()" class="btn btn-sm btn-outline gap-1.5 text-slate-200 hover:bg-slate-800">
-                <i data-lucide="copy" class="w-4 h-4"></i> Copy Kịch Bản
-            </button>
+            <div class="flex gap-2">
+                <button type="button" onclick="copyEpisodeText()" class="btn btn-sm btn-outline gap-1.5 text-slate-200 hover:bg-slate-800">
+                    <i data-lucide="copy" class="w-4 h-4"></i> Copy
+                </button>
+                <button type="button" id="modal_edit_btn" class="btn btn-sm btn-warning btn-outline gap-1.5">
+                    <i data-lucide="edit-3" class="w-4 h-4"></i> Sửa Kịch Bản
+                </button>
+            </div>
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('episode_detail_modal').close()" class="btn btn-sm btn-ghost">Đóng</button>
                 <button type="button" id="modal_render_btn" class="btn btn-sm btn-primary gap-1">
@@ -257,6 +265,60 @@
                 </button>
             </div>
         </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<!-- Modal Chỉnh Sửa Kịch Bản Tập -->
+<dialog id="edit_episode_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div>
+                <h3 class="font-bold text-lg text-white" id="edit_modal_title">Chỉnh Sửa Kịch Bản</h3>
+                <p class="text-xs text-slate-400" id="edit_modal_subtitle">Can thiệp và tinh chỉnh câu hook hoặc lời bình theo ý bạn</p>
+            </div>
+            <button onclick="document.getElementById('edit_episode_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+        </div>
+
+        <form id="edit_episode_form" onsubmit="saveEpisodeEdit(event)" class="space-y-4">
+            <input type="hidden" id="edit_episode_id" />
+
+            <div class="form-control">
+                <label class="label py-1">
+                    <span class="label-text text-rose-400 text-xs font-bold uppercase flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-3.5 h-3.5"></i> Câu Hook 1-3s (Mở Đầu Video):
+                    </span>
+                </label>
+                <input type="text" id="edit_ep_hook" class="input input-sm input-bordered w-full bg-slate-950 text-white font-medium focus:border-rose-500" required />
+            </div>
+
+            <div class="form-control">
+                <label class="label py-1">
+                    <span class="label-text text-indigo-400 text-xs font-bold uppercase flex items-center gap-1.5">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Lời Bình Chi Tiết (Narrative Body):
+                    </span>
+                </label>
+                <textarea id="edit_ep_body" rows="6" class="textarea textarea-bordered w-full bg-slate-950 text-slate-200 text-sm leading-relaxed focus:border-indigo-500" required></textarea>
+            </div>
+
+            <div class="form-control">
+                <label class="label py-1">
+                    <span class="label-text text-amber-400 text-xs font-bold uppercase flex items-center gap-1.5">
+                        <i data-lucide="megaphone" class="w-3.5 h-3.5"></i> Kêu Gọi Hành Động (CTA Cuối Video):
+                    </span>
+                </label>
+                <input type="text" id="edit_ep_cta" placeholder="Đón xem Tập tiếp theo nhé..." class="input input-sm input-bordered w-full bg-slate-950 text-white focus:border-amber-500" />
+            </div>
+
+            <div class="modal-action flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button type="button" onclick="document.getElementById('edit_episode_modal').close()" class="btn btn-sm btn-ghost">Hủy Bỏ</button>
+                <button type="submit" class="btn btn-sm btn-primary gap-1.5 px-6 shadow-lg shadow-indigo-600/30">
+                    <i data-lucide="save" class="w-4 h-4"></i> Lưu Kịch Bản
+                </button>
+            </div>
+        </form>
     </div>
     <form method="dialog" class="modal-backdrop">
         <button>close</button>
@@ -329,19 +391,71 @@
 
         currentModalText = `[TẬP ${epNum} - ${movie}]\n\n🔥 HOOK:\n${hook}\n\n📖 LỜI BÌNH:\n${body}\n\n📢 CTA:\n${cta}`;
 
-        const renderBtn = $('#modal_render_btn');
-        if (status === 'rendered') {
-            renderBtn.html('<i data-lucide="check" class="w-4 h-4"></i> Đã Render').addClass('btn-disabled');
-        } else {
-            renderBtn.html('<i data-lucide="video" class="w-4 h-4"></i> Render 9:16').removeClass('btn-disabled');
-            renderBtn.off('click').on('click', function() {
-                document.getElementById('episode_detail_modal').close();
-                renderEpisode(epId);
-            });
-        }
+        // Connect Edit button in Detail Modal
+        $('#modal_edit_btn').off('click').on('click', function() {
+            document.getElementById('episode_detail_modal').close();
+            openEditEpisodeModal(epId);
+        });
 
         lucide.createIcons();
         document.getElementById('episode_detail_modal').showModal();
+    }
+
+    function openEditEpisodeModal(epId) {
+        const container = $(`#ep_container_${epId}`);
+        const movie = container.attr('data-movie') || '';
+        const epNum = container.attr('data-ep-num') || '';
+        const hook = container.attr('data-hook') || '';
+        const body = container.attr('data-body') || '';
+        const cta = container.attr('data-cta') || '';
+
+        $('#edit_episode_id').val(epId);
+        $('#edit_modal_title').text(`Chỉnh Sửa Kịch Bản Tập ${epNum}`);
+        $('#edit_modal_subtitle').text(`Phim: ${movie} — Bạn có thể tinh chỉnh lời bình theo ý muốn.`);
+        $('#edit_ep_hook').val(hook);
+        $('#edit_ep_body').val(body);
+        $('#edit_ep_cta').val(cta);
+
+        lucide.createIcons();
+        document.getElementById('edit_episode_modal').showModal();
+    }
+
+    function saveEpisodeEdit(e) {
+        e.preventDefault();
+        const epId = $('#edit_episode_id').val();
+        const hookText = $('#edit_ep_hook').val();
+        const contentText = $('#edit_ep_body').val();
+        const ctaText = $('#edit_ep_cta').val();
+
+        $.ajax({
+            url: `/api/v1/episodes/${epId}/update`,
+            type: 'POST',
+            data: {
+                hook_text: hookText,
+                content_text: contentText,
+                call_to_action: ctaText
+            },
+            success: function(res) {
+                document.getElementById('edit_episode_modal').close();
+                // Update DOM container data attributes
+                const container = $(`#ep_container_${epId}`);
+                container.attr('data-hook', hookText);
+                container.attr('data-body', contentText);
+                container.attr('data-cta', ctaText);
+
+                // Update text displays
+                container.find('.font-bold.text-rose-400 span:last-child').text(`Hook: "${hookText}"`);
+                $(`#ep_text_${epId}`).text(contentText);
+
+                Toast.fire({
+                    icon: 'success',
+                    title: res.message || 'Đã lưu kịch bản thành công!'
+                });
+            },
+            error: function(err) {
+                Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể lưu kịch bản', 'error');
+            }
+        });
     }
 
     function copyEpisodeText() {

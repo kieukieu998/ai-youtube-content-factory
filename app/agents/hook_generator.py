@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.ai.provider_factory import get_ai_provider
 
@@ -14,8 +14,8 @@ class HookGenerationResult(BaseModel):
 class HookGeneratorAgent:
     """Agent 4: Tạo 3-5 câu mở đầu (Hook) giữ chân người xem trong 3s đầu tiên."""
     
-    def __init__(self, provider_type: str = "gemini_free"):
-        self.provider = get_ai_provider(provider_type)
+    def __init__(self, provider_type: Optional[str] = None):
+        self.provider = get_ai_provider(provider_type=provider_type, stage="script")
 
     async def generate_hooks(self, episode_content: str, movie_title: str) -> HookGenerationResult:
         prompt = (

@@ -29,6 +29,9 @@ async def scripts_page(request: Request, db: Session = Depends(get_db)):
 @router.post("/api/v1/scripts/generate")
 async def trigger_script_generation(
     movie_id: int = Form(...),
+    target_episodes: int = Form(3),
+    style: str = Form("dramatic"),
+    ai_provider: str = Form(None),
     db: Session = Depends(get_db)
 ):
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
@@ -38,27 +41,88 @@ async def trigger_script_generation(
     job = Job(
         job_type="ScriptGenerationJob",
         status="pending",
-        payload=json.dumps({"movie_id": movie_id})
+        payload=json.dumps({
+            "movie_id": movie_id,
+            "target_episodes": target_episodes,
+            "style": style,
+            "ai_provider": ai_provider
+        })
     )
     db.add(job)
     db.commit()
-    return JSONResponse({"status": "success", "message": f"Đã thêm tác vụ viết kịch bản cho phim '{movie.title}' vào hàng đợi", "job_id": job.id})
+    return JSONResponse({
+        "status": "success", 
+        "message": f"Đã thêm tác vụ viết {target_episodes} tập kịch bản cho phim '{movie.title}' vào hàng đợi", 
+        "job_id": job.id
+    })
 
-@router.post("/api/v1/episodes/{episode_id}/approve")
-async def approve_episode(
+@router.post("/api/v1/episodes/{episode_id}/update")
+async def update_episode(
     episode_id: int,
     hook_text: str = Form(None),
     content_text: str = Form(None),
+    call_to_action: str = Form(None),
     db: Session = Depends(get_db)
 ):
     episode = db.query(Episode).filter(Episode.id == episode_id).first()
     if not episode:
         raise HTTPException(status_code=404, detail="Không tìm thấy tập phim")
 
-    if hook_text:
-        episode.hook_text = hook_text
-    if content_text:
-        episode.content_text = content_text
+    if hook_text is not None:
+        episode.hook_text = hook_text.strip()
+    if content_text is not None:
+        episode.content_text = content_text.strip()
+    if call_to_action is not None:
+        episode.call_to_action = call_to_action.strip()
+
+    db.commit()
+    return JSONResponse({
+        "status": "success", 
+        "message": f"Đã cập nhật kịch bản Tập {episode.episode_number} thành công!",
+        "episode": {
+            "id": episode.id,
+            "hook_text": episode.hook_text,
+            "content_text": episode.content_text,
+            "call_to_action": episode.call_to_action
+        }
+    })
+
+@router.post("/api/v1/scripts/{script_id}/update")
+async def update_script(
+    script_id: int,
+    title: str = Form(...),
+    style: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    script = db.query(Script).filter(Script.id == script_id).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản")
+
+    script.title = title.strip()
+    if style:
+        script.style = style.strip()
+
+    db.commit()
+    return JSONResponse({"status": "success", "message": "Đã cập nhật tiêu đề kịch bản thành công!"})
+
+@router.post("/api/v1/episodes/{episode_id}/approve")
+async def approve_episode(
+    episode_id: int,
+    hook_text: str = Form(None),
+    content_text: str = Form(None),
+    call_to_action: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    episode = db.query(Episode).filter(Episode.id == episode_id).first()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tập phim")
+
+    if hook_text is not None:
+        episode.hook_text = hook_text.strip()
+    if content_text is not None:
+        episode.content_text = content_text.strip()
+    if call_to_action is not None:
+        episode.call_to_action = call_to_action.strip()
 
     episode.status = "approved"
     db.commit()
