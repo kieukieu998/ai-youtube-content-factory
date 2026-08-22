@@ -367,7 +367,8 @@ class JobWorker:
 
         existing_video_count = db.query(Video).filter(Video.episode_id == episode.id).count()
         render_version = existing_video_count + 1
-        output_video = str(movie_output_folder / f"{clean_movie_title}_Tap_{episode.episode_number}_v{render_version}.mp4")
+        version_label = f"v{render_version}"
+        output_video = str(movie_output_folder / f"{clean_movie_title}_Tap_{episode.episode_number}_{version_label}.mp4")
 
         output_video_path = await asyncio.to_thread(
             VideoEditorAgent.render_episode_video,
