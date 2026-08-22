@@ -113,31 +113,31 @@
                             {{ j.created_at.strftime('%H:%M:%S %d/%m') }}
                         </td>
                         <td class="text-right pr-4 whitespace-nowrap w-24">
-                            <div class="flex items-center justify-end gap-1.5">
+                            <div class="flex items-center justify-end gap-2">
                                 {% if j.status == 'completed' %}
                                     {% if j.job_type == 'RenderEpisodeJob' %}
-                                    <a href="/videos" class="btn btn-xs btn-circle btn-outline btn-success text-emerald-400 hover:text-white" title="Mở kho Video đã render">
+                                    <a href="/videos" class="w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600 hover:border-emerald-500 hover:text-white transition shadow-sm" title="Mở kho Video đã render">
                                         <i data-lucide="video" class="w-3.5 h-3.5"></i>
                                     </a>
                                     {% elif j.job_type == 'ScriptGenerationJob' %}
-                                    <a href="/scripts" class="btn btn-xs btn-circle btn-outline btn-secondary text-purple-400 hover:text-white" title="Mở kịch bản vừa tạo">
+                                    <a href="/scripts" class="w-7 h-7 rounded-lg flex items-center justify-center bg-purple-950/40 border border-purple-500/30 text-purple-400 hover:bg-purple-600 hover:border-purple-500 hover:text-white transition shadow-sm" title="Mở kịch bản vừa tạo">
                                         <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
                                     </a>
                                     {% elif j.job_type == 'MovieDiscoveryJob' %}
-                                    <a href="/movies" class="btn btn-xs btn-circle btn-outline btn-accent" title="Mở danh sách Phim">
+                                    <a href="/movies" class="w-7 h-7 rounded-lg flex items-center justify-center bg-sky-950/40 border border-sky-500/30 text-sky-400 hover:bg-sky-600 hover:border-sky-500 hover:text-white transition shadow-sm" title="Mở danh sách Phim">
                                         <i data-lucide="film" class="w-3.5 h-3.5"></i>
                                     </a>
                                     {% endif %}
                                 {% elif j.status in ['pending', 'processing'] %}
-                                <button onclick="cancelJob('{{ j.id }}')" class="btn btn-xs btn-circle btn-outline btn-error" title="Hủy tác vụ này">
+                                <button onclick="cancelJob('{{ j.id }}')" class="w-7 h-7 rounded-lg flex items-center justify-center bg-rose-950/40 border border-rose-500/30 text-rose-400 hover:bg-rose-600 hover:border-rose-500 hover:text-white transition shadow-sm" title="Hủy tác vụ này">
                                     <i data-lucide="ban" class="w-3.5 h-3.5"></i>
                                 </button>
                                 {% elif j.status in ['failed', 'cancelled'] %}
-                                <button onclick="retryJob('{{ j.id }}')" class="btn btn-xs btn-circle btn-outline btn-warning" title="Thử chạy lại">
+                                <button onclick="retryJob('{{ j.id }}')" class="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-950/40 border border-amber-500/30 text-amber-400 hover:bg-amber-600 hover:border-amber-500 hover:text-white transition shadow-sm" title="Thử chạy lại">
                                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                                 </button>
                                 {% endif %}
-                                <button onclick="deleteJob('{{ j.id }}')" class="btn btn-xs btn-circle btn-ghost text-slate-500 hover:text-rose-400 hover:bg-rose-500/10" title="Xóa tác vụ khỏi danh sách">
+                                <button onclick="deleteJob('{{ j.id }}')" class="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-900/80 border border-slate-800 text-slate-400 hover:bg-rose-950/50 hover:border-rose-500/40 hover:text-rose-400 transition shadow-sm" title="Xóa tác vụ khỏi danh sách">
                                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
