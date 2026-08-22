@@ -256,19 +256,17 @@
             <button onclick="closePlayerModal()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
         </div>
         
-        <!-- Body: 2 Columns on desktop (Video Left, Full Script Right) -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 flex-1 min-h-0 overflow-hidden">
-            <!-- Left: 9:16 Video Player -->
-            <div class="md:col-span-5 flex flex-col items-center justify-center bg-black/40 rounded-xl p-1.5 border border-slate-800/60">
-                <div class="w-full aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-2xl relative flex items-center justify-center max-h-[58vh]">
-                    <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
-                </div>
+        <!-- Body: 2 Columns on desktop (Video Left, Full Script Right - Perfect height match) -->
+        <div class="flex flex-col md:flex-row gap-5 items-center md:items-stretch justify-center flex-1 min-h-0 overflow-hidden">
+            <!-- Left: 9:16 Video Player (Tightly wrapped, no dead black space) -->
+            <div class="w-[275px] sm:w-[285px] h-[490px] sm:h-[510px] bg-black rounded-xl overflow-hidden shadow-2xl border border-slate-800/80 flex-shrink-0 flex items-center justify-center">
+                <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
             </div>
 
-            <!-- Right: Full Script & Details (Clean, minimal borders, only body scrolls) -->
-            <div class="md:col-span-7 flex flex-col justify-between bg-slate-950/40 rounded-xl p-4 min-h-0 overflow-hidden space-y-3">
+            <!-- Right: Full Script & Details (Exact same height as video!) -->
+            <div class="flex-1 min-w-0 w-full h-[490px] sm:h-[510px] flex flex-col justify-between bg-slate-950/40 rounded-xl p-4 border border-slate-800/60 overflow-hidden">
                 <!-- Hook (Pinned) -->
-                <div class="pb-2 border-b border-slate-800/60">
+                <div class="pb-2 border-b border-slate-800/60 flex-shrink-0">
                     <div class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
                         <i data-lucide="zap" class="w-3.5 h-3.5"></i> Câu Hook (1-3s đầu):
                     </div>
@@ -277,21 +275,21 @@
                     </p>
                 </div>
 
-                <!-- Narrative Body (ONLY this part scrolls!) -->
-                <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
-                    <div class="flex items-center justify-between pb-1 text-slate-400">
+                <!-- Narrative Body (ONLY this part scrolls with sleek scrollbar!) -->
+                <div class="flex-1 min-h-0 flex flex-col overflow-hidden py-2">
+                    <div class="flex items-center justify-between pb-1.5 text-slate-400 flex-shrink-0">
                         <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
                             <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Lời Bình Kịch Bản:
                         </div>
                         <span class="text-[10px] text-slate-500 font-mono" id="modal_script_wordcount">0 từ</span>
                     </div>
-                    <div class="overflow-y-auto flex-1 pr-2 mt-1 text-xs text-slate-300 leading-relaxed whitespace-pre-line select-text" id="modal_script_body">
+                    <div class="overflow-y-auto flex-1 pr-2 text-xs text-slate-300 leading-relaxed whitespace-pre-line select-text" id="modal_script_body">
                         <!-- JS populated -->
                     </div>
                 </div>
 
-                <!-- CTA (Pinned) -->
-                <div id="modal_script_cta_wrapper" class="pt-2 border-t border-slate-800/60 hidden">
+                <!-- CTA (Pinned if present) -->
+                <div id="modal_script_cta_wrapper" class="pt-2 border-t border-slate-800/60 flex-shrink-0 hidden">
                     <div class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
                         <i data-lucide="megaphone" class="w-3.5 h-3.5"></i> Kêu Gọi Hành Động (CTA):
                     </div>
@@ -301,12 +299,12 @@
                 </div>
 
                 <!-- Footer Meta Specs (Pinned) -->
-                <div class="pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400 font-mono">
-                    <div class="flex items-center gap-3">
+                <div class="pt-2.5 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400 font-mono flex-shrink-0">
+                    <div class="flex items-center gap-2.5">
                         <span class="flex items-center gap-1 text-slate-300 font-semibold">
                             <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="modal_meta_duration">00:00</span>
                         </span>
-                        <span class="text-slate-700">|</span>
+                        <span class="text-slate-700 font-bold">|</span>
                         <span class="flex items-center gap-1 text-slate-300">
                             <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-amber-400"></i> <span id="modal_meta_size">0 MB</span>
                         </span>
