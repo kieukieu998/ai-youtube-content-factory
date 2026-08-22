@@ -80,13 +80,23 @@ class OpenAICompatibleProvider(BaseAIProvider):
         )
         
         clean_json = raw_response.strip()
-        if clean_json.startswith("```json"):
-            clean_json = clean_json[7:]
-        if clean_json.startswith("```"):
-            clean_json = clean_json[3:]
-        if clean_json.endswith("```"):
-            clean_json = clean_json[:-3]
-        clean_json = clean_json.strip()
+        import re
+        code_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_json)
+        if code_match:
+            clean_json = code_match.group(1).strip()
+        else:
+            first_brace = clean_json.find('{')
+            last_brace = clean_json.rfind('}')
+            first_bracket = clean_json.find('[')
+            last_bracket = clean_json.rfind(']')
+            if first_brace != -1 and last_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+                clean_json = clean_json[first_brace:last_brace + 1]
+            elif first_bracket != -1 and last_bracket != -1:
+                clean_json = clean_json[first_bracket:last_bracket + 1]
         
-        parsed_dict = json.loads(clean_json)
-        return schema.model_validate(parsed_dict)
+        try:
+            parsed_dict = json.loads(clean_json, strict=False)
+            return schema.model_validate(parsed_dict)
+        except Exception as e:
+            logger.error(f"Failed to parse structured JSON: {e}\nRaw output: {raw_response}")
+            raise ValueError(f"AI response did not match expected schema: {e}")
