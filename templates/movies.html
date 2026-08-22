@@ -83,10 +83,10 @@
                         <td>
                             {% if m.sources %}
                             <div class="flex items-center gap-1.5">
-                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title }}', '{{ m.sources[0].file_path|replace('\\', '/') if m.sources else '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20" title="Bấm để xem trực tiếp video nguồn">
+                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title|escape }}', '{{ m.sources[0].file_path|replace('\\', '/') if m.sources else '' }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20" title="Bấm để xem trực tiếp video nguồn">
                                     <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video
                                 </button>
-                                <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title }}', '{{ m.original_title or '' }}', '{{ m.release_year or '' }}')" class="btn btn-ghost btn-xs text-slate-400 hover:text-white p-1" title="Đổi / Kéo lại video nguồn khác">
+                                <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}')" class="btn btn-ghost btn-xs text-slate-400 hover:text-white p-1" title="Đổi / Kéo lại video nguồn khác">
                                     <i data-lucide="refresh-cw" class="w-3 h-3"></i>
                                 </button>
                             </div>
@@ -796,7 +796,10 @@
         });
     }
 
-    function playSourceVideo(movieId, title, rawFilePath) {
+    let currentPreviewMovie = { id: null, title: '', orig: '', year: '' };
+
+    function playSourceVideo(movieId, title, rawFilePath, orig, year) {
+        currentPreviewMovie = { id: movieId, title: title, orig: orig || '', year: year || '' };
         let streamUrl = '';
         if (rawFilePath && rawFilePath.trim() !== '') {
             const normalized = rawFilePath.replace(/\\/g, '/');
@@ -818,11 +821,24 @@
         $('#modal_source_title').text(`Video Nguồn: ${title}`);
         const vid = document.getElementById('modal_source_video_element');
         vid.src = streamUrl;
-        $('#modal_source_download_btn').attr('href', streamUrl).attr('download', `source_movie_${movieId}.mp4`);
         document.getElementById('source_player_modal').showModal();
         vid.load();
         vid.play().catch(e => console.log('Autoplay prevented:', e));
         if (window.lucide) lucide.createIcons();
+    }
+
+    function replaceSourceWithYouTube() {
+        closeSourcePlayerModal();
+        if (currentPreviewMovie.id) {
+            openFetchTrailerModal(currentPreviewMovie.id, currentPreviewMovie.title, currentPreviewMovie.orig, currentPreviewMovie.year);
+        }
+    }
+
+    function replaceSourceWithUpload() {
+        closeSourcePlayerModal();
+        if (currentPreviewMovie.id) {
+            openUploadModal(currentPreviewMovie.id, currentPreviewMovie.title);
+        }
     }
 
     function closeSourcePlayerModal() {
@@ -852,11 +868,17 @@
             <video id="modal_source_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
         </div>
 
-        <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
-            <a id="modal_source_download_btn" href="#" download class="btn btn-sm btn-outline btn-success gap-1.5">
-                <i data-lucide="download" class="w-4 h-4"></i> Tải Video Gốc Về Máy
-            </a>
-            <button onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost">Đóng</button>
+        <div class="modal-action w-full flex flex-wrap justify-between items-center mt-3 pt-2.5 border-t border-slate-800 gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 font-medium">Thay thế video:</span>
+                <button type="button" onclick="replaceSourceWithYouTube()" class="btn btn-xs btn-error text-white gap-1 shadow-sm" title="Dán link YouTube khác để tải lại">
+                    <i data-lucide="youtube" class="w-3.5 h-3.5"></i> Nhập Link YouTube Khác
+                </button>
+                <button type="button" onclick="replaceSourceWithUpload()" class="btn btn-xs btn-outline btn-slate-700 text-slate-200 gap-1 hover:bg-slate-800" title="Tải file mp4 từ máy tính">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> Tải File MP4 Lên
+                </button>
+            </div>
+            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
