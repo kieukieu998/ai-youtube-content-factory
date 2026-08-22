@@ -42,6 +42,7 @@ class MovieSource(Base):
     file_path = Column(String(500), nullable=False)
     license_info = Column(Text, nullable=True)
     is_verified = Column(Boolean, default=False)
+    order_index = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     movie = relationship("Movie", back_populates="sources")

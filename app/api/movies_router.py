@@ -2,6 +2,8 @@ import os
 import json
 import shutil
 from pathlib import Path
+from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Request, Form, UploadFile, File, HTTPException
 from starlette.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -170,7 +172,7 @@ async def create_movie_from_youtube(
     if info.get("file_path") and os.path.exists(info["file_path"]):
         orig_path = Path(info["file_path"])
         clean_name = slugify_filename(movie.title, movie.release_year)
-        dest_path = settings.SOURCE_MEDIA_DIR / f"{movie.id}_{clean_name}_{orig_path.name}"
+        dest_path = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{orig_path.name}"
         try:
             orig_path.rename(dest_path)
             final_file_path = str(dest_path)
@@ -217,7 +219,7 @@ async def upload_movie_source(
                 pass
         db.delete(old_s)
 
-    dest_file = settings.SOURCE_MEDIA_DIR / f"{movie_id}_{clean_name}_{file.filename}"
+    dest_file = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{file.filename}"
     with open(dest_file, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -251,7 +253,7 @@ async def fetch_trailer_youtube(
         YouTubeTrailerDownloader.download_trailer,
         query_or_url=search_query,
         output_dir=str(settings.SOURCE_MEDIA_DIR),
-        filename_prefix=f"{movie.id}_{clean_prefix}"
+        filename_prefix=clean_prefix
     )
     
     if not file_path:
@@ -285,8 +287,12 @@ async def get_movie_sources(movie_id: int, db: Session = Depends(get_db)):
     if not movie:
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
+    sources = db.query(MovieSource).filter(
+        MovieSource.movie_id == movie_id
+    ).order_by(MovieSource.order_index.asc(), MovieSource.id.asc()).all()
+
     sources_data = []
-    for s in movie.sources:
+    for s in sources:
         stream_url = ""
         filename = ""
         if s.file_path:
@@ -310,6 +316,7 @@ async def get_movie_sources(movie_id: int, db: Session = Depends(get_db)):
             "filename": filename or f"Nguồn #{s.id}",
             "stream_url": stream_url or f"/api/v1/movies/{movie_id}/source-stream",
             "license_info": s.license_info,
+            "order_index": s.order_index or 1,
             "is_verified": s.is_verified,
             "created_at": s.created_at.strftime("%H:%M %d/%m/%Y") if s.created_at else ""
         })
@@ -320,6 +327,24 @@ async def get_movie_sources(movie_id: int, db: Session = Depends(get_db)):
         "movie_title": movie.title,
         "sources": sources_data
     })
+
+class ReorderSourcesRequest(BaseModel):
+    source_ids: List[int]
+
+@router.post("/api/v1/movies/{movie_id}/sources/reorder")
+async def reorder_movie_sources(
+    movie_id: int,
+    req: ReorderSourcesRequest,
+    db: Session = Depends(get_db)
+):
+    """Update sequence order (Tập 1, Tập 2, Tập 3) of sources."""
+    for idx, s_id in enumerate(req.source_ids):
+        db.query(MovieSource).filter(
+            MovieSource.id == s_id,
+            MovieSource.movie_id == movie_id
+        ).update({"order_index": idx + 1})
+    db.commit()
+    return JSONResponse({"status": "success", "message": "Đã lưu thứ tự các tập video thành công!"})
 
 @router.post("/api/v1/movies/{movie_id}/sources/add-youtube")
 async def add_youtube_source(
@@ -340,7 +365,7 @@ async def add_youtube_source(
         YouTubeTrailerDownloader.download_trailer,
         query_or_url=youtube_url.strip(),
         output_dir=str(settings.SOURCE_MEDIA_DIR),
-        filename_prefix=f"{movie.id}_{clean_prefix}_clip"
+        filename_prefix=f"{clean_prefix}_clip"
     )
     
     if not file_path:
@@ -351,6 +376,7 @@ async def add_youtube_source(
         source_type="youtube_clip",
         file_path=file_path,
         license_info=youtube_url.strip(),
+        order_index=len(movie.sources) + 1,
         is_verified=True
     )
     db.add(source)
@@ -371,7 +397,7 @@ async def add_upload_source(
     from app.video.youtube_downloader import slugify_filename
     clean_name = slugify_filename(movie.title, movie.release_year)
 
-    dest_file = settings.SOURCE_MEDIA_DIR / f"{movie_id}_{clean_name}_{file.filename}"
+    dest_file = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{file.filename}"
     with open(dest_file, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -380,6 +406,7 @@ async def add_upload_source(
         source_type="user_upload_clip",
         file_path=str(dest_file),
         license_info=file.filename,
+        order_index=len(movie.sources) + 1,
         is_verified=True
     )
     db.add(source)
