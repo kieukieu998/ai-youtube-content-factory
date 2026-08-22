@@ -834,22 +834,46 @@
 
     function playSourceVideo(movieId, title, orig, year, youtubeUrl) {
         currentPreviewMovie = { id: movieId, title: title, orig: orig || '', year: year || '', youtubeUrl: youtubeUrl || '' };
+        
+        // Reset player UI to prevent leftover state from previous movie
         $('#modal_source_title').text(`Nguồn Video: ${title}`);
         $('#modal_source_movie_meta').text(`${orig || ''} ${year ? '• ' + year : ''}`);
+        $('#modal_source_count_badge').text('Đang tải...');
+        $('#active_source_filename').text('Đang tải thông tin video...');
+        $('#active_source_meta').text('');
+        $('#active_source_yt_link').addClass('hidden');
+        $('#add_source_yt_input').val('');
+        
+        const vid = document.getElementById('modal_source_video_element');
+        if (vid) {
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load();
+        }
         
         document.getElementById('source_player_modal').showModal();
         loadMovieSourcesPlaylist(movieId);
     }
 
     function loadMovieSourcesPlaylist(movieId, autoSelectId = null) {
+        const mId = movieId || currentPreviewMovie.id;
+        if (!mId) return;
+
         $('#source_playlist_items').html('<div class="p-4 text-center text-xs text-slate-500"><span class="loading loading-spinner loading-xs mr-2"></span> Đang tải danh sách nguồn video...</div>');
         
-        $.get(`/api/v1/movies/${movieId}/sources`, function(res) {
-            currentMovieSources = res.sources || [];
-            $('#modal_source_count_badge').text(`${currentMovieSources.length} Video`);
-            renderPlaylistUI(currentMovieSources, autoSelectId);
-        }).fail(function() {
-            $('#source_playlist_items').html('<div class="p-3 text-center text-xs text-rose-400">Không thể nạp danh sách nguồn.</div>');
+        $.ajax({
+            url: `/api/v1/movies/${mId}/sources`,
+            type: 'GET',
+            cache: false,
+            success: function(res) {
+                currentMovieSources = res.sources || [];
+                $('#modal_source_count_badge').text(`${currentMovieSources.length} Video`);
+                renderPlaylistUI(currentMovieSources, autoSelectId);
+            },
+            error: function(err) {
+                console.error('Failed to load sources for movie', mId, err);
+                $('#source_playlist_items').html('<div class="p-3 text-center text-xs text-rose-400">Không thể nạp danh sách nguồn. Vui lòng bấm thử lại.</div>');
+            }
         });
     }
 
