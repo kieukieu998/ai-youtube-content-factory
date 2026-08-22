@@ -183,7 +183,13 @@ class JobWorker:
         job.result = "Đang lưu kịch bản và phân cảnh vào cơ sở dữ liệu..."
         db.commit()
 
-        # 3. Create Script entity
+        # 3. Clean up any existing old scripts for this movie (1 movie = 1 script folder)
+        old_scripts = db.query(Script).filter(Script.movie_id == movie.id).all()
+        for old_s in old_scripts:
+            db.delete(old_s)
+        db.flush()
+
+        # Create new Script entity
         script = Script(
             movie_id=movie.id,
             title=f"Kịch Bản Review – {movie.title}",
