@@ -10,18 +10,9 @@ from app.database.models import Movie, MovieSource, Script, Episode, Video, Sett
 from app.ai.provider_factory import get_ai_provider
 from app.video.scene_slicer import SceneSlicer
 
-@pytest.fixture(scope="module")
-def client():
-    with TestClient(app) as c:
-        yield c
-
-@pytest.fixture(scope="function")
-def db_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+from app.database.models import Movie, MovieSource, Script, Episode, Video, Setting, Job
+from app.ai.provider_factory import get_ai_provider
+from app.video.scene_slicer import SceneSlicer
 
 def test_ai_providers_per_stage_and_settings(client, db_session):
     """Task 1: Test saving & resolving separate AI providers per stage."""

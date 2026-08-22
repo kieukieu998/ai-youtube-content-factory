@@ -1,13 +1,5 @@
 import pytest
-from app.database.session import SessionLocal, engine, Base
 from app.database.models import Movie, Script, Episode, Video, Job, Setting
-
-@pytest.fixture(scope="module")
-def db_session():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    yield db
-    db.close()
 
 def test_create_movie_and_script(db_session):
     movie = Movie(
