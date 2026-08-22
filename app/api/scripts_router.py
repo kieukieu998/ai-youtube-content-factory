@@ -149,18 +149,42 @@ async def delete_script(script_id: int, db: Session = Depends(get_db)):
     db.commit()
     return JSONResponse({"status": "success", "message": f"Đã xóa kịch bản #{script_id} thành công!"})
 
-@router.post("/api/v1/scripts/bulk-delete")
-async def bulk_delete_scripts(req: BulkDeleteScriptRequest, db: Session = Depends(get_db)):
-    if not req.ids:
-        raise HTTPException(status_code=400, detail="Danh sách ID rỗng")
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã xóa {count} kịch bản thành công!"})
+
+@router.delete("/api/v1/episodes/{episode_id}")
+async def delete_episode(episode_id: int, db: Session = Depends(get_db)):
+    episode = db.query(Episode).filter(Episode.id == episode_id).first()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tập phim")
     
-    scripts = db.query(Script).filter(Script.id.in_(req.ids)).all()
-    count = len(scripts)
-    for s in scripts:
-        episodes = db.query(Episode).filter(Episode.script_id == s.id).all()
-        for ep in episodes:
-            db.delete(ep)
-        db.delete(s)
+    # Delete related videos
+    from app.database.models import Video
+    videos = db.query(Video).filter(Video.episode_id == episode_id).all()
+    for v in videos:
+        db.delete(v)
+        
+    db.delete(episode)
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã xóa tập #{episode_id} thành công!"})
+
+@router.post("/api/v1/episodes/approve-all-pending")
+async def approve_all_pending_episodes(db: Session = Depends(get_db)):
+    episodes = db.query(Episode).filter(Episode.status == "approval_pending").all()
+    count = len(episodes)
+    for ep in episodes:
+        ep.status = "approved"
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã duyệt thành công tất cả {count} tập đang chờ!"})
+
+@router.post("/api/v1/episodes/delete-all-pending")
+async def delete_all_pending_episodes(db: Session = Depends(get_db)):
+    episodes = db.query(Episode).filter(Episode.status == "approval_pending").all()
+    count = len(episodes)
+    for ep in episodes:
+        db.delete(ep)
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã xóa tất cả {count} tập đang chờ duyệt!"})
         
 @router.post("/api/v1/scripts/{script_id}/render-all")
 async def render_all_script_episodes(script_id: int, db: Session = Depends(get_db)):

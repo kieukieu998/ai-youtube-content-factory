@@ -13,17 +13,27 @@
 
     <!-- Pending Approval Section -->
     {% if episodes_pending %}
-    <div class="space-y-4">
-        <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
-            <i data-lucide="clock-alert" class="w-5 h-5"></i> Các Tập Đang Chờ Bạn Duyệt ({{ episodes_pending|length }})
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="space-y-4" id="pending_episodes_section">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl">
+            <h2 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                <i data-lucide="clock-alert" class="w-5 h-5"></i> Các Tập Đang Chờ Bạn Duyệt (<span id="pending_count">{{ episodes_pending|length }}</span>)
+            </h2>
+            <div class="flex items-center gap-2">
+                <button onclick="approveAllPending()" class="btn btn-xs btn-success text-white gap-1 shadow-md shadow-emerald-600/20" title="Duyệt tất cả các tập đang chờ">
+                    <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Duyệt Tất Cả ({{ episodes_pending|length }})
+                </button>
+                <button onclick="deleteAllPending()" class="btn btn-xs btn-error btn-outline gap-1" title="Xóa tất cả các tập đang chờ duyệt">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa Tất Cả ({{ episodes_pending|length }})
+                </button>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="pending_episodes_grid">
             {% for ep in episodes_pending %}
-            <div class="glass-card p-5 rounded-2xl border-amber-500/30 flex flex-col justify-between">
+            <div class="glass-card p-5 rounded-2xl border-amber-500/30 flex flex-col justify-between" id="pending_card_{{ ep.id }}">
                 <div>
                     <div class="flex justify-between items-start mb-3">
                         <span class="badge badge-warning font-semibold">Tập {{ ep.episode_number }}</span>
-                        <span class="text-xs text-slate-400">{{ ep.script.movie.title }}</span>
+                        <span class="text-xs text-slate-400">{{ ep.script.movie.title if (ep.script and ep.script.movie) else 'Phim' }}</span>
                     </div>
 
                     <div class="mb-3">
@@ -39,9 +49,14 @@
 
                 <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
                     <span class="text-xs text-slate-400">Điểm Hook: <strong class="text-amber-400">{{ "%.1f"|format(ep.hook_score) }}/100</strong></span>
-                    <button onclick="approveEpisode('{{ ep.id }}')" class="btn btn-sm btn-success text-white gap-1 shadow-lg shadow-emerald-600/30">
-                        <i data-lucide="check" class="w-4 h-4"></i> Duyệt Tập Này
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="deleteEpisode('{{ ep.id }}', 'Tập {{ ep.episode_number }}')" class="btn btn-sm btn-ghost text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 gap-1" title="Xóa tập này">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa
+                        </button>
+                        <button onclick="approveEpisode('{{ ep.id }}')" class="btn btn-sm btn-success text-white gap-1 shadow-lg shadow-emerald-600/30">
+                            <i data-lucide="check" class="w-4 h-4"></i> Duyệt Tập Này
+                        </button>
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -549,6 +564,92 @@
                     location.reload();
                 }
             });
+        });
+    }
+
+    function deleteEpisode(episodeId, epTitle) {
+        Swal.fire({
+            title: `Xóa ${epTitle || 'tập này'}?`,
+            text: 'Tập kịch bản này sẽ bị xóa vĩnh viễn khỏi hệ thống.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/episodes/${episodeId}`,
+                    type: 'DELETE',
+                    success: function(res) {
+                        $(`#pending_card_${episodeId}`).fadeOut(300, function() {
+                            $(this).remove();
+                            const remaining = $('#pending_episodes_grid .glass-card').length;
+                            $('#pending_count').text(remaining);
+                            if (remaining === 0) {
+                                $('#pending_episodes_section').fadeOut(300, function() { $(this).remove(); });
+                            }
+                        });
+                        $(`#ep_container_${episodeId}`).fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || 'Đã xóa tập thành công!'
+                        });
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa tập này', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    function approveAllPending() {
+        Swal.fire({
+            title: 'Duyệt tất cả các tập đang chờ?',
+            text: 'Toàn bộ các tập đang chờ duyệt sẽ được chuyển sang trạng thái Đã Duyệt.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý duyệt tất cả',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/api/v1/episodes/approve-all-pending', function(res) {
+                    Swal.fire('Thành công!', res.message, 'success').then(() => location.reload());
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể duyệt tất cả', 'error');
+                });
+            }
+        });
+    }
+
+    function deleteAllPending() {
+        Swal.fire({
+            title: 'Xóa TẤT CẢ các tập đang chờ duyệt?',
+            text: 'Toàn bộ các tập kịch bản chưa duyệt sẽ bị xóa vĩnh viễn.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý xóa hết',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post('/api/v1/episodes/delete-all-pending', function(res) {
+                    $('#pending_episodes_section').fadeOut(300, function() { $(this).remove(); });
+                    Toast.fire({
+                        icon: 'success',
+                        title: res.message || 'Đã xóa toàn bộ tập chờ duyệt!'
+                    });
+                }).fail(function(err) {
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa', 'error');
+                });
+            }
         });
     }
 

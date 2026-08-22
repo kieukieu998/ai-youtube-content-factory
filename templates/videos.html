@@ -106,9 +106,18 @@
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 self-end sm:self-center">
-                <button id="btn_delete_current_folder" class="btn btn-xs btn-error btn-outline gap-1" title="Xóa toàn bộ video của phim này">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa Cả Thư Mục Này
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <label class="flex items-center gap-2 cursor-pointer bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-indigo-500 transition text-xs font-semibold text-slate-200 select-none shadow-sm">
+                    <input type="checkbox" id="select_all_videos_in_folder" onchange="toggleSelectAllVideosInFolder(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
+                    <span>Chọn Tất Cả</span>
+                </label>
+
+                <button id="bulk_delete_folder_videos_btn" onclick="bulkDeleteSelectedFolderVideos()" class="hidden btn btn-xs btn-error text-white gap-1.5 shadow-lg shadow-rose-600/30">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa (<span id="folder_selected_videos_count">0</span>) đã chọn
+                </button>
+
+                <button id="btn_delete_current_folder" class="btn btn-xs btn-outline btn-error gap-1" title="Xóa toàn bộ video của phim này">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Xóa Cả Thư Mục
                 </button>
             </div>
         </div>
@@ -315,19 +324,96 @@
                 card.removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
             }
         });
+    function toggleSelectAllVideosInFolder(master) {
+        const isChecked = $(master).is(':checked');
+        const activeContent = $(`#folder_content_${currentFolderId}`);
+        activeContent.find('.video-card:visible .video-checkbox').each(function() {
+            $(this).prop('checked', isChecked);
+            const card = $(this).closest('.video-card');
+            if (isChecked) {
+                card.addClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+            } else {
+                card.removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
+            }
+        });
         updateSelectedCount();
     }
 
     function updateSelectedCount() {
-        const selected = $('.video-checkbox:checked');
-        const count = selected.length;
-        $('#selected_count').text(count);
-        if (count > 0) {
-            $('#bulk_delete_btn').removeClass('hidden');
+        if (currentFolderId === 'root') {
+            const selected = $('.video-checkbox:checked');
+            const count = selected.length;
+            $('#selected_count').text(count);
+            if (count > 0) {
+                $('#bulk_delete_btn').removeClass('hidden');
+            } else {
+                $('#bulk_delete_btn').addClass('hidden');
+                $('#select_all_videos').prop('checked', false);
+            }
         } else {
-            $('#bulk_delete_btn').addClass('hidden');
-            $('#select_all_videos').prop('checked', false);
+            const activeContent = $(`#folder_content_${currentFolderId}`);
+            const visibleCheckboxes = activeContent.find('.video-card:visible .video-checkbox');
+            const checkedCheckboxes = activeContent.find('.video-card:visible .video-checkbox:checked');
+            const count = checkedCheckboxes.length;
+            
+            $('#folder_selected_videos_count').text(count);
+            if (count > 0) {
+                $('#bulk_delete_folder_videos_btn').removeClass('hidden');
+            } else {
+                $('#bulk_delete_folder_videos_btn').addClass('hidden');
+            }
+
+            if (visibleCheckboxes.length > 0 && visibleCheckboxes.length === count) {
+                $('#select_all_videos_in_folder').prop('checked', true);
+            } else {
+                $('#select_all_videos_in_folder').prop('checked', false);
+            }
         }
+    }
+
+    function bulkDeleteSelectedFolderVideos() {
+        const activeContent = $(`#folder_content_${currentFolderId}`);
+        const ids = [];
+        activeContent.find('.video-card:visible .video-checkbox:checked').each(function() {
+            ids.push(parseInt($(this).val()));
+        });
+
+        if (ids.length === 0) return;
+
+        Swal.fire({
+            title: `Xóa ${ids.length} video đã chọn?`,
+            text: 'Tất cả các video đã chọn sẽ bị xóa vĩnh viễn khỏi Database và ổ cứng.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: `Đồng ý xóa (${ids.length})`,
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/v1/videos/bulk-delete',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    success: function(res) {
+                        ids.forEach(id => {
+                            $(`#video_card_${id}`).fadeOut(300, function() {
+                                $(this).remove();
+                                updateSelectedCount();
+                            });
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: res.message || `Đã xóa ${ids.length} video thành công!`
+                        });
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các video đã chọn', 'error');
+                    }
+                });
+            }
+        });
     }
 
     function bulkDeleteVideos() {
@@ -358,7 +444,7 @@
                         ids.forEach(id => {
                             $(`#video_card_${id}`).fadeOut(300, function() {
                                 $(this).remove();
-                                filterVideos();
+                                updateSelectedCount();
                             });
                         });
                         Toast.fire({
