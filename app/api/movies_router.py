@@ -37,6 +37,113 @@ async def trigger_movie_discovery(
     db.commit()
     return JSONResponse({"status": "success", "message": "Đã thêm tác vụ tìm kiếm phim vào hàng đợi", "job_id": job.id})
 
+@router.post("/api/v1/movies/{movie_id}/update")
+async def update_movie(
+    movie_id: int,
+    title: str = Form(...),
+    original_title: str = Form(None),
+    genre: str = Form(None),
+    release_year: int = Form(None),
+    synopsis: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phim")
+
+    movie.title = title.strip()
+    if original_title is not None:
+        movie.original_title = original_title.strip()
+    if genre is not None:
+        movie.genre = genre.strip()
+    if release_year is not None:
+        movie.release_year = release_year
+    if synopsis is not None:
+        movie.synopsis = synopsis.strip()
+
+    db.commit()
+    return JSONResponse({
+        "status": "success",
+        "message": f"Đã cập nhật thông tin phim '{movie.title}' thành công!",
+        "movie": {
+            "id": movie.id,
+            "title": movie.title,
+            "original_title": movie.original_title,
+            "genre": movie.genre,
+            "release_year": movie.release_year,
+            "synopsis": movie.synopsis
+        }
+    })
+
+@router.post("/api/v1/movies/create-from-youtube")
+async def create_movie_from_youtube(
+    youtube_url: str = Form(...),
+    title: str = Form(None),
+    original_title: str = Form(None),
+    genre: str = Form("Hành Động, Điện Ảnh"),
+    release_year: int = Form(None),
+    synopsis: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    url = youtube_url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Vui lòng nhập đường link YouTube hợp lệ")
+
+    from app.video.youtube_downloader import YouTubeTrailerDownloader
+    import asyncio
+
+    # Download in thread
+    info = await asyncio.to_thread(
+        YouTubeTrailerDownloader.get_video_info_and_download,
+        query_or_url=url,
+        output_dir=str(settings.SOURCE_MEDIA_DIR),
+        filename_prefix="movie_yt"
+    )
+
+    if not info.get("file_path"):
+        raise HTTPException(status_code=500, detail="Không thể tải video từ link YouTube này. Vui lòng kiểm tra lại URL.")
+
+    movie_title = title.strip() if (title and title.strip()) else (info.get("title") or "Phim Chưa Đặt Tên")
+    movie_orig = original_title.strip() if (original_title and original_title.strip()) else movie_title
+    movie_synopsis = synopsis.strip() if (synopsis and synopsis.strip()) else (info.get("description", "")[:400] if info.get("description") else f"Video phim nhập từ YouTube: {movie_title}")
+    
+    movie = Movie(
+        title=movie_title,
+        original_title=movie_orig,
+        release_year=release_year,
+        genre=genre,
+        duration_minutes=info.get("duration", 0),
+        synopsis=movie_synopsis,
+        potential_score=90.0,
+        status="discovered"
+    )
+    db.add(movie)
+    db.flush()
+
+    # Move/rename to movie ID prefix for neat organization
+    orig_path = Path(info["file_path"])
+    dest_path = settings.SOURCE_MEDIA_DIR / f"movie_{movie.id}_{orig_path.name}"
+    try:
+        orig_path.rename(dest_path)
+        final_file_path = str(dest_path)
+    except Exception:
+        final_file_path = str(orig_path)
+
+    source = MovieSource(
+        movie_id=movie.id,
+        source_type="youtube_link",
+        file_path=final_file_path,
+        is_verified=True
+    )
+    db.add(source)
+    db.commit()
+
+    return JSONResponse({
+        "status": "success",
+        "message": f"Đã thêm thành công phim '{movie.title}' từ YouTube vào kho dữ liệu!",
+        "movie_id": movie.id
+    })
+
 @router.post("/api/v1/movies/{movie_id}/upload-source")
 async def upload_movie_source(
     movie_id: int,
