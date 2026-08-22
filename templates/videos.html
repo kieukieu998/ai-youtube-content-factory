@@ -143,54 +143,60 @@
                  id="video_card_{{ v.id }}"
                  data-id="{{ v.id }}"
                  data-title="{{ mv_title|lower }}"
+                 data-movie="{{ mv_title }}"
                  data-ep-num="{{ ep_num }}"
                  data-version="v{{ v.render_version or 1 }}"
-                 data-hook="{{ ep_hook|lower }}"
+                 data-hook="{{ ep_hook }}"
+                 data-body="{{ (v.episode.content_text or '') if v.episode else '' }}"
+                 data-cta="{{ (v.episode.call_to_action or '') if v.episode else '' }}"
+                 data-duration="{{ v.duration_seconds|format_duration }}"
+                 data-size="{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB"
                  data-qa="{{ v.qa_status }}"
                  data-search="{{ search_blob|lower }}">
                 
+                <!-- 100% Clean Video Thumbnail: Zero overlay badges or checkboxes -->
                 <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
                      onclick="playVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')"
-                     title="Bấm để xem video">
+                     title="Bấm để xem video & kịch bản chi tiết">
                     <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
                     
-                    <!-- Standard Checkbox matching other pages -->
-                    <div class="absolute top-2.5 left-2.5 z-20" onclick="event.stopPropagation()">
-                        <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded" title="Chọn video này" />
-                    </div>
-
                     <!-- Hover overlay: Play button icon -->
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
                         <div class="btn btn-circle btn-primary btn-md shadow-2xl group-hover:scale-110 transition pointer-events-none">
                             <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                         </div>
                     </div>
-
-                    <div class="absolute top-2.5 right-2.5 z-10" onclick="event.stopPropagation()">
-                        {% if v.qa_status == 'passed' %}
-                        <span class="badge badge-success badge-xs text-white font-semibold shadow-md">Pass</span>
-                        {% else %}
-                        <span class="badge badge-error badge-xs text-white font-semibold shadow-md">Fail</span>
-                        {% endif %}
-                    </div>
                 </div>
 
-                <div class="p-3 space-y-1.5">
-                    <p class="text-xs text-slate-300 line-clamp-2 leading-snug">
-                        <span class="font-bold text-white mr-1">Tập {{ ep_num }}</span>
-                        {% set ver = v.render_version or 1 %}
-                        {% if ver == 1 %}
-                        <span class="badge badge-info badge-xs font-mono font-bold text-white mr-1 px-1 py-0 shadow-sm">v1</span>
-                        {% elif ver == 2 %}
-                        <span class="badge badge-warning badge-xs font-mono font-bold text-slate-950 mr-1 px-1 py-0 shadow-sm">v2</span>
-                        {% elif ver == 3 %}
-                        <span class="badge badge-secondary badge-xs font-mono font-bold text-white mr-1 px-1 py-0 shadow-sm">v3</span>
-                        {% else %}
-                        <span class="badge badge-accent badge-xs font-mono font-bold text-slate-950 mr-1 px-1 py-0 shadow-sm">v{{ ver }}</span>
-                        {% endif %}
-                        <span class="text-slate-300">"{{ ep_hook }}"</span>
-                    </p>
-                    <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <div class="p-2.5 space-y-2">
+                    <!-- Top row: Checkbox + Tập X + Badge [v1] on Left | Pass/Fail on Right -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded" title="Chọn video này" onclick="event.stopPropagation()" />
+                            <span class="font-bold text-white text-xs truncate">Tập {{ ep_num }}</span>
+                            {% set ver = v.render_version or 1 %}
+                            {% if ver == 1 %}
+                            <span class="badge badge-info badge-xs font-mono font-bold text-white px-1 py-0 shadow-sm">v1</span>
+                            {% elif ver == 2 %}
+                            <span class="badge badge-warning badge-xs font-mono font-bold text-slate-950 px-1 py-0 shadow-sm">v2</span>
+                            {% elif ver == 3 %}
+                            <span class="badge badge-secondary badge-xs font-mono font-bold text-white px-1 py-0 shadow-sm">v3</span>
+                            {% else %}
+                            <span class="badge badge-accent badge-xs font-mono font-bold text-slate-950 px-1 py-0 shadow-sm">v{{ ver }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            {% if v.qa_status == 'passed' %}
+                            <span class="badge badge-success badge-xs text-white font-semibold shadow-sm">Pass</span>
+                            {% else %}
+                            <span class="badge badge-error badge-xs text-white font-semibold shadow-sm">Fail</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Bottom row: Duration | Size on Left | Trash button on Right -->
+                    <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
                         <div class="flex items-center gap-1.5">
                             <span class="text-slate-300 flex items-center gap-1 font-semibold">
                                 <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> {{ v.duration_seconds|format_duration }}
@@ -228,31 +234,103 @@
     {% endif %}
 </div>
 
-<!-- Modal Xem Video Review -->
+<!-- Modal Xem Video Review & Kịch Bản Chi Tiết (Side by Side) -->
 <dialog id="player_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-sm flex flex-col items-center p-4">
-        <div class="flex items-center justify-between w-full mb-3">
-            <div class="flex items-center gap-2 truncate flex-1 mr-2">
-                <span id="modal_video_index" class="badge badge-primary badge-xs font-mono">1/1</span>
-                <h3 class="font-bold text-sm truncate text-white" id="modal_video_title">Xem Video Review</h3>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-4xl w-11/12 p-5 flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="flex items-center justify-between w-full pb-3 border-b border-slate-800 mb-4">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1 mr-4">
+                <div class="p-2 bg-indigo-600/20 border border-indigo-500/30 rounded-xl text-indigo-400">
+                    <i data-lucide="clapperboard" class="w-5 h-5"></i>
+                </div>
+                <div class="truncate">
+                    <div class="flex items-center gap-2">
+                        <span id="modal_video_index" class="badge badge-primary badge-xs font-mono">1/1</span>
+                        <span id="modal_version_badge" class="badge badge-info badge-xs font-mono font-bold text-white">v1</span>
+                        <span id="modal_qa_badge" class="badge badge-success badge-xs font-semibold">Pass</span>
+                        <h3 class="font-bold text-base truncate text-white" id="modal_video_title">Xem Video Review</h3>
+                    </div>
+                    <p class="text-xs text-slate-400 truncate" id="modal_movie_title">Phim: Sát Thủ Vô Hình</p>
+                </div>
             </div>
-            <button onclick="closePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
+            <button onclick="closePlayerModal()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
         </div>
         
-        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
-            <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+        <!-- Body: 2 Columns on desktop (Video Left, Full Script Right) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-5 overflow-y-auto flex-1 pr-1">
+            <!-- Left: 9:16 Video Player -->
+            <div class="md:col-span-5 flex flex-col items-center justify-center bg-black/60 rounded-2xl p-2 border border-slate-800/80">
+                <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800 max-h-[60vh]">
+                    <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+                </div>
+            </div>
+
+            <!-- Right: Full Script & Details -->
+            <div class="md:col-span-7 flex flex-col justify-between space-y-4 bg-slate-950/60 rounded-2xl p-4 border border-slate-800/80">
+                <div class="space-y-3.5 overflow-y-auto flex-1 pr-1">
+                    <!-- Hook -->
+                    <div class="bg-rose-950/20 border border-rose-500/30 rounded-xl p-3">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-rose-400 uppercase tracking-wider mb-1">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Câu Hook 1-3s (Mở Đầu):
+                        </div>
+                        <p class="text-sm font-semibold text-rose-100 italic leading-relaxed" id="modal_script_hook">
+                            <!-- JS populated -->
+                        </p>
+                    </div>
+
+                    <!-- Narrative Body -->
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Lời Bình Chi Tiết (Voice Body):
+                            </div>
+                            <span class="text-[10px] text-slate-500 font-mono" id="modal_script_wordcount">0 từ</span>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed whitespace-pre-line select-text" id="modal_script_body">
+                            <!-- JS populated -->
+                        </p>
+                    </div>
+
+                    <!-- CTA -->
+                    <div id="modal_script_cta_wrapper" class="bg-amber-950/20 border border-amber-500/30 rounded-xl p-3 hidden">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+                            <i data-lucide="megaphone" class="w-3.5 h-3.5"></i> Kêu Gọi Hành Động (CTA):
+                        </div>
+                        <p class="text-xs font-medium text-amber-100" id="modal_script_cta">
+                            <!-- JS populated -->
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer Meta Specs -->
+                <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center gap-1 text-slate-300 font-semibold">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> <span id="modal_meta_duration">00:00</span>
+                        </span>
+                        <span class="text-slate-700">|</span>
+                        <span class="flex items-center gap-1 text-slate-300">
+                            <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-amber-400"></i> <span id="modal_meta_size">0 MB</span>
+                        </span>
+                    </div>
+                    <button onclick="copyModalScript()" class="btn btn-xs btn-outline gap-1 text-slate-300 hover:text-white" title="Sao chép kịch bản tập này">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Kịch Bản
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
-            <div class="flex items-center gap-1.5">
-                <button onclick="prevVideo()" id="modal_btn_prev" class="btn btn-sm btn-outline gap-1 text-xs px-3" title="Video trước (Phím ←)">
-                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i> Trước
+        <!-- Action Footer -->
+        <div class="modal-action w-full flex justify-between items-center mt-4 pt-3 border-t border-slate-800">
+            <div class="flex items-center gap-2">
+                <button onclick="prevVideo()" id="modal_btn_prev" class="btn btn-sm btn-outline gap-1.5 text-xs px-4" title="Video trước (Phím ←)">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i> Tập Trước
                 </button>
-                <button onclick="nextVideo()" id="modal_btn_next" class="btn btn-sm btn-outline gap-1 text-xs px-3" title="Video tiếp theo (Phím →)">
-                    Sau <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                <button onclick="nextVideo()" id="modal_btn_next" class="btn btn-sm btn-outline gap-1.5 text-xs px-4" title="Video tiếp theo (Phím →)">
+                    Tập Tiếp <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </button>
             </div>
-            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-5">Đóng</button>
+            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-6">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -272,9 +350,31 @@
         
         container.each(function() {
             const vId = $(this).attr('data-id');
-            const title = $(this).attr('data-title') || $(this).find('p span.font-bold').text().trim() || 'Video';
+            const epNum = $(this).attr('data-ep-num') || '1';
+            const version = $(this).attr('data-version') || 'v1';
+            const movie = $(this).attr('data-movie') || '';
+            const hook = $(this).attr('data-hook') || '';
+            const body = $(this).attr('data-body') || '';
+            const cta = $(this).attr('data-cta') || '';
+            const duration = $(this).attr('data-duration') || '00:00';
+            const size = $(this).attr('data-size') || '0 MB';
+            const qa = $(this).attr('data-qa') || 'passed';
+            const title = `Tập ${epNum} (${version})`;
+
             if (vId) {
-                currentPlaylist.push({ id: vId, title: title });
+                currentPlaylist.push({
+                    id: vId,
+                    title: title,
+                    epNum: epNum,
+                    version: version,
+                    movie: movie,
+                    hook: hook,
+                    body: body,
+                    cta: cta,
+                    duration: duration,
+                    size: size,
+                    qa: qa
+                });
             }
         });
     }
@@ -283,7 +383,20 @@
         buildCurrentPlaylist();
         currentVideoIdx = currentPlaylist.findIndex(item => String(item.id) === String(videoId));
         if (currentVideoIdx === -1) {
-            currentPlaylist = [{ id: videoId, title: title }];
+            const card = $(`#video_card_${videoId}`);
+            currentPlaylist = [{
+                id: videoId,
+                title: title || 'Video Review',
+                epNum: card.attr('data-ep-num') || '1',
+                version: card.attr('data-version') || 'v1',
+                movie: card.attr('data-movie') || '',
+                hook: card.attr('data-hook') || '',
+                body: card.attr('data-body') || '',
+                cta: card.attr('data-cta') || '',
+                duration: card.attr('data-duration') || '00:00',
+                size: card.attr('data-size') || '0 MB',
+                qa: card.attr('data-qa') || 'passed'
+            }];
             currentVideoIdx = 0;
         }
         loadVideoAtCurrentIndex();
@@ -296,13 +409,50 @@
         const streamUrl = `/api/v1/videos/${cur.id}/stream`;
 
         $('#modal_video_title').text(cur.title);
+        $('#modal_movie_title').text(`Phim: ${cur.movie || 'N/A'}`);
         $('#modal_video_index').text(`${currentVideoIdx + 1}/${currentPlaylist.length}`);
         
+        // Version badge color
+        const verBadge = $('#modal_version_badge');
+        verBadge.text(cur.version);
+        verBadge.removeClass('badge-info badge-warning badge-secondary badge-accent');
+        if (cur.version === 'v1') verBadge.addClass('badge-info text-white');
+        else if (cur.version === 'v2') verBadge.addClass('badge-warning text-slate-950');
+        else if (cur.version === 'v3') verBadge.addClass('badge-secondary text-white');
+        else verBadge.addClass('badge-accent text-slate-950');
+
+        // QA badge
+        const qaBadge = $('#modal_qa_badge');
+        if (cur.qa === 'passed') {
+            qaBadge.text('Pass').removeClass('badge-error').addClass('badge-success text-white');
+        } else {
+            qaBadge.text('Fail').removeClass('badge-success').addClass('badge-error text-white');
+        }
+
+        // Script content
+        $('#modal_script_hook').text(cur.hook ? `"${cur.hook}"` : 'Chưa có câu hook');
+        $('#modal_script_body').text(cur.body || 'Chưa có lời bình kịch bản.');
+        
+        const wordCount = (cur.body || '').split(/\s+/).filter(Boolean).length;
+        $('#modal_script_wordcount').text(`${wordCount} từ`);
+
+        if (cur.cta) {
+            $('#modal_script_cta').text(cur.cta);
+            $('#modal_script_cta_wrapper').removeClass('hidden');
+        } else {
+            $('#modal_script_cta_wrapper').addClass('hidden');
+        }
+
+        // Meta specs
+        $('#modal_meta_duration').text(cur.duration);
+        $('#modal_meta_size').text(cur.size);
+
+        // Video playback
         const videoEl = document.getElementById('modal_video_element');
         videoEl.src = streamUrl;
         videoEl.play().catch(() => {});
 
-        // Update Prev / Next buttons state
+        // Prev / Next button states
         const hasPrev = currentVideoIdx > 0;
         const hasNext = currentVideoIdx < currentPlaylist.length - 1;
 
@@ -310,6 +460,18 @@
         $('#modal_btn_next').prop('disabled', !hasNext);
 
         lucide.createIcons();
+    }
+
+    function copyModalScript() {
+        if (currentPlaylist.length === 0) return;
+        const cur = currentPlaylist[currentVideoIdx];
+        const fullText = `TẬP ${cur.epNum} (${cur.version.toUpperCase()}) - ${cur.movie}\n\n[HOOK]:\n${cur.hook}\n\n[LỜI BÌNH]:\n${cur.body}\n\n[CTA]:\n${cur.cta}`;
+        navigator.clipboard.writeText(fullText).then(() => {
+            Toast.fire({
+                icon: 'success',
+                title: `Đã sao chép kịch bản Tập ${cur.epNum}!`
+            });
+        });
     }
 
     function prevVideo() {
