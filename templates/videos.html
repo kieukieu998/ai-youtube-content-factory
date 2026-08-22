@@ -324,6 +324,9 @@
                 card.removeClass('ring-2 ring-indigo-500 border-indigo-500/80 shadow-indigo-500/20');
             }
         });
+        updateSelectedCount();
+    }
+
     function toggleSelectAllVideosInFolder(master) {
         const isChecked = $(master).is(':checked');
         const activeContent = $(`#folder_content_${currentFolderId}`);
@@ -371,10 +374,13 @@
         }
     }
 
-    function bulkDeleteSelectedFolderVideos() {
-        const activeContent = $(`#folder_content_${currentFolderId}`);
+    function bulkDeleteVideos() {
         const ids = [];
-        activeContent.find('.video-card:visible .video-checkbox:checked').each(function() {
+        const selector = (currentFolderId === 'root')
+            ? '.video-checkbox:checked'
+            : `#folder_content_${currentFolderId} .video-card:visible .video-checkbox:checked`;
+
+        $(selector).each(function() {
             ids.push(parseInt($(this).val()));
         });
 
@@ -416,48 +422,8 @@
         });
     }
 
-    function bulkDeleteVideos() {
-        const ids = [];
-        $('.video-checkbox:checked').each(function() {
-            ids.push(parseInt($(this).val()));
-        });
-
-        if (ids.length === 0) return;
-
-        Swal.fire({
-            title: `Xóa ${ids.length} video đã chọn?`,
-            text: 'Tất cả các video đã chọn sẽ bị xóa vĩnh viễn khỏi Database và ổ cứng.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: `Đồng ý xóa (${ids.length})`,
-            cancelButtonText: 'Hủy',
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#475569'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/api/v1/videos/bulk-delete',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ ids: ids }),
-                    success: function(res) {
-                        ids.forEach(id => {
-                            $(`#video_card_${id}`).fadeOut(300, function() {
-                                $(this).remove();
-                                updateSelectedCount();
-                            });
-                        });
-                        Toast.fire({
-                            icon: 'success',
-                            title: res.message || `Đã xóa ${ids.length} video thành công!`
-                        });
-                    },
-                    error: function(err) {
-                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa các video đã chọn', 'error');
-                    }
-                });
-            }
-        });
+    function bulkDeleteSelectedFolderVideos() {
+        bulkDeleteVideos();
     }
 
     let currentFolderId = 'root';
