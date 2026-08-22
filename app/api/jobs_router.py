@@ -42,6 +42,7 @@ def enrich_job_info(jobs, db: Session):
 
         enriched.append({
             "id": j.id,
+            "job_type": j.job_type,
             "display_name": display_name,
             "sub_info": sub_info,
             "status": j.status,
