@@ -439,6 +439,11 @@
             $('#breadcrumb_current').addClass('hidden');
             $('#btn_back_root').addClass('hidden');
             $('#breadcrumb_root').removeClass('text-slate-400 font-normal').addClass('font-bold text-indigo-400');
+
+            // Sync URL with root
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
         } else {
             // Inside Folder View
             $('#root_folders_view').addClass('hidden');
@@ -448,18 +453,25 @@
             const content = $(`#folder_content_${folderId}`);
             content.removeClass('hidden');
             
+            const actualTitle = folderTitle || content.attr('data-title') || $(`#folder_tile_${folderId}`).find('h3').text().trim() || 'Thư mục';
+            
             // Breadcrumb
             $('#breadcrumb_separator').removeClass('hidden');
             $('#breadcrumb_current').removeClass('hidden');
-            $('#breadcrumb_title').text(folderTitle || 'Thư mục');
+            $('#breadcrumb_title').text(actualTitle);
             $('#btn_back_root').removeClass('hidden');
             $('#breadcrumb_root').removeClass('font-bold text-indigo-400').addClass('text-slate-400 font-normal');
 
             // Set Header & Delete Action
-            $('#current_folder_heading').text(folderTitle || 'Tập Phim');
+            $('#current_folder_heading').text(actualTitle);
             const videoCount = content.find('.video-card').length;
             $('#current_folder_subtext').text(`Gồm ${videoCount} tập video ngắn (9:16) hoàn thiện`);
-            $('#btn_delete_current_folder').attr('onclick', `deleteSpecificFolder('${folderId}', '${folderTitle}')`);
+            $('#btn_delete_current_folder').attr('onclick', `deleteSpecificFolder('${folderId}', '${actualTitle}')`);
+
+            // Sync URL with movie_id so F5 reload stays inside this folder!
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname + '?movie_id=' + encodeURIComponent(folderId));
+            }
         }
         filterFoldersAndVideos();
     }

@@ -963,6 +963,11 @@
             $('#script_breadcrumb_current').addClass('hidden');
             $('#script_btn_back_root').addClass('hidden');
             $('#script_breadcrumb_root').removeClass('text-slate-400 font-normal').addClass('font-bold text-indigo-400');
+
+            // Sync URL with root
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname);
+            }
         } else {
             $('#root_script_folders_view').addClass('hidden');
             $('#inside_script_folder_view').removeClass('hidden');
@@ -971,12 +976,19 @@
             const content = $(`#script_content_${scriptId}`);
             content.removeClass('hidden');
 
+            const actualTitle = title || content.attr('data-title') || $(`#script_tile_${scriptId}`).find('h3').text().trim() || 'Kịch Bản';
+
             // Breadcrumb
             $('#script_breadcrumb_separator').removeClass('hidden');
             $('#script_breadcrumb_current').removeClass('hidden');
-            $('#script_breadcrumb_title').text(title || 'Kịch Bản');
+            $('#script_breadcrumb_title').text(actualTitle);
             $('#script_btn_back_root').removeClass('hidden');
             $('#script_breadcrumb_root').removeClass('font-bold text-indigo-400').addClass('text-slate-400 font-normal');
+
+            // Sync URL so F5 stays in this script folder!
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', window.location.pathname + '?script_id=' + encodeURIComponent(scriptId));
+            }
         }
         filterScriptFolders();
     }
