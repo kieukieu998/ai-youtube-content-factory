@@ -177,7 +177,18 @@
 
                 <div class="p-3 space-y-1.5">
                     <p class="text-xs text-slate-300 line-clamp-2 leading-snug">
-                        <span class="font-bold text-white">Tập {{ ep_num }} v{{ v.render_version or 1 }}:</span> "{{ ep_hook }}"
+                        <span class="font-bold text-white mr-1">Tập {{ ep_num }}</span>
+                        {% set ver = v.render_version or 1 %}
+                        {% if ver == 1 %}
+                        <span class="badge badge-info badge-xs font-mono font-bold text-white mr-1 px-1 py-0 shadow-sm">v1</span>
+                        {% elif ver == 2 %}
+                        <span class="badge badge-warning badge-xs font-mono font-bold text-slate-950 mr-1 px-1 py-0 shadow-sm">v2</span>
+                        {% elif ver == 3 %}
+                        <span class="badge badge-secondary badge-xs font-mono font-bold text-white mr-1 px-1 py-0 shadow-sm">v3</span>
+                        {% else %}
+                        <span class="badge badge-accent badge-xs font-mono font-bold text-slate-950 mr-1 px-1 py-0 shadow-sm">v{{ ver }}</span>
+                        {% endif %}
+                        <span class="text-slate-300">"{{ ep_hook }}"</span>
                     </p>
                     <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
                         <div class="flex items-center gap-1.5">
@@ -228,16 +239,8 @@
             <button onclick="closePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
         </div>
         
-        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800 group">
+        <div class="w-full aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
             <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
-
-            <!-- Floating Next/Prev Arrow Buttons -->
-            <button id="modal_floating_prev" onclick="prevVideo()" class="btn btn-circle btn-sm bg-slate-950/80 hover:bg-indigo-600 text-white border-0 absolute left-2 top-1/2 -translate-y-1/2 shadow-xl transition-all opacity-75 hover:opacity-100 disabled:hidden z-20" title="Video trước (Phím ←)">
-                <i data-lucide="chevron-left" class="w-5 h-5"></i>
-            </button>
-            <button id="modal_floating_next" onclick="nextVideo()" class="btn btn-circle btn-sm bg-slate-950/80 hover:bg-indigo-600 text-white border-0 absolute right-2 top-1/2 -translate-y-1/2 shadow-xl transition-all opacity-75 hover:opacity-100 disabled:hidden z-20" title="Video tiếp theo (Phím →)">
-                <i data-lucide="chevron-right" class="w-5 h-5"></i>
-            </button>
         </div>
 
         <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
@@ -303,8 +306,8 @@
         const hasPrev = currentVideoIdx > 0;
         const hasNext = currentVideoIdx < currentPlaylist.length - 1;
 
-        $('#modal_btn_prev, #modal_floating_prev').prop('disabled', !hasPrev);
-        $('#modal_btn_next, #modal_floating_next').prop('disabled', !hasNext);
+        $('#modal_btn_prev').prop('disabled', !hasPrev);
+        $('#modal_btn_next').prop('disabled', !hasNext);
 
         lucide.createIcons();
     }
