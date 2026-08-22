@@ -217,6 +217,26 @@ async def fetch_trailer_youtube(
     db.commit()
     return JSONResponse({"status": "success", "message": f"Đã tự động tải thành công trailer cho phim '{movie.title}'!"})
 
+@router.get("/api/v1/movies/{movie_id}/source-stream")
+async def stream_movie_source(movie_id: int, db: Session = Depends(get_db)):
+    """Stream or redirect to the source media file/trailer for verification."""
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie or not movie.sources:
+        raise HTTPException(status_code=404, detail="Phim chưa có nguồn video media nào")
+
+    source = movie.sources[0]
+    file_path = source.file_path
+
+    if file_path.startswith("http://") or file_path.startswith("https://"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=file_path)
+
+    p = Path(file_path)
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="File video nguồn không tồn tại trên ổ cứng")
+
+    return FileResponse(p, media_type="video/mp4", filename=p.name)
+
 from typing import List
 from pydantic import BaseModel
 
