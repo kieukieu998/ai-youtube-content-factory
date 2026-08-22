@@ -23,6 +23,21 @@ from app.agents.qa_agent import QAAgent
 from app.agents.seo_agent import SEOAgent
 from app.video.scene_slicer import SceneSlicer
 
+def format_duration_str(seconds: float | int | None) -> str:
+    if seconds is None or seconds <= 0:
+        return "0s"
+    secs = int(round(seconds))
+    if secs < 60:
+        return f"{seconds:.1f}s" if (isinstance(seconds, float) and seconds != int(seconds)) else f"{secs}s"
+    mins = secs // 60
+    rem_secs = secs % 60
+    if mins < 60:
+        return f"{mins}p {rem_secs:02d}s" if rem_secs > 0 else f"{mins}p"
+    hours = mins // 60
+    rem_mins = mins % 60
+    return f"{hours}h {rem_mins:02d}p {rem_secs:02d}s" if rem_secs > 0 else f"{hours}h {rem_mins:02d}p"
+
+
 class JobWorker:
     """Background Async Poller and Dispatcher for SQLite Jobs queue."""
     
@@ -384,6 +399,6 @@ class JobWorker:
         
         job.status = "completed"
         job.progress = 100
-        job.result = f"Render video 9:16 thành công (v{render_version}, {duration:.1f}s)!"
+        job.result = f"Render video 9:16 thành công ({version_label}, {format_duration_str(duration)})!"
         db.commit()
         logger.info(f"Job #{job.id} render completed successfully for Episode {episode.id} -> {output_video}")

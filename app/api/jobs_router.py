@@ -16,25 +16,31 @@ def enrich_job_info(jobs, db: Session):
     for j in jobs:
         display_name = j.job_type
         sub_info = ""
+        target_url = None
         try:
             payload = json.loads(j.payload) if j.payload else {}
             if j.job_type == "MovieDiscoveryJob":
                 genre = payload.get("genre", "")
                 display_name = "🔍 Khám Phá Phim Mới"
                 sub_info = f"Thể loại: {genre}"
+                target_url = "/movies"
             elif j.job_type == "ScriptGenerationJob":
                 movie_id = payload.get("movie_id")
                 movie = db.query(Movie).filter(Movie.id == movie_id).first()
                 display_name = f"✍️ Viết Kịch Bản Phim: {movie.title if movie else f'Movie #{movie_id}'}"
                 sub_info = f"{movie.genre or ''}" if movie else ""
+                target_url = f"/scripts?movie_id={movie_id}" if movie_id else "/scripts"
             elif j.job_type == "RenderEpisodeJob":
                 episode_id = payload.get("episode_id")
                 ep = db.query(Episode).filter(Episode.id == episode_id).first()
                 if ep and ep.script and ep.script.movie:
+                    movie_id = ep.script.movie.id
                     display_name = f"🎬 Render Video 9:16: {ep.script.movie.title}"
                     sub_info = f"Tập {ep.episode_number} — Hook: \"{ep.hook_text or ''}\""
+                    target_url = f"/videos?movie_id={movie_id}"
                 else:
                     display_name = f"🎬 Render Video (Tập #{episode_id})"
+                    target_url = "/videos"
             elif j.job_type == "TestJob":
                 display_name = "🧪 Kiểm Thử Hệ Thống (TestJob)"
         except Exception:
@@ -49,6 +55,7 @@ def enrich_job_info(jobs, db: Session):
             "progress": j.progress,
             "error_message": j.error_message,
             "result": j.result,
+            "target_url": target_url,
             "created_at": j.created_at
         })
     return enriched

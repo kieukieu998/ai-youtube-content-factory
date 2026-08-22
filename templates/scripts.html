@@ -108,6 +108,7 @@
             <div class="script-folder-tile glass-card p-4 rounded-2xl border border-slate-800/80 hover:border-amber-500 hover:bg-slate-800/40 cursor-pointer transition-all duration-200 hover:scale-[1.02] shadow-lg group relative flex flex-col justify-between"
                  id="script_tile_{{ s.id }}"
                  data-id="{{ s.id }}"
+                 data-movie-id="{{ s.movie_id }}"
                  data-title="{{ s.title|lower }}"
                  data-genre="{{ (s.movie.genre if s.movie else '')|lower }}"
                  onclick="navigateScriptFolder('{{ s.id }}', '{{ s.title }}')">
@@ -930,5 +931,23 @@
         }
         updateSelectedScriptsCount();
     }
+
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetMovieId = urlParams.get('movie_id');
+        const targetScriptId = urlParams.get('script_id');
+        if (targetScriptId) {
+            const tile = $(`#script_tile_${targetScriptId}`);
+            if (tile.length) {
+                navigateScriptFolder(targetScriptId, tile.find('h3').text().trim());
+            }
+        } else if (targetMovieId) {
+            const tile = $(`.script-folder-tile[data-movie-id="${targetMovieId}"]`);
+            if (tile.length) {
+                const sId = tile.attr('data-id');
+                navigateScriptFolder(sId, tile.find('h3').text().trim());
+            }
+        }
+    });
 </script>
 {% endblock %}

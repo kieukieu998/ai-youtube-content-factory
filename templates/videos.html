@@ -174,7 +174,7 @@
                         {% endif %}
                     </div>
                     <div class="absolute bottom-2 left-2 bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-[11px] text-white font-mono z-10 pointer-events-none">
-                        {{ "%.1f"|format(v.duration_seconds) }}s
+                        {{ v.duration_seconds|format_duration }}
                     </div>
                 </div>
 
@@ -612,5 +612,17 @@
         }
         updateSelectedCount();
     }
+
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetMovieId = urlParams.get('movie_id');
+        if (targetMovieId) {
+            const tile = $(`#folder_tile_${targetMovieId}`);
+            if (tile.length) {
+                const title = tile.find('h3').text().trim();
+                navigateFolder(targetMovieId, title);
+            }
+        }
+    });
 </script>
 {% endblock %}
