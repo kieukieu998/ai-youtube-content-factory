@@ -623,11 +623,10 @@
         const targetMovieId = urlParams.get('movie_id');
         if (targetMovieId) {
             const tile = $(`#folder_tile_${targetMovieId}`);
-            if (tile.length) {
-                const title = tile.find('h3').text().trim();
-                navigateFolder(targetMovieId, title);
-            }
+            const title = tile.length ? tile.find('h3').text().trim() : $(`#folder_content_${targetMovieId}`).attr('data-title');
+            navigateFolder(targetMovieId, title);
         }
+        lucide.createIcons();
     });
 </script>
 {% endblock %}

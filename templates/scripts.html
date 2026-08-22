@@ -1078,16 +1078,17 @@
         const targetScriptId = urlParams.get('script_id');
         if (targetScriptId) {
             const tile = $(`#script_tile_${targetScriptId}`);
-            if (tile.length) {
-                navigateScriptFolder(targetScriptId, tile.find('h3').text().trim());
-            }
+            const title = tile.length ? tile.find('h3').text().trim() : $(`#script_content_${targetScriptId}`).attr('data-title');
+            navigateScriptFolder(targetScriptId, title);
         } else if (targetMovieId) {
             const tile = $(`.script-folder-tile[data-movie-id="${targetMovieId}"]`);
             if (tile.length) {
                 const sId = tile.attr('data-id');
-                navigateScriptFolder(sId, tile.find('h3').text().trim());
+                const title = tile.find('h3').text().trim();
+                navigateScriptFolder(sId, title);
             }
         }
+        lucide.createIcons();
     });
 </script>
 {% endblock %}
