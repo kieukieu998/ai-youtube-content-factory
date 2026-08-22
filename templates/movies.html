@@ -83,7 +83,7 @@
                         <td>
                             {% if m.sources %}
                             <div class="flex items-center gap-1.5">
-                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20" title="Bấm để xem trực tiếp video nguồn">
+                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title }}', '{{ m.sources[0].file_path|replace('\\', '/') if m.sources else '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20" title="Bấm để xem trực tiếp video nguồn">
                                     <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video
                                 </button>
                                 <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title }}', '{{ m.original_title or '' }}', '{{ m.release_year or '' }}')" class="btn btn-ghost btn-xs text-slate-400 hover:text-white p-1" title="Đổi / Kéo lại video nguồn khác">
@@ -796,13 +796,30 @@
         });
     }
 
-    function playSourceVideo(movieId, title) {
-        const streamUrl = `/api/v1/movies/${movieId}/source-stream`;
+    function playSourceVideo(movieId, title, rawFilePath) {
+        let streamUrl = '';
+        if (rawFilePath && rawFilePath.trim() !== '') {
+            const normalized = rawFilePath.replace(/\\/g, '/');
+            const mediaIdx = normalized.indexOf('/media/');
+            if (mediaIdx !== -1) {
+                streamUrl = normalized.substring(mediaIdx);
+            } else if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+                streamUrl = normalized;
+            } else {
+                const parts = normalized.split('/');
+                streamUrl = `/media/source/${parts[parts.length - 1]}`;
+            }
+        }
+        
+        if (!streamUrl) {
+            streamUrl = `/api/v1/movies/${movieId}/source-stream`;
+        }
+
         $('#modal_source_title').text(`Video Nguồn: ${title}`);
-        $('#modal_source_video_element').attr('src', streamUrl);
+        const vid = document.getElementById('modal_source_video_element');
+        vid.src = streamUrl;
         $('#modal_source_download_btn').attr('href', streamUrl).attr('download', `source_movie_${movieId}.mp4`);
         document.getElementById('source_player_modal').showModal();
-        const vid = document.getElementById('modal_source_video_element');
         vid.load();
         vid.play().catch(e => console.log('Autoplay prevented:', e));
         if (window.lucide) lucide.createIcons();
@@ -810,9 +827,12 @@
 
     function closeSourcePlayerModal() {
         const vid = document.getElementById('modal_source_video_element');
-        vid.pause();
-        vid.currentTime = 0;
-        vid.removeAttribute('src');
+        if (vid) {
+            vid.pause();
+            vid.currentTime = 0;
+            vid.removeAttribute('src');
+            vid.load();
+        }
         document.getElementById('source_player_modal').close();
     }
 </script>
