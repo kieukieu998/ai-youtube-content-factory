@@ -338,9 +338,14 @@ class JobWorker:
         job.result = "Đang xử lý FFmpeg render video dọc 9:16 (1080x1920)..."
         db.commit()
 
+        from app.video.youtube_downloader import slugify_filename
+        clean_movie_title = slugify_filename(movie.title, movie.release_year)
+        movie_output_folder = settings.OUTPUT_MEDIA_DIR / clean_movie_title
+        movie_output_folder.mkdir(parents=True, exist_ok=True)
+
         existing_video_count = db.query(Video).filter(Video.episode_id == episode.id).count()
         render_version = existing_video_count + 1
-        output_video = str(settings.OUTPUT_MEDIA_DIR / f"video_ep_{episode.id}_v{render_version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4")
+        output_video = str(movie_output_folder / f"{clean_movie_title}_Tap_{episode.episode_number}_v{render_version}.mp4")
 
         output_video_path = await asyncio.to_thread(
             VideoEditorAgent.render_episode_video,
