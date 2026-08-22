@@ -6,7 +6,7 @@
 <div class="space-y-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white">Kho Phim & Nguồn Media</h1>
+            <h1 class="text-2xl font-bold text-white">Kho Phim & Nguồn</h1>
             <p class="text-slate-400 text-sm">Danh sách các bộ phim đã được AI khám phá, nạp từ YouTube hoặc tải file video gốc.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -38,8 +38,8 @@
                         <th class="w-10">
                             <input type="checkbox" id="select_all_movies" onchange="toggleSelectAllMovies(this)" class="checkbox checkbox-xs checkbox-primary rounded" />
                         </th>
-                        <th>Tên Phim (Việt & Anh)</th>
-                        <th>Thể Loại / Năm</th>
+                        <th>Tên Phim</th>
+                        <th>Thể Loại</th>
                         <th>Điểm Tiềm Năng</th>
                         <th>Nguồn Video Gốc</th>
                         <th>Trạng Thái</th>
@@ -61,9 +61,10 @@
                             <input type="checkbox" value="{{ m.id }}" onchange="updateSelectedMoviesCount()" class="movie-checkbox checkbox checkbox-xs checkbox-primary rounded" />
                         </td>
                         <td>
-                            <div class="font-bold text-white flex items-center gap-2">
+                            <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
                                 <span id="movie_title_display_{{ m.id }}">{{ m.title }}</span>
-                                <a href="https://www.google.com/search?q={{ m.title }}+{{ m.original_title or '' }}+movie" target="_blank" class="text-indigo-400 hover:text-indigo-300" title="Tra cứu nguồn gốc phim trên Google/IMDb">
+                                <span class="text-xs font-normal text-slate-400 font-mono" id="movie_year_display_{{ m.id }}">{% if m.release_year %}({{ m.release_year }}){% endif %}</span>
+                                <a href="https://www.google.com/search?q={{ m.title }}+{{ m.original_title or '' }}+movie" target="_blank" class="text-indigo-400 hover:text-indigo-300 ml-0.5" title="Tra cứu nguồn gốc phim trên Google/IMDb">
                                     <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                                 </a>
                             </div>
@@ -71,7 +72,6 @@
                         </td>
                         <td>
                             <span class="badge badge-neutral badge-sm" id="movie_genre_display_{{ m.id }}">{{ m.genre or 'Chưa phân loại' }}</span>
-                            <span class="text-xs text-slate-400 ml-1" id="movie_year_display_{{ m.id }}">{{ m.release_year or '' }}</span>
                         </td>
                         <td>
                             <div class="flex items-center gap-2">
@@ -524,7 +524,7 @@
                 $(`#movie_title_display_${movieId}`).text(title);
                 $(`#movie_orig_display_${movieId}`).text(orig);
                 $(`#movie_genre_display_${movieId}`).text(genre || 'Chưa phân loại');
-                $(`#movie_year_display_${movieId}`).text(year);
+                $(`#movie_year_display_${movieId}`).text(year ? `(${year})` : '');
 
                 const row = $(`#movie_row_${movieId}`);
                 row.attr('data-title', title.toLowerCase());

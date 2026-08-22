@@ -4,10 +4,22 @@
 
 {% block content %}
 <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white">Kịch Bản & Cổng Duyệt Hooks (Semi-Auto Gate)</h1>
+            <h1 class="text-2xl font-bold text-white">Kịch Bản & Hooks</h1>
             <p class="text-slate-400 text-sm">Xem trước lời bình, chọn câu Hook giật gân nhất và duyệt trước khi render video.</p>
+        </div>
+        
+        <!-- Search & Bulk Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+            <button id="bulk_delete_scripts_btn" onclick="bulkDeleteScripts()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_scripts_count">0</span>) đã chọn
+            </button>
+            <div class="relative flex items-center">
+                <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                <input type="text" id="script_search_input" oninput="filterScriptFolders()" placeholder="Tìm kịch bản, tên phim..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
+            </div>
         </div>
     </div>
 
@@ -66,21 +78,6 @@
 
     <!-- All Scripts Explorer -->
     <div class="space-y-4">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div>
-                <h2 class="text-xl font-bold text-white">Thư Mục Kịch Bản Phim</h2>
-                <p class="text-xs text-slate-400">Xem và quản lý kịch bản phân cảnh theo từng thư mục phim (Windows Explorer).</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <button id="bulk_delete_scripts_btn" onclick="bulkDeleteScripts()" class="hidden btn btn-error btn-sm text-white gap-1.5 shadow-lg shadow-rose-600/30">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa (<span id="selected_scripts_count">0</span>) đã chọn
-                </button>
-                <div class="relative flex items-center">
-                    <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
-                    <input type="text" id="script_search_input" oninput="filterScriptFolders()" placeholder="Tìm kịch bản, tên phim..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
-                </div>
-            </div>
-        </div>
 
         {% if scripts %}
         <!-- BREADCRUMB EXPLORER BAR -->
