@@ -19,11 +19,13 @@
                 <i data-lucide="search" class="w-4 h-4 absolute left-2.5 text-slate-400 pointer-events-none"></i>
                 <input type="text" id="movie_search_input" oninput="filterMovies()" placeholder="Tìm tên phim, thể loại..." class="input input-sm input-bordered bg-slate-900 text-white pl-8 pr-4 w-52 border-slate-700 focus:border-indigo-500 focus:outline-none" />
             </div>
-            <button onclick="openYouTubeModal()" class="btn btn-error btn-sm text-white gap-2 shadow-lg shadow-rose-600/30">
-                <i data-lucide="youtube" class="w-4 h-4"></i> Thêm Link YouTube
+            <button onclick="openYouTubeModal()" class="btn btn-error btn-sm text-white gap-2 shadow-lg shadow-rose-600/30 font-semibold inline-flex items-center justify-center">
+                <i data-lucide="youtube" class="w-4 h-4 flex-shrink-0"></i>
+                <span>Thêm Link YouTube</span>
             </button>
-            <button onclick="document.getElementById('discover_modal').showModal()" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-indigo-600/30">
-                <i data-lucide="sparkles" class="w-4 h-4"></i> AI Khám Phá Phim
+            <button onclick="document.getElementById('discover_modal').showModal()" class="btn btn-primary btn-sm gap-2 shadow-lg shadow-indigo-600/30 font-semibold inline-flex items-center justify-center">
+                <i data-lucide="sparkles" class="w-4 h-4 flex-shrink-0"></i>
+                <span>AI Khám Phá Phim</span>
             </button>
         </div>
     </div>
@@ -84,8 +86,8 @@
                         <td>
                             {% if m.sources %}
                             <div class="flex items-center gap-1.5">
-                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title|escape }}', '{{ m.sources[0].file_path|replace('\\', '/') if m.sources else '' }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20" title="Bấm để xem trực tiếp video nguồn">
-                                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video
+                                <button onclick="playSourceVideo('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="badge badge-success badge-sm text-white gap-1 hover:brightness-110 cursor-pointer shadow-sm shadow-emerald-500/20 font-medium" title="Bấm để xem danh sách các video nguồn">
+                                    <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video ({{ m.sources|length }})
                                 </button>
                                 <button onclick="openFetchTrailerModal('{{ m.id }}', '{{ m.title|escape }}', '{{ m.original_title|escape if m.original_title else '' }}', '{{ m.release_year or '' }}', '{{ m.youtube_url or '' }}')" class="btn btn-ghost btn-xs text-slate-400 hover:text-white p-1" title="Đổi / Kéo lại video nguồn khác">
                                     <i data-lucide="refresh-cw" class="w-3 h-3"></i>
@@ -834,52 +836,197 @@
     }
 
     let currentPreviewMovie = { id: null, title: '', orig: '', year: '', youtubeUrl: '' };
+    let currentMovieSources = [];
+    let activeSourceId = null;
 
-    function playSourceVideo(movieId, title, rawFilePath, orig, year, youtubeUrl) {
+    function playSourceVideo(movieId, title, orig, year, youtubeUrl) {
         currentPreviewMovie = { id: movieId, title: title, orig: orig || '', year: year || '', youtubeUrl: youtubeUrl || '' };
-        let streamUrl = '';
-        if (rawFilePath && rawFilePath.trim() !== '') {
-            const normalized = rawFilePath.replace(/\\/g, '/');
-            const mediaIdx = normalized.indexOf('/media/');
-            if (mediaIdx !== -1) {
-                streamUrl = normalized.substring(mediaIdx);
-            } else if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-                streamUrl = normalized;
-            } else {
-                const parts = normalized.split('/');
-                streamUrl = `/media/source/${parts[parts.length - 1]}`;
-            }
-        }
+        $('#modal_source_title').text(`Nguồn Video: ${title}`);
+        $('#modal_source_movie_meta').text(`${orig || ''} ${year ? '• ' + year : ''}`);
         
-        if (!streamUrl) {
-            streamUrl = `/api/v1/movies/${movieId}/source-stream`;
+        document.getElementById('source_player_modal').showModal();
+        loadMovieSourcesPlaylist(movieId);
+    }
+
+    function loadMovieSourcesPlaylist(movieId, autoSelectId = null) {
+        $('#source_playlist_items').html('<div class="p-4 text-center text-xs text-slate-500"><span class="loading loading-spinner loading-xs mr-2"></span> Đang tải danh sách nguồn video...</div>');
+        
+        $.get(`/api/v1/movies/${movieId}/sources`, function(res) {
+            currentMovieSources = res.sources || [];
+            $('#modal_source_count_badge').text(`${currentMovieSources.length} Video`);
+            renderPlaylistUI(currentMovieSources, autoSelectId);
+        }).fail(function() {
+            $('#source_playlist_items').html('<div class="p-3 text-center text-xs text-rose-400">Không thể nạp danh sách nguồn.</div>');
+        });
+    }
+
+    function renderPlaylistUI(sources, autoSelectId = null) {
+        if (!sources || sources.length === 0) {
+            $('#source_playlist_items').html('<div class="p-4 text-center text-xs text-slate-500 bg-slate-950/60 rounded-xl border border-slate-800">Chưa có nguồn video nào. Hãy thêm link YouTube hoặc tải file mp4 bên dưới!</div>');
+            const vid = document.getElementById('modal_source_video_element');
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load();
+            $('#active_source_filename').text('Chưa có video');
+            $('#active_source_meta').text('');
+            $('#active_source_yt_link').addClass('hidden');
+            return;
         }
 
-        $('#modal_source_title').text(`Video Nguồn: ${title}`);
-        const vid = document.getElementById('modal_source_video_element');
-        vid.src = streamUrl;
-        document.getElementById('source_player_modal').showModal();
-        vid.load();
-        vid.play().catch(e => console.log('Autoplay prevented:', e));
+        let selected = sources.find(s => s.id === autoSelectId) || sources[0];
+        activeSourceId = selected.id;
+
+        let html = '';
+        sources.forEach((s, idx) => {
+            const isActive = s.id === selected.id;
+            const isYt = s.source_type.includes('youtube') || (s.license_info && (s.license_info.includes('youtube') || s.license_info.includes('youtu.be')));
+            const iconClass = isYt ? 'text-red-500' : 'text-sky-400';
+            const iconName = isYt ? 'youtube' : 'film';
+            const typeLabel = isYt ? 'YouTube Video' : 'File MP4';
+
+            html += `
+            <div onclick="switchActiveSource(${s.id})" class="p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between gap-2.5 ${isActive ? 'bg-indigo-950/50 border-indigo-500/80 shadow-md shadow-indigo-950/50' : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/40'}">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}">
+                        <i data-lucide="${iconName}" class="w-3.5 h-3.5 ${isActive ? 'text-white' : iconClass}"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs font-medium truncate ${isActive ? 'text-white font-semibold' : 'text-slate-300'}">
+                            Nguồn #${idx + 1}: ${s.filename}
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                            <span>${typeLabel}</span>
+                            ${s.created_at ? `<span>• ${s.created_at}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                    ${isActive ? '<span class="badge badge-xs badge-success text-white font-semibold">Đang phát</span>' : ''}
+                    <button type="button" onclick="handleDeleteSingleSource(event, ${s.id})" class="btn btn-ghost btn-xs text-slate-500 hover:text-rose-400 p-1" title="Xóa nguồn video này">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            </div>
+            `;
+        });
+
+        $('#source_playlist_items').html(html);
+        playSourceFile(selected);
         if (window.lucide) lucide.createIcons();
     }
 
-    function replaceSourceWithYouTube() {
-        closeSourcePlayerModal();
-        setTimeout(() => {
-            if (currentPreviewMovie.id) {
-                openFetchTrailerModal(currentPreviewMovie.id, currentPreviewMovie.title, currentPreviewMovie.orig, currentPreviewMovie.year, currentPreviewMovie.youtubeUrl);
-            }
-        }, 150);
+    function switchActiveSource(sourceId) {
+        const selected = currentMovieSources.find(s => s.id === sourceId);
+        if (selected) {
+            activeSourceId = selected.id;
+            renderPlaylistUI(currentMovieSources, selected.id);
+        }
     }
 
-    function replaceSourceWithUpload() {
-        closeSourcePlayerModal();
-        setTimeout(() => {
-            if (currentPreviewMovie.id) {
-                openUploadModal(currentPreviewMovie.id, currentPreviewMovie.title);
+    function playSourceFile(source) {
+        const vid = document.getElementById('modal_source_video_element');
+        vid.src = source.stream_url;
+        vid.load();
+        vid.play().catch(e => console.log('Autoplay prevented:', e));
+
+        $('#active_source_filename').text(source.filename);
+        $('#active_source_meta').text(`Định dạng: ${source.source_type} ${source.created_at ? '• ' + source.created_at : ''}`);
+
+        if (source.license_info && (source.license_info.startsWith('http://') || source.license_info.startsWith('https://'))) {
+            $('#active_source_yt_link').removeClass('hidden').attr('href', source.license_info);
+        } else {
+            $('#active_source_yt_link').addClass('hidden');
+        }
+    }
+
+    function handleAddSourceYouTube(e) {
+        e.preventDefault();
+        const ytUrl = $('#add_source_yt_input').val();
+        if (!ytUrl || !currentPreviewMovie.id) return;
+
+        $('#add_source_yt_input').val('');
+        Swal.fire({
+            title: 'Đang tải thêm video...',
+            text: 'Vui lòng chờ giây lát trong khi AI tải clip YouTube này về kho media.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        $.post(`/api/v1/movies/${currentPreviewMovie.id}/sources/add-youtube`, { youtube_url: ytUrl }, function(res) {
+            Swal.fire({
+                title: 'Thành Công!',
+                text: res.message,
+                icon: 'success',
+                confirmButtonColor: '#10b981'
+            });
+            loadMovieSourcesPlaylist(currentPreviewMovie.id);
+        }).fail(function(err) {
+            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải thêm video từ YouTube', 'error');
+        });
+    }
+
+    function handleAddSourceUpload(input) {
+        if (!input.files || input.files.length === 0 || !currentPreviewMovie.id) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        Swal.fire({
+            title: 'Đang tải lên...',
+            text: `Đang tải file ${file.name} lên server...`,
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        $.ajax({
+            url: `/api/v1/movies/${currentPreviewMovie.id}/sources/add-upload`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                Swal.fire({
+                    title: 'Thành Công!',
+                    text: res.message,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981'
+                });
+                loadMovieSourcesPlaylist(currentPreviewMovie.id);
+            },
+            error: function(err) {
+                Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tải file lên', 'error');
             }
-        }, 150);
+        });
+    }
+
+    function handleDeleteSingleSource(e, sourceId) {
+        e.stopPropagation();
+        if (!currentPreviewMovie.id) return;
+
+        Swal.fire({
+            title: 'Xóa nguồn video này?',
+            text: 'File video này sẽ bị xóa khỏi bộ nhớ máy tính.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#475569',
+            confirmButtonText: 'Đồng Ý Xóa',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/api/v1/movies/${currentPreviewMovie.id}/sources/${sourceId}`,
+                    type: 'DELETE',
+                    success: function(res) {
+                        Toast.fire({ icon: 'success', title: res.message });
+                        loadMovieSourcesPlaylist(currentPreviewMovie.id);
+                    },
+                    error: function(err) {
+                        Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể xóa nguồn này', 'error');
+                    }
+                });
+            }
+        });
     }
 
     function closeSourcePlayerModal() {
@@ -894,32 +1041,89 @@
     }
 </script>
 
-<!-- Modal Xem Video Nguồn (Trailer / Media Preview) -->
+<!-- Modal Xem & Quản Lý Đa Nguồn Video Media (Playlist Studio) -->
 <dialog id="source_player_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-2xl p-4 flex flex-col items-center">
-        <div class="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-            <h3 class="font-bold text-sm truncate text-white flex items-center gap-2">
-                <i data-lucide="film" class="w-4 h-4 text-emerald-400"></i>
-                <span id="modal_source_title">Xem Video Nguồn</span>
-            </h3>
-            <button onclick="closeSourcePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-4xl p-5 flex flex-col">
+        <!-- Modal Header -->
+        <div class="w-full flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <i data-lucide="film" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                        <span id="modal_source_title">Quản Lý Nguồn Video</span>
+                        <span id="modal_source_count_badge" class="badge badge-sm badge-success text-white font-semibold">0 Video</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 font-mono" id="modal_source_movie_meta"></p>
+                </div>
+            </div>
+            <button onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost btn-circle">✕</button>
         </div>
         
-        <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
-            <video id="modal_source_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+        <!-- Modal Body: 2 Columns (Player Left + Playlist Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+            <!-- Left: Video Player (7 cols) -->
+            <div class="lg:col-span-7 flex flex-col space-y-3">
+                <div class="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative flex items-center justify-center border border-slate-800">
+                    <video id="modal_source_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
+                </div>
+                <!-- Active Video Info Card -->
+                <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                    <div class="space-y-0.5 min-w-0 flex-1">
+                        <div class="font-semibold text-slate-200 truncate flex items-center gap-1.5">
+                            <i data-lucide="play" class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0"></i>
+                            <span id="active_source_filename" class="truncate">Đang phát video...</span>
+                        </div>
+                        <div class="text-slate-400 font-mono text-[11px]" id="active_source_meta"></div>
+                    </div>
+                    <a id="active_source_yt_link" href="#" target="_blank" class="hidden btn btn-xs btn-outline btn-error gap-1 flex-shrink-0 font-medium">
+                        <i data-lucide="external-link" class="w-3 h-3"></i> Mở YouTube
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Sources Playlist & Add Tools (5 cols) -->
+            <div class="lg:col-span-5 flex flex-col justify-between space-y-3">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="list-video" class="w-4 h-4 text-indigo-400"></i> Danh Sách Nguồn
+                    </span>
+                    <span class="text-[11px] text-slate-500">Bấm để chuyển</span>
+                </div>
+
+                <!-- Playlist Items Container -->
+                <div id="source_playlist_items" class="space-y-2 max-h-56 overflow-y-auto pr-1 flex-1">
+                    <!-- Dynamic sources list rendered via JS -->
+                </div>
+
+                <!-- Add More Source Box -->
+                <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2.5">
+                    <div class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Thêm Nguồn Video Bổ Sung
+                    </div>
+                    <!-- Add YouTube Source Form -->
+                    <form onsubmit="handleAddSourceYouTube(event)" class="flex gap-1.5">
+                        <input type="url" id="add_source_yt_input" placeholder="Dán link YouTube khác..." class="input input-xs input-bordered bg-slate-900 text-white font-mono text-xs flex-1 focus:border-red-500" required />
+                        <button type="submit" class="btn btn-xs btn-error text-white gap-1 flex-shrink-0 font-medium shadow-sm">
+                            <i data-lucide="download" class="w-3 h-3"></i> Tải Thêm
+                        </button>
+                    </form>
+                    <!-- Add Upload Source Form -->
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                        <span class="text-[11px] text-slate-400">Hoặc tải file từ máy:</span>
+                        <label class="btn btn-xs btn-outline btn-info text-sky-300 gap-1 font-medium cursor-pointer">
+                            <i data-lucide="upload" class="w-3 h-3"></i> Tải Thêm MP4
+                            <input type="file" accept="video/mp4,video/mkv,video/webm" onchange="handleAddSourceUpload(this)" class="hidden" />
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="w-full flex flex-wrap items-center justify-between mt-4 pt-3 border-t border-slate-800 gap-3">
-            <div class="flex items-center gap-2.5 flex-wrap">
-                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">Thay thế video:</span>
-                <button type="button" onclick="replaceSourceWithYouTube()" class="btn btn-sm btn-error text-white gap-2 shadow-md shadow-rose-950/40 font-medium h-9 min-h-[36px] px-3.5" title="Dán link YouTube khác để tải lại">
-                    <i data-lucide="youtube" class="w-4 h-4 flex-shrink-0"></i> Nhập Link YouTube Khác
-                </button>
-                <button type="button" onclick="replaceSourceWithUpload()" class="btn btn-sm btn-outline btn-info text-sky-300 gap-2 hover:bg-sky-500/20 font-medium h-9 min-h-[36px] px-3.5" title="Tải file mp4 từ máy tính">
-                    <i data-lucide="upload" class="w-4 h-4 flex-shrink-0"></i> Tải File MP4 Lên
-                </button>
-            </div>
-            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost text-slate-300 h-9 min-h-[36px]">Đóng</button>
+        <!-- Modal Footer -->
+        <div class="w-full flex items-center justify-end mt-4 pt-3 border-t border-slate-800">
+            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost text-slate-300">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">

@@ -276,6 +276,133 @@ async def fetch_trailer_youtube(
     db.commit()
     return JSONResponse({"status": "success", "message": f"Đã tự động tải thành công trailer cho phim '{movie.title}'!"})
 
+@router.get("/api/v1/movies/{movie_id}/sources")
+async def get_movie_sources(movie_id: int, db: Session = Depends(get_db)):
+    """Retrieve all media sources (trailers, clips, full videos) attached to a movie."""
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phim")
+
+    sources_data = []
+    for s in movie.sources:
+        stream_url = ""
+        filename = ""
+        if s.file_path:
+            norm = s.file_path.replace("\\", "/")
+            if norm.startswith("http://") or norm.startswith("https://"):
+                stream_url = norm
+                filename = norm
+            else:
+                p = Path(s.file_path)
+                filename = p.name
+                if "media" in norm:
+                    idx = norm.find("/media/")
+                    stream_url = norm[idx:] if idx != -1 else f"/media/source/{p.name}"
+                else:
+                    stream_url = f"/media/source/{p.name}"
+        
+        sources_data.append({
+            "id": s.id,
+            "source_type": s.source_type,
+            "file_path": s.file_path,
+            "filename": filename or f"Nguồn #{s.id}",
+            "stream_url": stream_url or f"/api/v1/movies/{movie_id}/source-stream",
+            "license_info": s.license_info,
+            "is_verified": s.is_verified,
+            "created_at": s.created_at.strftime("%H:%M %d/%m/%Y") if s.created_at else ""
+        })
+
+    return JSONResponse({
+        "status": "success",
+        "movie_id": movie.id,
+        "movie_title": movie.title,
+        "sources": sources_data
+    })
+
+@router.post("/api/v1/movies/{movie_id}/sources/add-youtube")
+async def add_youtube_source(
+    movie_id: int,
+    youtube_url: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Add an extra YouTube clip/trailer to the movie's media pool."""
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phim")
+
+    from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
+    clean_prefix = slugify_filename(movie.title, movie.release_year)
+    
+    file_path = YouTubeTrailerDownloader.download_trailer(
+        query_or_url=youtube_url.strip(),
+        output_dir=str(settings.SOURCE_MEDIA_DIR),
+        filename_prefix=f"{movie.id}_{clean_prefix}_clip"
+    )
+    
+    if not file_path:
+        raise HTTPException(status_code=500, detail="Không thể tải video từ YouTube. Vui lòng kiểm tra lại link.")
+
+    source = MovieSource(
+        movie_id=movie.id,
+        source_type="youtube_clip",
+        file_path=file_path,
+        license_info=youtube_url.strip(),
+        is_verified=True
+    )
+    db.add(source)
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã thêm nguồn video YouTube mới cho phim '{movie.title}'!"})
+
+@router.post("/api/v1/movies/{movie_id}/sources/add-upload")
+async def add_upload_source(
+    movie_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Add an extra uploaded MP4 clip to the movie's media pool."""
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if not movie:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phim")
+
+    from app.video.youtube_downloader import slugify_filename
+    clean_name = slugify_filename(movie.title, movie.release_year)
+
+    dest_file = settings.SOURCE_MEDIA_DIR / f"{movie_id}_{clean_name}_{file.filename}"
+    with open(dest_file, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    source = MovieSource(
+        movie_id=movie.id,
+        source_type="user_upload_clip",
+        file_path=str(dest_file),
+        license_info=file.filename,
+        is_verified=True
+    )
+    db.add(source)
+    db.commit()
+    return JSONResponse({"status": "success", "message": f"Đã thêm clip video '{file.filename}' vào nguồn phim!"})
+
+@router.delete("/api/v1/movies/{movie_id}/sources/{source_id}")
+async def delete_movie_source(
+    movie_id: int,
+    source_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a specific media source from a movie."""
+    source = db.query(MovieSource).filter(MovieSource.id == source_id, MovieSource.movie_id == movie_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nguồn video này")
+
+    if source.file_path and Path(source.file_path).exists() and "source" in source.file_path:
+        try:
+            Path(source.file_path).unlink()
+        except Exception:
+            pass
+
+    db.delete(source)
+    db.commit()
+    return JSONResponse({"status": "success", "message": "Đã xóa nguồn video thành công!"})
+
 @router.get("/api/v1/movies/{movie_id}/source-stream")
 async def stream_movie_source(movie_id: int, db: Session = Depends(get_db)):
     """Stream or redirect to the source media file/trailer for verification."""
