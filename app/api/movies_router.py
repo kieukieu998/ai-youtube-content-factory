@@ -122,7 +122,7 @@ async def create_movie_from_youtube(
     if not url:
         raise HTTPException(status_code=400, detail="Vui lòng nhập đường link YouTube hợp lệ")
 
-    from app.video.youtube_downloader import YouTubeTrailerDownloader
+    from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
     import asyncio
 
     # Try fast extraction first for immediate responsiveness
@@ -169,7 +169,8 @@ async def create_movie_from_youtube(
     final_file_path = None
     if info.get("file_path") and os.path.exists(info["file_path"]):
         orig_path = Path(info["file_path"])
-        dest_path = settings.SOURCE_MEDIA_DIR / f"movie_{movie.id}_{orig_path.name}"
+        clean_name = slugify_filename(movie.title, movie.release_year)
+        dest_path = settings.SOURCE_MEDIA_DIR / f"{movie.id}_{clean_name}_{orig_path.name}"
         try:
             orig_path.rename(dest_path)
             final_file_path = str(dest_path)
@@ -204,6 +205,9 @@ async def upload_movie_source(
     if not movie:
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
+    from app.video.youtube_downloader import slugify_filename
+    clean_name = slugify_filename(movie.title, movie.release_year)
+
     # Clean up old source records and files
     for old_s in movie.sources:
         if old_s.file_path and Path(old_s.file_path).exists() and "source" in old_s.file_path:
@@ -213,7 +217,7 @@ async def upload_movie_source(
                 pass
         db.delete(old_s)
 
-    dest_file = settings.SOURCE_MEDIA_DIR / f"movie_{movie_id}_{file.filename}"
+    dest_file = settings.SOURCE_MEDIA_DIR / f"{movie_id}_{clean_name}_{file.filename}"
     with open(dest_file, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -238,13 +242,14 @@ async def fetch_trailer_youtube(
     if not movie:
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
-    from app.video.youtube_downloader import YouTubeTrailerDownloader
+    from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
     search_query = youtube_url.strip() if youtube_url and youtube_url.strip() else f"{movie.original_title or movie.title} {movie.release_year or ''}"
-    
+    clean_prefix = slugify_filename(movie.title, movie.release_year)
+
     file_path = YouTubeTrailerDownloader.download_trailer(
         query_or_url=search_query,
         output_dir=str(settings.SOURCE_MEDIA_DIR),
-        filename_prefix=f"movie_{movie.id}"
+        filename_prefix=f"{movie.id}_{clean_prefix}"
     )
     
     if not file_path:

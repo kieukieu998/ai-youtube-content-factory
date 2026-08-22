@@ -1,9 +1,24 @@
 import os
+import re
 import asyncio
+import unicodedata
 from pathlib import Path
 from typing import Optional
 from loguru import logger
 from app.core.config import settings
+
+def slugify_filename(title: str, year: Optional[int] = None) -> str:
+    """Convert movie title and year to a clean safe filename string e.g. Tro_Choi_Tron_Tim_2019."""
+    if not title:
+        return "movie"
+    nfkd = unicodedata.normalize('NFKD', str(title))
+    ascii_text = nfkd.encode('ASCII', 'ignore').decode('ASCII')
+    clean = re.sub(r'[^a-zA-Z0-9]+', '_', ascii_text).strip('_')
+    if not clean:
+        clean = "movie"
+    if year:
+        clean = f"{clean}_{year}"
+    return clean[:70]
 
 class YouTubeTrailerDownloader:
     """Auto-searches and downloads official movie trailers from YouTube using yt-dlp."""

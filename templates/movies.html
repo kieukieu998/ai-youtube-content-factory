@@ -909,17 +909,17 @@
             <video id="modal_source_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
         </div>
 
-        <div class="modal-action w-full flex flex-wrap justify-between items-center mt-3 pt-2.5 border-t border-slate-800 gap-2">
-            <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-400 font-medium">Thay thế video:</span>
-                <button type="button" onclick="replaceSourceWithYouTube()" class="btn btn-xs btn-error text-white gap-1.5 shadow-sm font-medium" title="Dán link YouTube khác để tải lại">
-                    <i data-lucide="youtube" class="w-3.5 h-3.5"></i> Nhập Link YouTube Khác
+        <div class="w-full flex flex-wrap items-center justify-between mt-4 pt-3 border-t border-slate-800 gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="text-xs text-slate-400 font-medium whitespace-nowrap">Thay thế video:</span>
+                <button type="button" onclick="replaceSourceWithYouTube()" class="btn btn-sm btn-error text-white gap-2 shadow-md shadow-rose-950/40 font-medium h-9 min-h-[36px] px-3.5" title="Dán link YouTube khác để tải lại">
+                    <i data-lucide="youtube" class="w-4 h-4 flex-shrink-0"></i> Nhập Link YouTube Khác
                 </button>
-                <button type="button" onclick="replaceSourceWithUpload()" class="btn btn-xs btn-outline btn-info text-sky-300 gap-1.5 hover:bg-sky-500/20 font-medium" title="Tải file mp4 từ máy tính">
-                    <i data-lucide="upload" class="w-3.5 h-3.5"></i> Tải File MP4 Lên
+                <button type="button" onclick="replaceSourceWithUpload()" class="btn btn-sm btn-outline btn-info text-sky-300 gap-2 hover:bg-sky-500/20 font-medium h-9 min-h-[36px] px-3.5" title="Tải file mp4 từ máy tính">
+                    <i data-lucide="upload" class="w-4 h-4 flex-shrink-0"></i> Tải File MP4 Lên
                 </button>
             </div>
-            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost">Đóng</button>
+            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost text-slate-300 h-9 min-h-[36px]">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
