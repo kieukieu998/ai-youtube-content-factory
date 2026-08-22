@@ -8,6 +8,19 @@ def init_db():
     logger.info("Initializing database tables...")
     Base.metadata.create_all(bind=engine)
     
+    # Auto-migrate missing columns for SQLite
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            # Check created_by in movies
+            cols = [c[1] for c in conn.execute(text("PRAGMA table_info(movies)")).fetchall()]
+            if "created_by" not in cols:
+                conn.execute(text("ALTER TABLE movies ADD COLUMN created_by VARCHAR(50) DEFAULT 'ai'"))
+                conn.commit()
+                logger.info("Migrated column movies.created_by")
+    except Exception as e:
+        logger.warning(f"Column migration notice: {e}")
+    
     db = SessionLocal()
     try:
         # Default settings definitions

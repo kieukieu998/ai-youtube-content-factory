@@ -27,6 +27,7 @@ class Movie(Base):
     poster_url = Column(String(500), nullable=True)
     potential_score = Column(Float, default=0.0)
     status = Column(String(50), default="discovered", index=True) # discovered, analyzed, scripted, completed
+    created_by = Column(String(50), default="ai") # ai, user
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

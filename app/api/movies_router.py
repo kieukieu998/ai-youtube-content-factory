@@ -163,7 +163,8 @@ async def create_movie_from_youtube(
         duration_minutes=duration_val,
         synopsis=movie_synopsis,
         potential_score=90.0,
-        status="discovered"
+        status="discovered",
+        created_by="user"
     )
     db.add(movie)
     db.flush()
