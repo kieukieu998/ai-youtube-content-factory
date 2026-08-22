@@ -243,10 +243,12 @@ async def fetch_trailer_youtube(
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
     from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
+    import asyncio
     search_query = youtube_url.strip() if youtube_url and youtube_url.strip() else f"{movie.original_title or movie.title} {movie.release_year or ''}"
     clean_prefix = slugify_filename(movie.title, movie.release_year)
 
-    file_path = YouTubeTrailerDownloader.download_trailer(
+    file_path = await asyncio.to_thread(
+        YouTubeTrailerDownloader.download_trailer,
         query_or_url=search_query,
         output_dir=str(settings.SOURCE_MEDIA_DIR),
         filename_prefix=f"{movie.id}_{clean_prefix}"
@@ -331,9 +333,11 @@ async def add_youtube_source(
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
     from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
+    import asyncio
     clean_prefix = slugify_filename(movie.title, movie.release_year)
     
-    file_path = YouTubeTrailerDownloader.download_trailer(
+    file_path = await asyncio.to_thread(
+        YouTubeTrailerDownloader.download_trailer,
         query_or_url=youtube_url.strip(),
         output_dir=str(settings.SOURCE_MEDIA_DIR),
         filename_prefix=f"{movie.id}_{clean_prefix}_clip"
