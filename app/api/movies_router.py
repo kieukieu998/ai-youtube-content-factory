@@ -13,9 +13,25 @@ from app.core.config import settings
 
 router = APIRouter()
 
+def extract_youtube_url(movie: Movie) -> str:
+    """Extract full YouTube link from license_info or filename."""
+    if not movie.sources:
+        return ""
+    for s in movie.sources:
+        if s.license_info and ("youtube.com" in s.license_info or "youtu.be" in s.license_info):
+            return s.license_info
+        if s.file_path:
+            p = Path(s.file_path)
+            parts = p.stem.split("_")
+            if len(parts) >= 3 and len(parts[-1]) == 11:
+                return f"https://www.youtube.com/watch?v={parts[-1]}"
+    return ""
+
 @router.get("/movies", response_class=HTMLResponse)
 async def movies_list_page(request: Request, db: Session = Depends(get_db)):
     movies = db.query(Movie).order_by(Movie.created_at.desc()).all()
+    for m in movies:
+        m.youtube_url = extract_youtube_url(m)
     return templates.TemplateResponse(
         request=request,
         name="movies.html",
@@ -45,6 +61,7 @@ async def update_movie(
     genre: str = Form(None),
     release_year: int = Form(None),
     synopsis: str = Form(None),
+    youtube_url: str = Form(None),
     db: Session = Depends(get_db)
 ):
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
@@ -61,6 +78,21 @@ async def update_movie(
     if synopsis is not None:
         movie.synopsis = synopsis.strip()
 
+    # Update or attach YouTube URL to source
+    if youtube_url and youtube_url.strip():
+        clean_yt = youtube_url.strip()
+        if movie.sources:
+            movie.sources[0].license_info = clean_yt
+        else:
+            source = MovieSource(
+                movie_id=movie.id,
+                source_type="youtube_link",
+                file_path=clean_yt,
+                license_info=clean_yt,
+                is_verified=False
+            )
+            db.add(source)
+
     db.commit()
     return JSONResponse({
         "status": "success",
@@ -71,7 +103,8 @@ async def update_movie(
             "original_title": movie.original_title,
             "genre": movie.genre,
             "release_year": movie.release_year,
-            "synopsis": movie.synopsis
+            "synopsis": movie.synopsis,
+            "youtube_url": youtube_url.strip() if youtube_url else ""
         }
     })
 
@@ -149,6 +182,7 @@ async def create_movie_from_youtube(
         movie_id=movie.id,
         source_type="youtube_link",
         file_path=final_file_path,
+        license_info=url,
         is_verified=bool(info.get("file_path") and os.path.exists(info["file_path"]))
     )
     db.add(source)
@@ -170,6 +204,15 @@ async def upload_movie_source(
     if not movie:
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
+    # Clean up old source records and files
+    for old_s in movie.sources:
+        if old_s.file_path and Path(old_s.file_path).exists() and "source" in old_s.file_path:
+            try:
+                Path(old_s.file_path).unlink()
+            except Exception:
+                pass
+        db.delete(old_s)
+
     dest_file = settings.SOURCE_MEDIA_DIR / f"movie_{movie_id}_{file.filename}"
     with open(dest_file, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -178,11 +221,12 @@ async def upload_movie_source(
         movie_id=movie.id,
         source_type="user_upload",
         file_path=str(dest_file),
+        license_info=file.filename,
         is_verified=True
     )
     db.add(source)
     db.commit()
-    return JSONResponse({"status": "success", "message": "Tải lên video nguồn thành công!"})
+    return JSONResponse({"status": "success", "message": f"Đã tải lên và thay thế video nguồn '{file.filename}' thành công!"})
 
 @router.post("/api/v1/movies/{movie_id}/fetch-trailer")
 async def fetch_trailer_youtube(
@@ -195,7 +239,7 @@ async def fetch_trailer_youtube(
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
     from app.video.youtube_downloader import YouTubeTrailerDownloader
-    search_query = youtube_url if youtube_url and youtube_url.strip() else f"{movie.original_title or movie.title} {movie.release_year or ''}"
+    search_query = youtube_url.strip() if youtube_url and youtube_url.strip() else f"{movie.original_title or movie.title} {movie.release_year or ''}"
     
     file_path = YouTubeTrailerDownloader.download_trailer(
         query_or_url=search_query,
@@ -206,11 +250,21 @@ async def fetch_trailer_youtube(
     if not file_path:
         raise HTTPException(status_code=500, detail="Không thể tải trailer từ YouTube. Vui lòng kiểm tra lại đường truyền hoặc link.")
 
-    # Save to movie sources
+    # Clean up old source records and files
+    for old_s in movie.sources:
+        if old_s.file_path and old_s.file_path != file_path and Path(old_s.file_path).exists() and "source" in old_s.file_path:
+            try:
+                Path(old_s.file_path).unlink()
+            except Exception:
+                pass
+        db.delete(old_s)
+
+    # Save new movie source
     source = MovieSource(
         movie_id=movie.id,
         source_type="youtube_trailer",
         file_path=file_path,
+        license_info=search_query if ("youtube.com" in search_query or "youtu.be" in search_query) else None,
         is_verified=True
     )
     db.add(source)
