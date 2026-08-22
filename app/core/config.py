@@ -58,6 +58,7 @@ class Settings(ConfigBase):
     
     # Emergency & Guard
     DAILY_BUDGET_LIMIT_USD: float = float(os.getenv("DAILY_BUDGET_LIMIT_USD", "0.0"))
+    OPERATION_MODE: str = os.getenv("OPERATION_MODE", "semi_auto")
     TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID: Optional[str] = os.getenv("TELEGRAM_CHAT_ID")
 

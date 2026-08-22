@@ -193,7 +193,8 @@ class JobWorker:
         db.add(script)
         db.flush()
 
-        auto_mode = settings.OPERATION_MODE == "auto"
+        mode_setting = db.query(Setting).filter(Setting.key == "operation_mode").first()
+        auto_mode = (mode_setting.value == "full_auto") if mode_setting else False
         episode_status = "approved" if auto_mode else "approval_pending"
 
         for ep_data in script_pkg.episodes:
