@@ -166,18 +166,16 @@
         </div>
         <form onsubmit="handleAddYouTubeMovie(event)" class="space-y-3.5">
             <div class="form-control">
-                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-semibold">Đường Link YouTube Video / Trailer (*):</span></label>
-                <input type="url" id="yt_input_url" placeholder="https://www.youtube.com/watch?v=..." class="input input-sm input-bordered bg-slate-950 text-white w-full focus:border-red-500" required />
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Đường Link YouTube Video / Trailer (*):</span></label>
+                <input type="url" id="yt_input_url" placeholder="https://www.youtube.com/watch?v=..." class="input input-sm input-bordered bg-slate-950 text-white font-mono text-xs w-full focus:border-red-500" required />
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="form-control">
-                    <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tên Phim (Tiếng Việt):</span></label>
-                    <input type="text" id="yt_input_title" placeholder="Để trống để tự lấy tên video" class="input input-sm input-bordered bg-slate-950 text-white w-full" />
-                </div>
-                <div class="form-control">
-                    <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tên Gốc (Tiếng Anh/Quốc tế):</span></label>
-                    <input type="text" id="yt_input_orig" placeholder="Vd: Inception (2010)" class="input input-sm input-bordered bg-slate-950 text-white w-full" />
-                </div>
+            <div class="form-control">
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Tên Phim (Tiếng Việt):</span></label>
+                <input type="text" id="yt_input_title" placeholder="Để trống để AI tự lấy tên từ YouTube" class="input input-sm input-bordered bg-slate-950 text-white w-full focus:border-indigo-500 font-semibold" />
+            </div>
+            <div class="form-control">
+                <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tên Gốc (Tiếng Anh/Quốc tế):</span></label>
+                <input type="text" id="yt_input_orig" placeholder="Vd: Inception (2010)" class="input input-sm input-bordered bg-slate-950 text-white font-mono w-full" />
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="form-control">
@@ -190,8 +188,8 @@
                 </div>
             </div>
             <div class="form-control">
-                <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tóm Tắt Ngắn:</span></label>
-                <textarea id="yt_input_synopsis" rows="2" placeholder="Tóm tắt ngắn cốt truyện (tùy chọn)..." class="textarea textarea-sm textarea-bordered bg-slate-950 text-white w-full"></textarea>
+                <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tóm Tắt Cốt Truyện:</span></label>
+                <textarea id="yt_input_synopsis" rows="3" placeholder="Tóm tắt ngắn cốt truyện (tùy chọn, để trống AI sẽ tự lấy)..." class="textarea textarea-bordered bg-slate-950 text-slate-200 text-xs leading-relaxed w-full"></textarea>
             </div>
             <div class="modal-action pt-2 border-t border-slate-800">
                 <button type="button" onclick="document.getElementById('youtube_modal').close()" class="btn btn-sm btn-ghost">Hủy</button>
@@ -218,6 +216,10 @@
         <form onsubmit="handleSaveMovieEdit(event)" class="space-y-3.5">
             <input type="hidden" id="edit_movie_id" />
             <div class="form-control">
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Đường Link YouTube Video / Trailer:</span></label>
+                <input type="url" id="edit_movie_youtube" placeholder="https://www.youtube.com/watch?v=..." class="input input-sm input-bordered bg-slate-950 text-white font-mono text-xs w-full focus:border-red-500" />
+            </div>
+            <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Tên Phim (Tiếng Việt) (*):</span></label>
                 <input type="text" id="edit_movie_title" class="input input-sm input-bordered bg-slate-950 text-white w-full focus:border-indigo-500 font-semibold" required />
             </div>
@@ -234,10 +236,6 @@
                     <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Năm Phát Hành:</span></label>
                     <input type="number" id="edit_movie_year" class="input input-sm input-bordered bg-slate-950 text-white w-full" />
                 </div>
-            </div>
-            <div class="form-control">
-                <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Link YouTube Trailer / Video Nguồn:</span></label>
-                <input type="url" id="edit_movie_youtube" placeholder="https://www.youtube.com/watch?v=..." class="input input-sm input-bordered bg-slate-950 text-white font-mono text-xs w-full focus:border-red-500" />
             </div>
             <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Tóm Tắt Cốt Truyện:</span></label>
