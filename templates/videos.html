@@ -176,22 +176,23 @@
                 </div>
 
                 <div class="p-3 space-y-1.5">
-                    <div class="font-bold text-white text-xs line-clamp-1 title-text flex items-center justify-between">
-                        <span class="flex items-center gap-1">
-                            Tập {{ ep_num }}
-                            {% if v.render_version %}
-                            <span class="badge {% if v.render_version > 1 %}badge-warning{% else %}badge-info{% endif %} badge-xs font-mono font-bold">v{{ v.render_version }}</span>
-                            {% endif %}
-                        </span>
-                        <span class="text-[10px] text-slate-500 font-mono">{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB</span>
+                    <div class="font-bold text-white text-xs line-clamp-1 title-text flex items-center gap-1.5">
+                        <span>Tập {{ ep_num }}</span>
+                        {% if v.render_version %}
+                        <span class="badge {% if v.render_version > 1 %}badge-warning{% else %}badge-info{% endif %} badge-xs font-mono font-bold">v{{ v.render_version }}</span>
+                        {% endif %}
                     </div>
                     <p class="text-[11px] text-slate-400 line-clamp-2 hook-text">
                         Hook: "{{ ep_hook }}"
                     </p>
                     <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                        <span class="text-slate-300 flex items-center gap-1 font-semibold">
-                            <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> {{ v.duration_seconds|format_duration }}
-                        </span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-slate-300 flex items-center gap-1 font-semibold">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> {{ v.duration_seconds|format_duration }}
+                            </span>
+                            <span class="text-slate-600">•</span>
+                            <span class="text-[10px] text-slate-400 font-mono">{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB</span>
+                        </div>
                         <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="text-slate-500 hover:text-rose-400 p-0.5 rounded transition" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
