@@ -191,11 +191,11 @@
                     <p class="text-[11px] text-slate-400 line-clamp-2 hook-text">
                         Hook: "{{ ep_hook }}"
                     </p>
-                    <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                        <a href="/api/v1/videos/{{ v.id }}/stream" download="video_ep_{{ ep_num }}_v{{ v.render_version or 1 }}.mp4" class="text-slate-400 hover:text-indigo-400 flex items-center gap-1" title="Tải video">
-                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải Về
-                        </a>
-                        <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="text-slate-400 hover:text-rose-400" title="Xóa video này">
+                    <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                        <span class="text-slate-300 flex items-center gap-1 font-semibold">
+                            <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i> {{ v.duration_seconds|format_duration }}
+                        </span>
+                        <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="text-slate-500 hover:text-rose-400 p-0.5 rounded transition" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -223,10 +223,10 @@
     {% endif %}
 </div>
 
-<!-- Modal Xem Video Dọc 9:16 -->
+<!-- Modal Xem Video Review -->
 <dialog id="player_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-sm p-4 flex flex-col items-center">
-        <div class="w-full flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-sm flex flex-col items-center p-4">
+        <div class="flex items-center justify-between w-full mb-3">
             <h3 class="font-bold text-sm truncate text-white" id="modal_video_title">Xem Video Review</h3>
             <button onclick="closePlayerModal()" class="btn btn-xs btn-ghost btn-circle">✕</button>
         </div>
@@ -235,11 +235,8 @@
             <video id="modal_video_element" class="w-full h-full object-contain" controls autoplay playsinline></video>
         </div>
 
-        <div class="modal-action w-full flex justify-between items-center mt-3 pt-2 border-t border-slate-800">
-            <a id="modal_download_btn" href="#" download class="btn btn-sm btn-outline btn-primary gap-1.5 flex-1 mr-2">
-                <i data-lucide="download" class="w-4 h-4"></i> Tải Về Máy
-            </a>
-            <button onclick="closePlayerModal()" class="btn btn-sm btn-ghost">Đóng</button>
+        <div class="modal-action w-full flex justify-end items-center mt-3 pt-2 border-t border-slate-800">
+            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-6">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
@@ -252,7 +249,6 @@
         const streamUrl = `/api/v1/videos/${videoId}/stream`;
         $('#modal_video_title').text(title);
         $('#modal_video_element').attr('src', streamUrl);
-        $('#modal_download_btn').attr('href', streamUrl).attr('download', `video_${videoId}.mp4`);
         document.getElementById('player_modal').showModal();
         document.getElementById('modal_video_element').play();
     }
