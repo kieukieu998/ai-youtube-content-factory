@@ -260,13 +260,25 @@
             <input type="hidden" id="script_modal_movie_id" />
 
             <div class="form-control">
-                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Số Lượng Tập Kịch Bản (Tùy Chỉnh):</span></label>
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Số Lượng Tập Kịch Bản:</span></label>
                 <select id="script_modal_episodes" class="select select-sm select-bordered bg-slate-950 text-white w-full">
-                    <option value="1">1 Tập (Trọn gói Review ngắn ~60s)</option>
+                    <option value="1">1 Tập (Trọn gói 1 video duy nhất)</option>
                     <option value="2">2 Tập (Phần 1 Mở đầu + Phần 2 Cao trào)</option>
                     <option value="3" selected>3 Tập (Tiêu chuẩn: Mở đầu -> Xung đột -> Đại kết cục)</option>
                     <option value="4">4 Tập (Bóc tách chi tiết nhiều twist)</option>
                     <option value="5">5 Tập (Series dài tập cho phim phức tạp)</option>
+                </select>
+            </div>
+
+            <div class="form-control">
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Thời Lượng Mỗi Tập (Tùy Chọn):</span></label>
+                <select id="script_modal_duration" class="select select-sm select-bordered bg-slate-950 text-white w-full">
+                    <option value="60" selected>60 Giây (Shorts / TikTok chuẩn ~150 từ)</option>
+                    <option value="180">3 Phút (Review ngắn ~450 từ)</option>
+                    <option value="300">5 Phút (Tóm tắt trung bình ~750 từ)</option>
+                    <option value="600">10 Phút (Tóm tắt chi tiết ~1.500 từ)</option>
+                    <option value="1020">17 Phút (Tóm tắt trọn bộ phim chuyên sâu ~2.550 từ)</option>
+                    <option value="1200">20 Phút (Full Movie Recap dài tập ~3.000 từ)</option>
                 </select>
             </div>
 
@@ -517,6 +529,7 @@
         e.preventDefault();
         const movieId = $('#script_modal_movie_id').val();
         const episodes = $('#script_modal_episodes').val();
+        const duration = $('#script_modal_duration').val() || 60;
         const style = $('#script_modal_style').val();
         const provider = $('#script_modal_provider').val();
 
@@ -526,6 +539,7 @@
         $.post('/api/v1/scripts/generate', {
             movie_id: movieId,
             target_episodes: episodes,
+            target_duration_seconds: duration,
             style: style,
             ai_provider: provider
         }, function(res) {

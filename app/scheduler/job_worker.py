@@ -146,6 +146,7 @@ class JobWorker:
     async def _handle_script_generation(cls, db, job: Job, payload: Dict[str, Any]):
         movie_id = payload.get("movie_id")
         target_episodes = int(payload.get("target_episodes", 3))
+        target_duration_seconds = int(payload.get("target_duration_seconds", 60))
         style = payload.get("style", "dramatic")
         ai_provider = payload.get("ai_provider")
 
@@ -170,7 +171,8 @@ class JobWorker:
             movie_title=movie.title, 
             analysis=analysis,
             style=style,
-            target_episodes=target_episodes
+            target_episodes=target_episodes,
+            target_duration_seconds=target_duration_seconds
         )
         job.progress = 70
         db.commit()

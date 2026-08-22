@@ -26,27 +26,34 @@ class ScriptWriterAgent:
         movie_title: str, 
         analysis: MovieAnalysis,
         style: str = "dramatic",
-        target_episodes: Optional[int] = None
+        target_episodes: Optional[int] = None,
+        target_duration_seconds: int = 60
     ) -> FullScriptPackage:
         ep_count = target_episodes or analysis.recommended_episodes or 3
+        duration_sec = target_duration_seconds if target_duration_seconds > 0 else 60
+        target_words = max(120, int((duration_sec / 60.0) * 150))
+        duration_desc = f"{duration_sec // 60} phút ({duration_sec} giây)" if duration_sec >= 60 else f"{duration_sec} giây"
+
         prompt = (
             f"Tên Phim: {movie_title}\n"
             f"Phong cách giọng điệu: {style}\n"
-            f"Chủ đề: {analysis.core_theme}\n"
+            f"Chủ đề cốt lõi: {analysis.core_theme}\n"
             f"Tóm tắt cốt truyện: {analysis.plot_summary}\n"
             f"Khoảnh khắc đắt giá: {', '.join(analysis.key_highlights)}\n"
             f"Cú Twist bất ngờ: {', '.join(analysis.plot_twists)}\n"
-            f"SỐ LƯỢNG TẬP YÊU CẦU BẮT BUỘC: CHÍNH XÁC {ep_count} TẬP.\n\n"
-            f"YÊU CẦU VIẾT KỊCH BẢN TIKTOK TRIỆU VIEW (CỰC KỲ QUAN TRỌNG):\n"
+            f"SỐ LƯỢNG TẬP YÊU CẦU: CHÍNH XÁC {ep_count} TẬP.\n"
+            f"THỜI LƯỢNG MỤC TIÊU MỖI TẬP: {duration_desc}.\n\n"
+            f"YÊU CẦU VIẾT KỊCH BẢN CHUYÊN NGHIỆP (CỰC KỲ QUAN TRỌNG):\n"
             f"1. Tổng số phần (episodes) trong mảng 'episodes' BẮT BUỘC PHẢI CÓ ĐÚNG {ep_count} tập (đánh số episode_number từ 1 đến {ep_count}).\n"
-            f"2. Hook (1-3s): Phải là một câu hỏi giật gân, nghịch lý hoặc tình huống sống còn khiến người xem lập tức dừng lướt.\n"
-            f"3. Lời bình (Narrative Body ~90-130 từ/tập): Kể chuyện nhịp độ nhanh, dồn dập, câu từ sắc bén, giàu hình ảnh và cảm xúc. Dùng dấu câu ngắt nhịp hợp lý để giọng đọc AI truyền cảm, có điểm nhấn.\n"
-            f"4. Cao trào & Kêu gọi (CTA): Dừng ngay tại thời điểm gay cấn nhất, đặt câu hỏi bỏ lửng khiến người xem đón xem tiếp theo."
+            f"2. Hook (1-3s đầu): Phải là một câu hỏi giật gân, nghịch lý hoặc tình huống sống còn khiến người xem lập tức dừng lướt.\n"
+            f"3. Độ dài Lời bình (Narrative Body): BẮT BUỘC viết đầy đủ, chi tiết, hấp dẫn khoảng {target_words} TỪ cho mỗi tập (tương ứng với tốc độ đọc AI chuẩn 150 từ/phút để đạt đúng thời lượng {duration_desc}).\n"
+            f"4. Nhịp điệu câu chuyện: Kể chuyện lớp lang, giàu cảm xúc, dồn dập, dùng dấu câu ngắt nhịp tự nhiên để giọng đọc AI truyền cảm.\n"
+            f"5. Cao trào & Kêu gọi (CTA): Kết thúc mỗi tập với cao trào nghẹt thở và câu kêu gọi đón xem tập tiếp theo."
         )
         
         system_prompt = (
-            "Bạn là Chuyên Gia Biên Kịch Kênh Review Phim Triệu View trên TikTok và YouTube Shorts. "
-            "Phong cách viết của bạn cực kỳ cuốn hút, nghẹt thở, kịch tính từng giây, từ ngữ sinh động, không viết lan man hay khô khan học thuật."
+            "Bạn là Chuyên Gia Biên Kịch Kênh Review & Phân Tích Phim Triệu View trên TikTok và YouTube. "
+            "Phong cách viết của bạn cực kỳ cuốn hút, nghẹt thở, kịch tính từng giây, từ ngữ sinh động, giàu hình ảnh, không viết lan man hay khô khan học thuật."
         )
         
         result = await self.provider.generate_structured(

@@ -92,6 +92,18 @@ def test_script_custom_episodes_generation(client, db_session):
     )
     db_session.add(movie)
     db_session.commit()
+    db_session.refresh(movie)
+
+    # Generate 1 episode with 17 minutes duration (1020s)
+    res_17m = client.post(
+        "/api/v1/scripts/generate",
+        data={"movie_id": movie.id, "target_episodes": 1, "target_duration_seconds": 1020, "style": "dramatic"}
+    )
+    assert res_17m.status_code == 200
+    job_17m = db_session.query(Job).filter(Job.id == res_17m.json()["job_id"]).first()
+    payload_17m = json.loads(job_17m.payload)
+    assert payload_17m["target_duration_seconds"] == 1020
+    assert payload_17m["target_episodes"] == 1
 
     gen_res = client.post(
         "/api/v1/scripts/generate",

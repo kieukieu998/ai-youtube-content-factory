@@ -30,6 +30,7 @@ async def scripts_page(request: Request, db: Session = Depends(get_db)):
 async def trigger_script_generation(
     movie_id: int = Form(...),
     target_episodes: int = Form(3),
+    target_duration_seconds: int = Form(60),
     style: str = Form("dramatic"),
     ai_provider: str = Form(None),
     db: Session = Depends(get_db)
@@ -44,15 +45,17 @@ async def trigger_script_generation(
         payload=json.dumps({
             "movie_id": movie_id,
             "target_episodes": target_episodes,
+            "target_duration_seconds": target_duration_seconds,
             "style": style,
             "ai_provider": ai_provider
         })
     )
     db.add(job)
     db.commit()
+    dur_label = f"{target_duration_seconds // 60} phút/tập" if target_duration_seconds >= 60 else f"{target_duration_seconds}s/tập"
     return JSONResponse({
         "status": "success", 
-        "message": f"Đã thêm tác vụ viết {target_episodes} tập kịch bản cho phim '{movie.title}' vào hàng đợi", 
+        "message": f"Đã thêm tác vụ viết {target_episodes} tập ({dur_label}) cho phim '{movie.title}' vào hàng đợi", 
         "job_id": job.id
     })
 

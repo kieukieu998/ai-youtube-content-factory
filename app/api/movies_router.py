@@ -92,7 +92,10 @@ async def create_movie_from_youtube(
     from app.video.youtube_downloader import YouTubeTrailerDownloader
     import asyncio
 
-    # Download in thread
+    # Try fast extraction first for immediate responsiveness
+    fast_info = await asyncio.to_thread(YouTubeTrailerDownloader.extract_metadata_fast, url)
+
+    # Attempt download
     info = await asyncio.to_thread(
         YouTubeTrailerDownloader.get_video_info_and_download,
         query_or_url=url,
@@ -100,19 +103,29 @@ async def create_movie_from_youtube(
         filename_prefix="movie_yt"
     )
 
-    if not info.get("file_path"):
-        raise HTTPException(status_code=500, detail="Không thể tải video từ link YouTube này. Vui lòng kiểm tra lại URL.")
+    movie_title = (
+        (title.strip() if title and title.strip() else None)
+        or info.get("title")
+        or fast_info.get("title")
+        or "Phim Chưa Đặt Tên"
+    )
+    movie_orig = (
+        (original_title.strip() if original_title and original_title.strip() else None)
+        or movie_title
+    )
+    raw_desc = info.get("description") or fast_info.get("description") or ""
+    movie_synopsis = (
+        (synopsis.strip() if synopsis and synopsis.strip() else None)
+        or (raw_desc[:400] if raw_desc else f"Phim nhập từ YouTube: {movie_title}")
+    )
+    duration_val = info.get("duration") or fast_info.get("duration") or 0
 
-    movie_title = title.strip() if (title and title.strip()) else (info.get("title") or "Phim Chưa Đặt Tên")
-    movie_orig = original_title.strip() if (original_title and original_title.strip()) else movie_title
-    movie_synopsis = synopsis.strip() if (synopsis and synopsis.strip()) else (info.get("description", "")[:400] if info.get("description") else f"Video phim nhập từ YouTube: {movie_title}")
-    
     movie = Movie(
         title=movie_title,
         original_title=movie_orig,
         release_year=release_year,
         genre=genre,
-        duration_minutes=info.get("duration", 0),
+        duration_minutes=duration_val,
         synopsis=movie_synopsis,
         potential_score=90.0,
         status="discovered"
@@ -120,20 +133,23 @@ async def create_movie_from_youtube(
     db.add(movie)
     db.flush()
 
-    # Move/rename to movie ID prefix for neat organization
-    orig_path = Path(info["file_path"])
-    dest_path = settings.SOURCE_MEDIA_DIR / f"movie_{movie.id}_{orig_path.name}"
-    try:
-        orig_path.rename(dest_path)
-        final_file_path = str(dest_path)
-    except Exception:
-        final_file_path = str(orig_path)
+    final_file_path = None
+    if info.get("file_path") and os.path.exists(info["file_path"]):
+        orig_path = Path(info["file_path"])
+        dest_path = settings.SOURCE_MEDIA_DIR / f"movie_{movie.id}_{orig_path.name}"
+        try:
+            orig_path.rename(dest_path)
+            final_file_path = str(dest_path)
+        except Exception:
+            final_file_path = str(orig_path)
+    else:
+        final_file_path = url
 
     source = MovieSource(
         movie_id=movie.id,
         source_type="youtube_link",
         file_path=final_file_path,
-        is_verified=True
+        is_verified=bool(info.get("file_path") and os.path.exists(info["file_path"]))
     )
     db.add(source)
     db.commit()
