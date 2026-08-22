@@ -35,15 +35,15 @@ def test_ai_providers_per_stage_and_settings(client, db_session):
     assert save_response.json()["status"] == "success"
 
     # Test factory resolution by stage
-    discovery_p = get_ai_provider(stage="discovery")
+    discovery_p = get_ai_provider(stage="discovery", db=db_session)
     assert discovery_p.__class__.__name__ == "OpenAICompatibleProvider"
     assert discovery_p.model_name == "deepseek-chat"
 
-    script_p = get_ai_provider(stage="script")
+    script_p = get_ai_provider(stage="script", db=db_session)
     assert script_p.__class__.__name__ == "OpenAICompatibleProvider"
     assert script_p.model_name == "gpt-4o"
 
-    render_p = get_ai_provider(stage="render")
+    render_p = get_ai_provider(stage="render", db=db_session)
     assert render_p.__class__.__name__ == "GeminiProvider"
 
 def test_movie_update_and_custom_titles(client, db_session):

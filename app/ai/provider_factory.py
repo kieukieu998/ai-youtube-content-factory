@@ -1,21 +1,25 @@
-from typing import Optional
+from typing import Optional, Any
 from app.ai.base import BaseAIProvider
 from app.ai.gemini_provider import GeminiProvider
 from app.ai.deepseek_provider import OpenAICompatibleProvider
 from app.core.config import settings
 
-def get_ai_provider(provider_type: Optional[str] = None, stage: Optional[str] = None) -> BaseAIProvider:
+def get_ai_provider(provider_type: Optional[str] = None, stage: Optional[str] = None, db: Optional[Any] = None) -> BaseAIProvider:
     """
     Factory function to return the configured AI Provider instance.
     Can resolve provider by explicit type or by stage ('discovery', 'script', 'render').
     """
     db_settings = {}
     try:
-        from app.database.session import SessionLocal
-        from app.database.models import Setting
-        db = SessionLocal()
-        db_settings = {s.key: s.value for s in db.query(Setting).all()}
-        db.close()
+        if db is not None:
+            from app.database.models import Setting
+            db_settings = {s.key: s.value for s in db.query(Setting).all()}
+        else:
+            from app.database.session import SessionLocal
+            from app.database.models import Setting
+            _session = SessionLocal()
+            db_settings = {s.key: s.value for s in _session.query(Setting).all()}
+            _session.close()
     except Exception:
         pass
 
