@@ -145,19 +145,33 @@ class JobWorker:
     @classmethod
     async def _handle_script_generation(cls, db, job: Job, payload: Dict[str, Any]):
         movie_id = payload.get("movie_id")
+        target_episodes = int(payload.get("target_episodes", 3))
+        style = payload.get("style", "dramatic")
+        ai_provider = payload.get("ai_provider")
+
         movie = db.query(Movie).filter(Movie.id == movie_id).first()
         if not movie:
             raise ValueError(f"Movie ID {movie_id} not found")
 
         # 1. Analyst
-        analyst = MovieAnalystAgent()
-        analysis = await analyst.analyze_movie(movie.title, movie.synopsis or "", movie.genre or "")
+        analyst = MovieAnalystAgent(provider_type=ai_provider)
+        analysis = await analyst.analyze_movie(
+            title=movie.title, 
+            synopsis=movie.synopsis or "", 
+            genre=movie.genre or "",
+            target_episodes=target_episodes
+        )
         job.progress = 40
         db.commit()
 
         # 2. Script Writer
-        writer = ScriptWriterAgent()
-        script_pkg = await writer.generate_scripts(movie.title, analysis)
+        writer = ScriptWriterAgent(provider_type=ai_provider)
+        script_pkg = await writer.generate_scripts(
+            movie_title=movie.title, 
+            analysis=analysis,
+            style=style,
+            target_episodes=target_episodes
+        )
         job.progress = 70
         db.commit()
 
@@ -165,15 +179,15 @@ class JobWorker:
         script = Script(
             movie_id=movie.id,
             title=f"Kịch Bản Review - {movie.title}",
-            target_episodes=script_pkg.total_episodes,
+            target_episodes=len(script_pkg.episodes),
             full_script=json.dumps([ep.model_dump() for ep in script_pkg.episodes], ensure_ascii=False),
-            style=analysis.tone_style
+            style=style or analysis.tone_style
         )
         db.add(script)
         db.flush()
 
         # 4. Generate Hooks for each episode
-        hook_gen = HookGeneratorAgent()
+        hook_gen = HookGeneratorAgent(provider_type=ai_provider)
         for ep in script_pkg.episodes:
             hooks_result = await hook_gen.generate_hooks(ep.narrative_body, movie.title)
             selected_hook = hooks_result.recommended_best_hook or ep.hook_draft
@@ -313,8 +327,10 @@ class JobWorker:
         job.progress = 75
         db.commit()
 
-        # 4. Render 9:16 Video in background thread
-        output_video = str(settings.OUTPUT_MEDIA_DIR / f"video_ep_{episode.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4")
+        # 4. Render 9:16 Video in background thread with versioning (v1, v2, v3...)
+        existing_video_count = db.query(Video).filter(Video.episode_id == episode.id).count()
+        render_version = existing_video_count + 1
+        output_video = str(settings.OUTPUT_MEDIA_DIR / f"video_ep_{episode.id}_v{render_version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4")
 
         output_video_path = await asyncio.to_thread(
             VideoEditorAgent.render_episode_video,

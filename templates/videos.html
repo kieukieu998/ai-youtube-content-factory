@@ -159,17 +159,22 @@
 
                 <div class="p-3 space-y-1.5">
                     <div class="font-bold text-white text-xs line-clamp-1 title-text flex items-center justify-between">
-                        <span>Tập {{ v.episode.episode_number }}</span>
+                        <span class="flex items-center gap-1">
+                            Tập {{ v.episode.episode_number }}
+                            {% if v.render_version %}
+                            <span class="badge {% if v.render_version > 1 %}badge-warning{% else %}badge-info{% endif %} badge-xs font-mono font-bold">v{{ v.render_version }}</span>
+                            {% endif %}
+                        </span>
                         <span class="text-[10px] text-slate-500 font-mono">{{ (v.file_size_bytes / (1024*1024))|round(1) }} MB</span>
                     </div>
                     <p class="text-[11px] text-slate-400 line-clamp-2 hook-text">
                         Hook: "{{ v.episode.hook_text }}"
                     </p>
                     <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                        <a href="/api/v1/videos/{{ v.id }}/stream" download="video_{{ v.id }}.mp4" class="text-slate-400 hover:text-indigo-400 flex items-center gap-1" title="Tải video">
+                        <a href="/api/v1/videos/{{ v.id }}/stream" download="video_ep_{{ v.episode.episode_number }}_v{{ v.render_version or 1 }}.mp4" class="text-slate-400 hover:text-indigo-400 flex items-center gap-1" title="Tải video">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải Về
                         </a>
-                        <button onclick="deleteVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }}')" class="text-slate-400 hover:text-rose-400" title="Xóa video này">
+                        <button onclick="deleteVideo('{{ v.id }}', '{{ v.episode.script.movie.title }} - Tập {{ v.episode.episode_number }} (v{{ v.render_version or 1 }})')" class="text-slate-400 hover:text-rose-400" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>

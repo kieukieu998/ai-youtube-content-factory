@@ -18,6 +18,16 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
     approved_episodes = db.query(Episode).filter(Episode.status.in_(["approved", "draft"])).all()
     
+    # Group videos by Episode to determine version index
+    ep_videos_map = defaultdict(list)
+    for v in sorted(videos, key=lambda x: x.created_at or x.id):
+        ep_videos_map[v.episode_id].append(v)
+        
+    for ep_id, v_sub_list in ep_videos_map.items():
+        for idx, vid in enumerate(v_sub_list, 1):
+            vid.render_version = idx
+            vid.render_version_label = f"v{idx}"
+
     # Group videos by Movie Folder
     movie_dict = defaultdict(list)
     for v in videos:
@@ -31,7 +41,10 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
     for movie_id, v_list in movie_dict.items():
         if movie_id != 0:
             movie = db.query(Movie).filter(Movie.id == movie_id).first()
-            v_list_sorted = sorted(v_list, key=lambda x: x.episode.episode_number if x.episode else 0)
+            v_list_sorted = sorted(
+                v_list, 
+                key=lambda x: (x.episode.episode_number if x.episode else 0, getattr(x, "render_version", 1))
+            )
             script = db.query(Script).filter(Script.movie_id == movie_id).first()
             total_eps = len(script.episodes) if script else len(v_list)
             

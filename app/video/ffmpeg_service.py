@@ -49,6 +49,7 @@ class FFmpegService:
 
         # Check if video_input_path has an audio stream
         has_source_audio = False
+        a_map = "1:a"
         try:
             probe_cmd = [
                 settings.FFPROBE_PATH, "-v", "error",

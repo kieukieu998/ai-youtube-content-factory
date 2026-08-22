@@ -36,34 +36,41 @@ class SceneSlicer:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
+        # Clean stale clips in slice folder to prevent mixing old scenes
+        for old_f in output_path.glob("*.mp4"):
+            try:
+                old_f.unlink()
+            except Exception:
+                pass
+
         total_duration = cls.get_video_duration(source_video_path)
         
-        # Calculate timeline window matching the story arc of the current episode
+        # Calculate distinct timeline window matching the story arc of the current episode
         if total_episodes <= 1:
-            start_ratio, end_ratio = 0.05, 0.95
+            start_ratio, end_ratio = 0.02, 0.98
         elif total_episodes == 3:
             if episode_number == 1:
                 # Act 1: Introduction & Inciting incident
-                start_ratio, end_ratio = 0.05, 0.38
+                start_ratio, end_ratio = 0.02, 0.35
             elif episode_number == 2:
                 # Act 2: Rising action & Conflict
-                start_ratio, end_ratio = 0.35, 0.70
+                start_ratio, end_ratio = 0.35, 0.68
             else:
                 # Act 3: Climax & Grand Twist Resolution
-                start_ratio, end_ratio = 0.65, 0.95
+                start_ratio, end_ratio = 0.68, 0.98
         else:
-            seg_len = 0.90 / total_episodes
-            start_ratio = max(0.02, 0.05 + (episode_number - 1) * seg_len - 0.03)
-            end_ratio = min(0.98, start_ratio + seg_len + 0.05)
+            seg_len = 0.96 / total_episodes
+            start_ratio = max(0.01, 0.02 + (episode_number - 1) * seg_len)
+            end_ratio = min(0.99, start_ratio + seg_len)
 
-        start_sec = max(2.0, total_duration * start_ratio)
-        end_sec = min(total_duration - 2.0, total_duration * end_ratio)
-        if end_sec <= start_sec + 5.0:
-            start_sec = 2.0
-            end_sec = total_duration - 2.0
+        start_sec = max(1.0, total_duration * start_ratio)
+        end_sec = min(total_duration - 1.0, total_duration * end_ratio)
+        if end_sec <= start_sec + 4.0:
+            start_sec = 1.0
+            end_sec = total_duration - 1.0
 
         core_duration = end_sec - start_sec
-        step = max(target_clip_len, core_duration / max_clips)
+        step = max(target_clip_len, core_duration / max(1, max_clips))
         generated_clips = []
         
         logger.info(
