@@ -97,7 +97,9 @@ class Video(Base):
     __tablename__ = "videos"
     
     id = Column(Integer, primary_key=True, index=True)
-    episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=False)
+    episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
+    title = Column(String(255), nullable=True)
+    video_type = Column(String(50), default="script_review") # script_review, transformed_1_1
     file_path = Column(String(500), nullable=False)
     resolution = Column(String(20), default="1080x1920")
     fps = Column(Integer, default=30)

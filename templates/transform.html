@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}Lách Bản Quyền 1:1 Video — AI Movie Content Factory{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-7xl mx-auto pb-12">
+    <!-- Header Banner -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950/70 via-slate-900/90 to-indigo-950/70 p-6 md:p-8 border border-purple-500/20 shadow-2xl backdrop-blur-xl">
+        <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 mb-3">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                    <span>Anti-Copyright & Frequency Transformer 1:1</span>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                    Xử Lý Video Lách Bản Quyền 1:1
+                </h1>
+                <p class="text-sm text-slate-300 mt-2 max-w-2xl leading-relaxed">
+                    Giữ nguyên 100% thời lượng video gốc, không cần kịch bản hay giọng đọc AI. Tự động thay đổi tần số âm thanh (Pitch/EQ), chuyển đổi hình ảnh và xóa sạch metadata chống quét trùng lặp trên TikTok/Shorts/Facebook.
+                </p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <a href="/jobs" class="btn btn-sm bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/80 rounded-xl gap-1.5 shadow-sm">
+                    <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i> Hàng Đợi (Queue)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Form & Configuration Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Input & Settings Column (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+            <div class="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/80 p-6 shadow-xl space-y-6">
+                <!-- Source Input Tabs -->
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+                        <i data-lucide="video" class="w-4 h-4 text-purple-400"></i>
+                        1. Nguồn Video Gốc Đầu Vào
+                    </h2>
+
+                    <!-- Tabs Header -->
+                    <div class="grid grid-cols-3 gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-semibold mb-4">
+                        <button type="button" onclick="switchSourceTab('yt')" id="tab_btn_yt" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm">
+                            <i data-lucide="link" class="w-3.5 h-3.5"></i> Link YouTube
+                        </button>
+                        <button type="button" onclick="switchSourceTab('upload')" id="tab_btn_upload" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-slate-400 hover:text-white transition">
+                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Tải File MP4
+                        </button>
+                        <button type="button" onclick="switchSourceTab('library')" id="tab_btn_library" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-slate-400 hover:text-white transition">
+                            <i data-lucide="folder" class="w-3.5 h-3.5"></i> Kho Phim Sẵn Có
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: YouTube URL -->
+                    <div id="tab_panel_yt" class="space-y-3">
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-slate-300 text-xs font-semibold">Dán Link Video YouTube:</span>
+                            </label>
+                            <div class="relative">
+                                <i data-lucide="youtube" class="w-4 h-4 text-rose-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                <input type="url" id="inp_youtube_url" placeholder="https://www.youtube.com/watch?v=... hoặc tên video tìm kiếm" class="input input-sm input-bordered w-full bg-slate-950 text-white pl-10 text-xs focus:border-purple-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Upload File -->
+                    <div id="tab_panel_upload" class="hidden space-y-3">
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-slate-300 text-xs font-semibold">Chọn file video MP4 từ máy tính:</span>
+                            </label>
+                            <input type="file" id="inp_file_upload" onchange="onFileUploadChange(this)" accept="video/mp4,video/mkv,video/mov" class="file-input file-input-sm file-input-bordered w-full bg-slate-950 text-slate-200 text-xs focus:border-purple-500" />
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Select from Movie Library -->
+                    <div id="tab_panel_library" class="hidden space-y-3">
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-slate-300 text-xs font-semibold">Chọn video nguồn từ Kho Phim:</span>
+                            </label>
+                            <select id="inp_library_source" onchange="onLibrarySourceChange(this)" class="select select-sm select-bordered w-full bg-slate-950 text-slate-200 text-xs focus:border-purple-500">
+                                <option value="" data-title="">-- Chọn phim trong hệ thống --</option>
+                                {% for m in existing_movies %}
+                                    {% for s in m.sources %}
+                                        <option value="{{ s.file_path }}" data-title="{{ m.title }} ({{ m.release_year or '' }})">{{ m.title }} ({{ m.release_year or 'N/A' }}) - {{ s.file_path.split('\\')[-1] }}</option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Title -->
+                    <div class="form-control mt-3">
+                        <label class="label py-1">
+                            <span class="label-text text-slate-300 text-xs font-semibold">Tên Video Đầu Ra (Tùy chọn):</span>
+                        </label>
+                        <input type="text" id="inp_video_title" placeholder="Nhập tên gợi nhớ (VD: Hoạt Hình Tập 1, Review Phim A...)" class="input input-sm input-bordered w-full bg-slate-950 text-white text-xs focus:border-purple-500" />
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-slate-800/80"></div>
+
+                <!-- Transformation Options -->
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2 mb-4">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i>
+                        2. Cấu Hình Biến Đổi & Lách Bản Quyền
+                    </h2>
+
+                    <div class="space-y-4 text-xs">
+                        <!-- Aspect Ratio -->
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-slate-300 font-semibold flex items-center gap-1.5">
+                                    <i data-lucide="aspect-ratio" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                    Tỉ Lệ Khung Hình Đầu Ra:
+                                </span>
+                            </label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 cursor-pointer hover:border-indigo-500/50 transition">
+                                    <input type="radio" name="aspect_ratio" value="original" checked class="radio radio-xs radio-primary" />
+                                    <div>
+                                        <div class="font-bold text-slate-200">Giữ Nguyên Gốc</div>
+                                        <div class="text-[10px] text-slate-500">16:9 / 4:3 chuẩn</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 cursor-pointer hover:border-indigo-500/50 transition">
+                                    <input type="radio" name="aspect_ratio" value="blurred_stack_9_16" class="radio radio-xs radio-primary" />
+                                    <div>
+                                        <div class="font-bold text-slate-200">Dọc 9:16 Nền Mờ</div>
+                                        <div class="text-[10px] text-slate-500">Chuẩn TikTok/Shorts</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/60 cursor-pointer hover:border-indigo-500/50 transition">
+                                    <input type="radio" name="aspect_ratio" value="center_crop_9_16" class="radio radio-xs radio-primary" />
+                                    <div>
+                                        <div class="font-bold text-slate-200">Dọc 9:16 Crop Giữa</div>
+                                        <div class="text-[10px] text-slate-500">Phóng to toàn màn hình</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Audio Pitch Shift -->
+                        <div class="form-control">
+                            <label class="label py-1 flex justify-between">
+                                <span class="label-text text-slate-300 font-semibold flex items-center gap-1.5">
+                                    <i data-lucide="music" class="w-3.5 h-3.5 text-purple-400"></i>
+                                    Đổi Cao Độ Âm Thanh (Pitch Shift):
+                                </span>
+                                <span id="pitch_val_label" class="text-xs font-mono font-bold text-purple-400">+2.0% (Thanh nhẹ)</span>
+                            </label>
+                            <select id="inp_pitch_shift" onchange="updatePitchLabel(this.value)" class="select select-sm select-bordered w-full bg-slate-950 text-slate-200 focus:border-purple-500">
+                                <option value="1.00">0.0% (Giữ nguyên cao độ gốc)</option>
+                                <option value="1.02" selected>+2.0% (Lệch nhẹ - Khuyên dùng)</option>
+                                <option value="1.04">+4.0% (Giọng thanh hơn)</option>
+                                <option value="0.98">-2.0% (Giọng trầm ấm nhẹ)</option>
+                                <option value="0.96">-4.0% (Giọng trầm hơn)</option>
+                            </select>
+                        </div>
+
+                        <!-- Toggles Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                            <label class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-purple-500/30 transition">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="radio" class="w-4 h-4 text-indigo-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-slate-200">Làm Lệch Tần Số EQ</div>
+                                        <div class="text-[10px] text-slate-500">Equalizer & Sample Rate 48kHz</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_audio_eq" checked class="toggle toggle-sm toggle-primary" />
+                            </label>
+
+                            <label class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-purple-500/30 transition">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="palette" class="w-4 h-4 text-emerald-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-slate-200">Color Grading</div>
+                                        <div class="text-[10px] text-slate-500">Chỉnh màu sắc & Contrast nhẹ</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_color_grading" checked class="toggle toggle-sm toggle-success" />
+                            </label>
+
+                            <label class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-purple-500/30 transition">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="maximize" class="w-4 h-4 text-amber-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-slate-200">Micro-Zoom 102%</div>
+                                        <div class="text-[10px] text-slate-500">Phóng to vi mô chống quét viền</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_micro_zoom" checked class="toggle toggle-sm toggle-warning" />
+                            </label>
+
+                            <label class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-purple-500/30 transition">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="flip-horizontal" class="w-4 h-4 text-rose-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-slate-200">Lật Gương Khung Hình</div>
+                                        <div class="text-[10px] text-slate-500">Horizontal Mirror Flip</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_hflip" class="toggle toggle-sm toggle-error" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Action -->
+                <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                    <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-purple-400"></i>
+                        <span>Giữ nguyên 100% thời lượng gốc • Re-encode MD5 mới</span>
+                    </div>
+                    <button type="button" id="btn_submit_transform" onclick="submitVideoTransform()" class="h-10 px-6 rounded-2xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/30 transition flex items-center gap-2">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transformed History & Player Column (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/80 p-6 shadow-xl flex flex-col h-full min-h-[500px]">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="film" class="w-4 h-4 text-emerald-400"></i>
+                        Video 1:1 Đã Xử Lý
+                    </h2>
+                    <span class="badge badge-sm badge-success">{{ transformed_videos | length }} Video</span>
+                </div>
+
+                <!-- Video List -->
+                <div class="flex-1 overflow-y-auto space-y-3 mt-4 pr-1">
+                    {% if transformed_videos and transformed_videos | length > 0 %}
+                        {% for v in transformed_videos %}
+                        <div class="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800/90 hover:border-purple-500/40 transition flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="text-xs font-bold text-slate-200 truncate" title="{{ v.title or v.file_path.split('\\')[-1] }}">
+                                    {{ v.title or v.file_path.split('\\')[-1] }}
+                                </div>
+                                <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-1">
+                                    <span class="text-emerald-400 font-semibold">{{ "%02d:%02d" | format((v.duration_seconds // 60) | int, (v.duration_seconds % 60) | int) }}</span>
+                                    <span>•</span>
+                                    <span>{{ v.resolution }}</span>
+                                    <span>•</span>
+                                    <span>{{ (v.file_size_bytes / (1024 * 1024)) | round(1) }} MB</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <button type="button" onclick="playTransformedVideo('{{ v.id }}', '{{ v.title or v.file_path.split('\\')[-1] }}')" class="w-8 h-8 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 flex items-center justify-center transition" title="Phát Video">
+                                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <a href="/api/v1/videos/{{ v.id }}/stream" download class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition" title="Tải về MP4">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="py-16 text-center text-slate-500">
+                            <i data-lucide="sparkles" class="w-10 h-10 mx-auto mb-2 opacity-30 text-purple-400"></i>
+                            <p class="text-xs">Chưa có video 1:1 nào được tạo.</p>
+                            <p class="text-[10px] text-slate-600 mt-1">Dán link YouTube hoặc tải file bên trái để bắt đầu!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Phát Video Transformed -->
+<dialog id="player_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-3xl p-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <h3 class="font-bold text-sm text-white truncate" id="player_modal_title">Xem Video 1:1</h3>
+            <button type="button" onclick="closePlayerModal()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="relative aspect-video bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800">
+            <video id="player_video_el" controls class="max-h-full max-w-full rounded-xl"></video>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick="closePlayerModal()">close</button>
+    </form>
+</dialog>
+
+<script>
+    let activeSourceTab = 'yt';
+
+    function switchSourceTab(tab) {
+        activeSourceTab = tab;
+        $('#tab_btn_yt').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
+        $('#tab_btn_upload').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
+        $('#tab_btn_library').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
+
+        $('#tab_panel_yt').addClass('hidden');
+        $('#tab_panel_upload').addClass('hidden');
+        $('#tab_panel_library').addClass('hidden');
+
+        if (tab === 'yt') {
+            $('#tab_btn_yt').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
+            $('#tab_panel_yt').removeClass('hidden');
+        } else if (tab === 'upload') {
+            $('#tab_btn_upload').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
+            $('#tab_panel_upload').removeClass('hidden');
+        } else if (tab === 'library') {
+            $('#tab_btn_library').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
+            $('#tab_panel_library').removeClass('hidden');
+        }
+    }
+
+    function updatePitchLabel(val) {
+        const labels = {
+            "1.00": "0.0% (Chuẩn gốc)",
+            "1.02": "+2.0% (Thanh nhẹ - Đề xuất)",
+            "1.04": "+4.0% (Giọng thanh hơn)",
+            "0.98": "-2.0% (Giọng trầm ấm)",
+            "0.96": "-4.0% (Giọng trầm hơn)"
+        };
+        $('#pitch_val_label').text(labels[val] || `${val}x`);
+    }
+
+    function onLibrarySourceChange(el) {
+        const selectedOption = $(el).find('option:selected');
+        const title = selectedOption.data('title');
+        if (title) {
+            $('#inp_video_title').val(title);
+        }
+    }
+
+    function onFileUploadChange(el) {
+        if (el.files && el.files[0]) {
+            const fileName = el.files[0].name.replace(/\.[^/.]+$/, "");
+            $('#inp_video_title').val(fileName);
+        }
+    }
+
+    function submitVideoTransform() {
+        let title = $('#inp_video_title').val().trim();
+        const aspectRatio = $('input[name="aspect_ratio"]:checked').val();
+        const pitchShift = $('#inp_pitch_shift').val();
+        const enableAudioEq = $('#chk_audio_eq').is(':checked');
+        const enableColorGrading = $('#chk_color_grading').is(':checked');
+        const enableMicroZoom = $('#chk_micro_zoom').is(':checked');
+        const enableHflip = $('#chk_hflip').is(':checked');
+
+        const btn = $('#btn_submit_transform');
+
+        if (activeSourceTab === 'upload') {
+            const fileInput = document.getElementById('inp_file_upload');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                Swal.fire('Lỗi', 'Vui lòng chọn file MP4 từ máy tính để tải lên.', 'warning');
+                return;
+            }
+
+            if (!title) {
+                title = fileInput.files[0].name.replace(/\.[^/.]+$/, "");
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('title', title);
+            formData.append('aspect_ratio', aspectRatio);
+            formData.append('pitch_shift', pitchShift);
+            formData.append('enable_audio_eq', enableAudioEq);
+            formData.append('enable_color_grading', enableColorGrading);
+            formData.append('enable_micro_zoom', enableMicroZoom);
+            formData.append('enable_hflip', enableHflip);
+
+            btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tải file lên...');
+
+            $.ajax({
+                url: '/api/v1/videos/upload-and-transform',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(res) {
+                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                    Swal.fire({
+                        title: 'Đã Thêm Vào Hàng Đợi!',
+                        text: res.message,
+                        icon: 'success',
+                        confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        window.location.href = '/jobs';
+                    });
+                },
+                error: function(err) {
+                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
+                }
+            });
+        } else {
+            let ytUrl = null;
+            let sourcePath = null;
+
+            if (activeSourceTab === 'yt') {
+                ytUrl = $('#inp_youtube_url').val().trim();
+                if (!ytUrl) {
+                    Swal.fire('Lỗi', 'Vui lòng nhập đường link video YouTube.', 'warning');
+                    return;
+                }
+            } else if (activeSourceTab === 'library') {
+                sourcePath = $('#inp_library_source').val();
+                if (!sourcePath) {
+                    Swal.fire('Lỗi', 'Vui lòng chọn một video từ Kho Phim.', 'warning');
+                    return;
+                }
+                if (!title) {
+                    title = $('#inp_library_source option:selected').data('title') || '';
+                }
+            }
+
+            btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
+
+            $.ajax({
+                url: '/api/v1/videos/transform',
+                type: 'POST',
+                data: {
+                    youtube_url: ytUrl,
+                    source_file_path: sourcePath,
+                    title: title,
+                    aspect_ratio: aspectRatio,
+                    pitch_shift: pitchShift,
+                    enable_audio_eq: enableAudioEq,
+                    enable_color_grading: enableColorGrading,
+                    enable_micro_zoom: enableMicroZoom,
+                    enable_hflip: enableHflip
+                },
+                success: function(res) {
+                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                    Swal.fire({
+                        title: 'Đã Thêm Vào Hàng Đợi!',
+                        text: res.message,
+                        icon: 'success',
+                        confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        window.location.href = '/jobs';
+                    });
+                },
+                error: function(err) {
+                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
+                }
+            });
+        }
+    }
+
+    function playTransformedVideo(vidId, title) {
+        const modal = document.getElementById('player_modal');
+        const videoEl = document.getElementById('player_video_el');
+        $('#player_modal_title').text(title);
+        videoEl.src = `/api/v1/videos/${vidId}/stream`;
+        videoEl.play();
+        modal.showModal();
+    }
+
+    function closePlayerModal() {
+        const modal = document.getElementById('player_modal');
+        const videoEl = document.getElementById('player_video_el');
+        videoEl.pause();
+        videoEl.removeAttribute('src');
+        modal.close();
+    }
+</script>
+{% endblock %}

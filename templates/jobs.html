@@ -189,6 +189,10 @@
                                     <a href="{{ j.target_url or '/movies' }}" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-sky-400 hover:text-sky-300 hover:bg-sky-500/15 transition" title="Mở danh sách Phim">
                                         <i data-lucide="film" class="w-4 h-4"></i>
                                     </a>
+                                    {% elif j.job_type == 'VideoTransformJob' %}
+                                    <a href="{{ j.target_url or '/transform' }}" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-purple-400 hover:text-purple-300 hover:bg-purple-500/15 transition" title="Mở trang Lách Bản Quyền 1:1">
+                                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                    </a>
                                     {% endif %}
                                 {% elif j.status in ['pending', 'processing'] %}
                                 <button onclick="cancelJob('{{ j.id }}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition" title="Hủy tác vụ này">

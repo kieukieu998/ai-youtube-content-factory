@@ -41,6 +41,14 @@ def enrich_job_info(jobs, db: Session):
                 else:
                     display_name = f"🎬 Render Video (Tập #{episode_id})"
                     target_url = "/videos"
+            elif j.job_type == "VideoTransformJob":
+                video_title = payload.get("title") or "Video 1:1"
+                ratio = payload.get("aspect_ratio", "original")
+                ratio_label = "16:9 gốc" if ratio == "original" else ("9:16 Nền mờ" if ratio == "blurred_stack_9_16" else "9:16 Crop")
+                pitch = float(payload.get("pitch_shift", 1.02))
+                display_name = f"🛡️ Lách Bản Quyền 1:1: {video_title}"
+                sub_info = f"Tỉ lệ: {ratio_label} — Pitch: {pitch:+.2f}x"
+                target_url = "/transform"
             elif j.job_type == "TestJob":
                 display_name = "🧪 Kiểm Thử Hệ Thống (TestJob)"
         except Exception:

@@ -13,11 +13,22 @@ def init_db():
         from sqlalchemy import text
         with engine.connect() as conn:
             # Check created_by in movies
-            cols = [c[1] for c in conn.execute(text("PRAGMA table_info(movies)")).fetchall()]
-            if "created_by" not in cols:
+            cols_m = [c[1] for c in conn.execute(text("PRAGMA table_info(movies)")).fetchall()]
+            if "created_by" not in cols_m:
                 conn.execute(text("ALTER TABLE movies ADD COLUMN created_by VARCHAR(50) DEFAULT 'ai'"))
                 conn.commit()
                 logger.info("Migrated column movies.created_by")
+
+            # Check title & video_type in videos
+            cols_v = [c[1] for c in conn.execute(text("PRAGMA table_info(videos)")).fetchall()]
+            if "title" not in cols_v:
+                conn.execute(text("ALTER TABLE videos ADD COLUMN title VARCHAR(255)"))
+                conn.commit()
+                logger.info("Migrated column videos.title")
+            if "video_type" not in cols_v:
+                conn.execute(text("ALTER TABLE videos ADD COLUMN video_type VARCHAR(50) DEFAULT 'script_review'"))
+                conn.commit()
+                logger.info("Migrated column videos.video_type")
     except Exception as e:
         logger.warning(f"Column migration notice: {e}")
     

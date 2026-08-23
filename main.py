@@ -17,6 +17,7 @@ from app.api.scripts_router import router as scripts_router
 from app.api.videos_router import router as videos_router
 from app.api.jobs_router import router as jobs_router
 from app.api.settings_router import router as settings_router
+from app.api.transform_router import router as transform_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -81,6 +82,7 @@ app.include_router(dashboard_router, tags=["Dashboard"])
 app.include_router(movies_router, tags=["Movies"])
 app.include_router(scripts_router, tags=["Scripts"])
 app.include_router(videos_router, tags=["Videos"])
+app.include_router(transform_router, tags=["Transformer"])
 app.include_router(jobs_router, tags=["Jobs"])
 app.include_router(settings_router, tags=["Settings"])
 
