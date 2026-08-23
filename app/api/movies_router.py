@@ -110,6 +110,49 @@ async def update_movie(
         }
     })
 
+async def _background_download_youtube_source(movie_id: int, url: str):
+    """Background helper to download full YouTube video without blocking UI."""
+    from app.database.session import SessionLocal
+    from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
+    import asyncio
+    from loguru import logger
+    
+    db = SessionLocal()
+    try:
+        movie = db.query(Movie).filter(Movie.id == movie_id).first()
+        if not movie:
+            return
+            
+        clean_prefix = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
+        info = await asyncio.to_thread(
+            YouTubeTrailerDownloader.get_video_info_and_download,
+            query_or_url=url,
+            output_dir=str(settings.SOURCE_MEDIA_DIR),
+            filename_prefix=f"{clean_prefix}"
+        )
+        
+        if info.get("file_path") and os.path.exists(info["file_path"]):
+            final_file_path = info["file_path"]
+            source = db.query(MovieSource).filter(MovieSource.movie_id == movie_id, MovieSource.license_info == url).first()
+            if source:
+                source.file_path = final_file_path
+                source.is_verified = True
+            else:
+                source = MovieSource(
+                    movie_id=movie.id,
+                    source_type="youtube_link",
+                    file_path=final_file_path,
+                    license_info=url,
+                    is_verified=True
+                )
+                db.add(source)
+            db.commit()
+            logger.info(f"Background YouTube download completed for movie #{movie_id} -> {final_file_path}")
+    except Exception as e:
+        logger.error(f"Error in background youtube download for movie #{movie_id}: {e}")
+    finally:
+        db.close()
+
 @router.post("/api/v1/movies/create-from-youtube")
 async def create_movie_from_youtube(
     youtube_url: str = Form(...),
@@ -124,23 +167,14 @@ async def create_movie_from_youtube(
     if not url:
         raise HTTPException(status_code=400, detail="Vui lòng nhập đường link YouTube hợp lệ")
 
-    from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
+    from app.video.youtube_downloader import YouTubeTrailerDownloader
     import asyncio
 
-    # Try fast extraction first for immediate responsiveness
+    # Fast extraction (takes ~1-2 seconds) for immediate responsive UI
     fast_info = await asyncio.to_thread(YouTubeTrailerDownloader.extract_metadata_fast, url)
-
-    # Attempt download
-    info = await asyncio.to_thread(
-        YouTubeTrailerDownloader.get_video_info_and_download,
-        query_or_url=url,
-        output_dir=str(settings.SOURCE_MEDIA_DIR),
-        filename_prefix="movie_yt"
-    )
 
     movie_title = (
         (title.strip() if title and title.strip() else None)
-        or info.get("title")
         or fast_info.get("title")
         or "Phim Chưa Đặt Tên"
     )
@@ -148,12 +182,12 @@ async def create_movie_from_youtube(
         (original_title.strip() if original_title and original_title.strip() else None)
         or movie_title
     )
-    raw_desc = info.get("description") or fast_info.get("description") or ""
+    raw_desc = fast_info.get("description") or ""
     movie_synopsis = (
         (synopsis.strip() if synopsis and synopsis.strip() else None)
         or (raw_desc[:400] if raw_desc else f"Phim nhập từ YouTube: {movie_title}")
     )
-    duration_val = info.get("duration") or fast_info.get("duration") or 0
+    duration_val = fast_info.get("duration") or 0
 
     movie = Movie(
         title=movie_title,
@@ -169,32 +203,22 @@ async def create_movie_from_youtube(
     db.add(movie)
     db.flush()
 
-    final_file_path = None
-    if info.get("file_path") and os.path.exists(info["file_path"]):
-        orig_path = Path(info["file_path"])
-        clean_name = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
-        dest_path = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{orig_path.name}"
-        try:
-            orig_path.rename(dest_path)
-            final_file_path = str(dest_path)
-        except Exception:
-            final_file_path = str(orig_path)
-    else:
-        final_file_path = url
-
     source = MovieSource(
         movie_id=movie.id,
         source_type="youtube_link",
-        file_path=final_file_path,
+        file_path=url, # Initially points to URL until background download finishes
         license_info=url,
-        is_verified=bool(info.get("file_path") and os.path.exists(info["file_path"]))
+        is_verified=False
     )
     db.add(source)
     db.commit()
 
+    # Launch non-blocking background download task
+    asyncio.create_task(_background_download_youtube_source(movie.id, url))
+
     return JSONResponse({
         "status": "success",
-        "message": f"Đã thêm thành công phim '{movie.title}' từ YouTube vào kho dữ liệu!",
+        "message": f"Đã thêm thành công phim '{movie.title}' vào Kho Phim! Video đang được tải ngầm.",
         "movie_id": movie.id
     })
 
