@@ -56,9 +56,10 @@
             line-height: 1 !important;
             vertical-align: middle !important;
             font-weight: 600 !important;
+            border-radius: 9999px !important;
         }
         .badge-sm {
-            padding: 0.25rem 0.6rem !important;
+            padding: 0.25rem 0.65rem !important;
             min-height: 1.4rem !important;
             height: auto !important;
             font-size: 0.75rem !important;
@@ -68,6 +69,78 @@
             min-height: 1.15rem !important;
             height: auto !important;
             font-size: 0.68rem !important;
+        }
+
+        /* Unified Soft-Tint Status Badges (Replacing Harsh Saturated Solid Badges) */
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+            color: #6ee7b7 !important;
+            border: 1px solid rgba(16, 185, 129, 0.3) !important;
+        }
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            color: #fcd34d !important;
+            border: 1px solid rgba(245, 158, 11, 0.3) !important;
+        }
+        .badge-info {
+            background-color: rgba(14, 165, 233, 0.15) !important;
+            color: #7dd3fc !important;
+            border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        }
+        .badge-error {
+            background-color: rgba(244, 63, 94, 0.15) !important;
+            color: #fda4af !important;
+            border: 1px solid rgba(244, 63, 94, 0.3) !important;
+        }
+        .badge-neutral {
+            background-color: rgba(30, 41, 59, 0.8) !important;
+            color: #cbd5e1 !important;
+            border: 1px solid rgba(51, 65, 85, 0.6) !important;
+        }
+        .badge-ghost {
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            color: #94a3b8 !important;
+            border: 1px solid rgba(51, 65, 85, 0.4) !important;
+        }
+
+        html, select, select option {
+            color-scheme: dark !important;
+        }
+
+        /* Unified Form Controls: Inputs, Selects, Textareas */
+        .input-bordered, .select-bordered, .textarea-bordered, select {
+            border-color: rgba(51, 65, 85, 0.8) !important;
+            background-color: rgba(15, 23, 42, 0.85) !important;
+            border-radius: 0.75rem !important;
+            color-scheme: dark !important;
+            transition: all 0.2s ease !important;
+        }
+        .input-bordered:focus, .select-bordered:focus, .textarea-bordered:focus, select:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
+            outline: none !important;
+        }
+
+        /* Style Select Options dropdown */
+        select option {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+            padding: 10px 14px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+        }
+        select option:checked,
+        select option:hover {
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+        }
+
+        /* Unified Dialog / Modal Box */
+        dialog.modal .modal-box {
+            background-color: #0f172a !important;
+            border: 1px solid rgba(51, 65, 85, 0.8) !important;
+            border-radius: 1.25rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
         }
 
         /* Modern Seamless Glowing Progress Bar with Shimmer Beam */
@@ -218,11 +291,11 @@
                 </a>
             </div>
         </div>
-        <div class="flex-none gap-3">
-            <button onclick="emergencyStopAll()" class="btn btn-error btn-sm gap-2 text-white font-semibold shadow-lg shadow-rose-600/30">
+        <div class="flex-none gap-3 flex items-center">
+            <button onclick="emergencyStopAll()" class="btn btn-sm bg-rose-600 hover:bg-rose-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-rose-600/25 font-semibold transition inline-flex items-center justify-center">
                 <i data-lucide="octagon-alert" class="w-4 h-4"></i> STOP ALL
             </button>
-            <a href="/settings" class="btn btn-ghost btn-circle btn-sm" title="Cài Đặt">
+            <a href="/settings" class="btn btn-sm btn-ghost text-slate-400 hover:text-white hover:bg-slate-800/60 rounded-xl p-2 transition" title="Cài Đặt">
                 <i data-lucide="settings" class="w-5 h-5"></i>
             </a>
         </div>

@@ -12,15 +12,15 @@
     <form id="settings_form" onsubmit="saveSettings(event)" class="space-y-6">
         
         <!-- AI Engine Settings -->
-        <div class="glass-card p-6 rounded-2xl space-y-5">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div class="glass-card p-6 rounded-2xl border border-slate-800/80 shadow-xl space-y-5">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
                 <i data-lucide="brain" class="w-5 h-5 text-indigo-400"></i> Cấu Hình AI Engine & Tùy Chọn Theo Công Đoạn
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-control">
-                    <label class="label"><span class="label-text text-slate-300 font-semibold">AI Provider Tổng Mặc Định:</span></label>
-                    <select name="default_ai_provider" class="select select-bordered bg-slate-900 text-white w-full">
+                    <label class="label"><span class="label-text text-slate-300 font-semibold text-xs">AI Provider Tổng Mặc Định:</span></label>
+                    <select name="default_ai_provider" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                         <option value="gemini_free" {% if settings.default_ai_provider == 'gemini_free' or not settings.default_ai_provider %}selected{% endif %}>Google Gemini (Gói Free Tier 100%)</option>
                         <option value="deepseek" {% if settings.default_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek API (Mở rộng)</option>
                         <option value="openai" {% if settings.default_ai_provider == 'openai' %}selected{% endif %}>OpenAI ChatGPT (GPT-4o)</option>
@@ -28,8 +28,8 @@
                 </div>
 
                 <div class="form-control">
-                    <label class="label"><span class="label-text text-slate-300 font-semibold">Chế Độ Vận Hành:</span></label>
-                    <select name="operation_mode" class="select select-bordered bg-slate-900 text-white w-full">
+                    <label class="label"><span class="label-text text-slate-300 font-semibold text-xs">Chế Độ Vận Hành:</span></label>
+                    <select name="operation_mode" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                         <option value="semi_auto" {% if settings.operation_mode == 'semi_auto' or not settings.operation_mode %}selected{% endif %}>Semi-Auto (Bán tự động — Duyệt Hook trước khi render)</option>
                         <option value="full_auto" {% if settings.operation_mode == 'full_auto' %}selected{% endif %}>Full-Auto (Tự động 100% từ A-Z)</option>
                     </select>
@@ -37,14 +37,14 @@
             </div>
 
             <!-- Specific Stage AI Providers -->
-            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
                     <i data-lucide="sliders" class="w-4 h-4"></i> Cấu Hình Riêng Cho Từng Công Đoạn (Tùy Chọn)
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div class="form-control">
                         <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">1. Khám Phá Phim:</span></label>
-                        <select name="discovery_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                        <select name="discovery_ai_provider" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                             <option value="inherit" {% if not settings.discovery_ai_provider or settings.discovery_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
                             <option value="gemini_free" {% if settings.discovery_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
                             <option value="deepseek" {% if settings.discovery_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
@@ -54,7 +54,7 @@
 
                     <div class="form-control">
                         <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">2. Viết Kịch Bản & Hook:</span></label>
-                        <select name="script_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                        <select name="script_ai_provider" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                             <option value="inherit" {% if not settings.script_ai_provider or settings.script_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
                             <option value="gemini_free" {% if settings.script_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
                             <option value="deepseek" {% if settings.script_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
@@ -64,7 +64,7 @@
 
                     <div class="form-control">
                         <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">3. Render & SEO/QA:</span></label>
-                        <select name="render_ai_provider" class="select select-bordered select-sm bg-slate-900 text-white w-full">
+                        <select name="render_ai_provider" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                             <option value="inherit" {% if not settings.render_ai_provider or settings.render_ai_provider == settings.default_ai_provider %}selected{% endif %}>Theo Mặc Định Chung</option>
                             <option value="gemini_free" {% if settings.render_ai_provider == 'gemini_free' %}selected{% endif %}>Google Gemini Free</option>
                             <option value="deepseek" {% if settings.render_ai_provider == 'deepseek' %}selected{% endif %}>DeepSeek Chat</option>
@@ -79,57 +79,57 @@
                 <div class="form-control">
                     <label class="label py-1">
                         <span class="label-text text-slate-300 text-xs font-semibold">Google Gemini API Key:</span>
-                        <a href="https://aistudio.google.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">Lấy Key miễn phí tại Google AI Studio &rarr;</a>
+                        <a href="https://aistudio.google.com/" target="_blank" class="label-text-alt text-indigo-400 hover:text-indigo-300 hover:underline transition">Lấy Key miễn phí tại Google AI Studio &rarr;</a>
                     </label>
-                    <input type="password" name="gemini_api_key" value="{{ gemini_api_key }}" placeholder="AIzaSy..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                    <input type="password" name="gemini_api_key" value="{{ gemini_api_key }}" placeholder="AIzaSy..." class="input input-sm bg-slate-900/90 text-white font-mono text-xs border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none w-full transition" />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="form-control">
                         <label class="label py-1">
                             <span class="label-text text-slate-300 text-xs font-semibold">DeepSeek API Key:</span>
-                            <a href="https://platform.deepseek.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">DeepSeek Platform &rarr;</a>
+                            <a href="https://platform.deepseek.com/" target="_blank" class="label-text-alt text-indigo-400 hover:text-indigo-300 hover:underline transition">DeepSeek Platform &rarr;</a>
                         </label>
-                        <input type="password" name="deepseek_api_key" value="{{ deepseek_api_key }}" placeholder="sk-..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                        <input type="password" name="deepseek_api_key" value="{{ deepseek_api_key }}" placeholder="sk-..." class="input input-sm bg-slate-900/90 text-white font-mono text-xs border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none w-full transition" />
                     </div>
 
                     <div class="form-control">
                         <label class="label py-1">
                             <span class="label-text text-slate-300 text-xs font-semibold">OpenAI API Key:</span>
-                            <a href="https://platform.openai.com/" target="_blank" class="label-text-alt text-indigo-400 hover:underline">OpenAI Platform &rarr;</a>
+                            <a href="https://platform.openai.com/" target="_blank" class="label-text-alt text-indigo-400 hover:text-indigo-300 hover:underline transition">OpenAI Platform &rarr;</a>
                         </label>
-                        <input type="password" name="openai_api_key" value="{{ openai_api_key }}" placeholder="sk-..." class="input input-sm input-bordered bg-slate-900 text-white font-mono w-full" />
+                        <input type="password" name="openai_api_key" value="{{ openai_api_key }}" placeholder="sk-..." class="input input-sm bg-slate-900/90 text-white font-mono text-xs border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none w-full transition" />
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- TTS Voice Settings -->
-        <div class="glass-card p-6 rounded-2xl space-y-4">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+        <div class="glass-card p-6 rounded-2xl border border-slate-800/80 shadow-xl space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
                 <i data-lucide="mic" class="w-5 h-5 text-rose-400"></i> Giọng Đọc Lồng Tiếng (Edge-TTS Miễn Phí)
             </h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-control">
-                    <label class="label"><span class="label-text text-slate-300 font-semibold">Giọng Đọc Mặc Định:</span></label>
-                    <select name="default_tts_voice" class="select select-bordered bg-slate-900 text-white w-full">
+                    <label class="label"><span class="label-text text-slate-300 font-semibold text-xs">Giọng Đọc Mặc Định:</span></label>
+                    <select name="default_tts_voice" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
                         <option value="vi-VN-HoaiMyNeural" {% if settings.default_tts_voice == 'vi-VN-HoaiMyNeural' %}selected{% endif %}>vi-VN-HoaiMyNeural (Nữ miền Bắc truyền cảm)</option>
                         <option value="vi-VN-NamMinhNeural" {% if settings.default_tts_voice == 'vi-VN-NamMinhNeural' %}selected{% endif %}>vi-VN-NamMinhNeural (Nam miền Bắc trầm ấm)</option>
                     </select>
                 </div>
 
                 <div class="form-control">
-                    <label class="label"><span class="label-text text-slate-300 font-semibold">Van Khóa Ngân Sách ($/Ngày):</span></label>
-                    <input type="number" name="daily_budget_limit_usd" value="{{ settings.daily_budget_limit_usd or '0.0' }}" step="0.5" min="0" class="input input-bordered bg-slate-900 text-white font-mono w-full" />
-                    <label class="label"><span class="label-text-alt text-slate-500">Đặt 0.0 nếu dùng gói Gemini Free</span></label>
+                    <label class="label"><span class="label-text text-slate-300 font-semibold text-xs">Van Khóa Ngân Sách ($/Ngày):</span></label>
+                    <input type="number" name="daily_budget_limit_usd" value="{{ settings.daily_budget_limit_usd or '0.0' }}" step="0.5" min="0" class="input input-sm bg-slate-900/90 text-white font-mono text-xs border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none w-full transition" />
+                    <label class="label py-0.5"><span class="label-text-alt text-slate-500 text-[11px]">Đặt 0.0 nếu dùng gói Gemini Free</span></label>
                 </div>
             </div>
         </div>
 
         <!-- Action Button -->
         <div class="flex justify-end gap-3">
-            <button type="submit" class="btn btn-primary px-8 shadow-lg shadow-indigo-600/30">
+            <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-8 py-2.5 inline-flex items-center justify-center">
                 <i data-lucide="save" class="w-4 h-4"></i> Lưu Cấu Hình
             </button>
         </div>
