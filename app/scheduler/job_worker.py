@@ -616,11 +616,20 @@ class JobWorker:
         dur = media_info.get("duration", 0.0)
         res_str = f"{media_info.get('width', 1080)}x{media_info.get('height', 1920)}"
 
+        # Resolve movie_id if not explicitly in payload
+        movie_id = payload.get("movie_id")
+        if not movie_id and input_source_file:
+            from app.database.models import MovieSource
+            ms = db.query(MovieSource).filter(MovieSource.file_path == input_source_file).first()
+            if ms:
+                movie_id = ms.movie_id
+
         job.progress = 95
         job.result = "Đang lưu trữ bản ghi video hoàn tất..."
         db.commit()
 
         video = Video(
+            movie_id=movie_id,
             episode_id=None,
             title=title or "Video 1:1 Biến Đổi",
             video_type="transformed_1_1",

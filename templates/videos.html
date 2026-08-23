@@ -185,9 +185,10 @@
                  data-search="{{ search_blob|lower }}">
                 
                 <!-- 100% Clean Video Thumbnail: Zero overlay badges or checkboxes -->
+                {% set play_title = v.title if v.video_type == "transformed_1_1" else (mv_title ~ " - Tập " ~ ep_num ~ " (v" ~ (v.render_version or 1) ~ ")") %}
                 <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
-                     onclick="playVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')"
-                     title="Bấm để xem video & kịch bản chi tiết">
+                     onclick="playVideo('{{ v.id }}', '{{ play_title }}')"
+                     title="Bấm để xem video">
                     <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
                     
                     <!-- Hover overlay: Play button icon -->
@@ -199,13 +200,18 @@
                 </div>
 
                 <div class="p-2.5 space-y-2">
-                    <!-- Top row: Checkbox + Tập X + Badge [v1] on Left | Pass/Fail on Right -->
+                    <!-- Top row: Checkbox + Title/Episode + Badge on Left | Pass/Fail on Right -->
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 min-w-0">
                             <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded my-0 flex-shrink-0" title="Chọn video này" onclick="event.stopPropagation()" />
+                            {% if v.video_type == 'transformed_1_1' %}
+                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title }}">{{ v.title or '1:1 Lách Bản Quyền' }}</span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none bg-purple-500/15 text-purple-300 border border-purple-500/30">1:1</span>
+                            {% else %}
                             <span class="font-bold text-white text-xs truncate leading-none flex items-center">Tập {{ ep_num }}</span>
                             {% set ver = v.render_version or 1 %}
                             <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none bg-sky-500/15 text-sky-300 border border-sky-500/30">v{{ ver }}</span>
+                            {% endif %}
                         </div>
                         
                         <div class="flex items-center">

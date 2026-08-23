@@ -97,6 +97,7 @@ class Video(Base):
     __tablename__ = "videos"
     
     id = Column(Integer, primary_key=True, index=True)
+    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=True)
     episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
     title = Column(String(255), nullable=True)
     video_type = Column(String(50), default="script_review") # script_review, transformed_1_1
@@ -109,6 +110,7 @@ class Video(Base):
     qa_notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    movie = relationship("Movie", backref="videos")
     episode = relationship("Episode", back_populates="videos")
     publishes = relationship("Publish", back_populates="video", cascade="all, delete-orphan")
 

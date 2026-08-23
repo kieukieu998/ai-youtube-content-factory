@@ -32,9 +32,12 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
     # Group videos by Movie Folder
     movie_dict = defaultdict(list)
     for v in videos:
-        if v.episode and v.episode.script and v.episode.script.movie:
-            movie_id = v.episode.script.movie.id
-            movie_dict[movie_id].append(v)
+        mid = v.movie_id
+        if not mid and v.episode and v.episode.script and v.episode.script.movie:
+            mid = v.episode.script.movie.id
+            
+        if mid:
+            movie_dict[mid].append(v)
         else:
             movie_dict[0].append(v)
             

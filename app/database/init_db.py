@@ -19,7 +19,7 @@ def init_db():
                 conn.commit()
                 logger.info("Migrated column movies.created_by")
 
-            # Check title & video_type in videos
+            # Check title, video_type, movie_id in videos
             cols_v = [c[1] for c in conn.execute(text("PRAGMA table_info(videos)")).fetchall()]
             if "title" not in cols_v:
                 conn.execute(text("ALTER TABLE videos ADD COLUMN title VARCHAR(255)"))
@@ -29,6 +29,10 @@ def init_db():
                 conn.execute(text("ALTER TABLE videos ADD COLUMN video_type VARCHAR(50) DEFAULT 'script_review'"))
                 conn.commit()
                 logger.info("Migrated column videos.video_type")
+            if "movie_id" not in cols_v:
+                conn.execute(text("ALTER TABLE videos ADD COLUMN movie_id INTEGER REFERENCES movies(id)"))
+                conn.commit()
+                logger.info("Migrated column videos.movie_id")
     except Exception as e:
         logger.warning(f"Column migration notice: {e}")
     

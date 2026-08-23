@@ -39,53 +39,103 @@ async def trigger_video_transform(
     enable_hflip: bool = Form(False),
     enable_color_grading: bool = Form(True),
     enable_micro_zoom: bool = Form(True),
+    movie_id: Optional[int] = Form(None),
     source_file_path: Optional[str] = Form(None),
+    source_file_paths: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Trigger a background job to transform video with anti-copyright 1:1 filters."""
-    if not youtube_url and not source_file_path:
-        raise HTTPException(status_code=400, detail="Vui lòng cung cấp link YouTube hoặc chọn file video nguồn.")
+    """Trigger background job(s) to transform video(s) with anti-copyright 1:1 filters."""
+    from app.database.models import MovieSource, Movie
 
-    from app.database.models import MovieSource
+    target_paths = []
+    if source_file_paths:
+        try:
+            parsed = json.loads(source_file_paths)
+            if isinstance(parsed, list):
+                target_paths = [p for p in parsed if p]
+        except Exception:
+            target_paths = [p.strip() for p in source_file_paths.split(",") if p.strip()]
+    elif source_file_path:
+        target_paths = [source_file_path.strip()]
 
-    # Auto-resolve title if not explicitly entered by user
-    actual_title = (title or "").strip()
-    if not actual_title or actual_title == "Video Chuyển Đổi":
-        if source_file_path:
-            ms = db.query(MovieSource).filter(MovieSource.file_path == source_file_path.strip()).first()
-            if ms and ms.movie:
-                actual_title = ms.movie.title
-            else:
-                actual_title = Path(source_file_path.strip()).stem
-        elif youtube_url:
-            actual_title = "Video YouTube 1:1"
+    if not youtube_url and not target_paths:
+        raise HTTPException(status_code=400, detail="Vui lòng chọn ít nhất 1 video nguồn từ Kho Phim hoặc nhập link YouTube.")
+
+    movie = db.query(Movie).filter(Movie.id == movie_id).first() if movie_id else None
+
+    # Handle YouTube URL
+    if youtube_url:
+        actual_title = (title or "").strip() or "Video YouTube 1:1"
+        payload = {
+            "youtube_url": youtube_url.strip(),
+            "file_path": None,
+            "movie_id": movie_id,
+            "title": actual_title,
+            "aspect_ratio": aspect_ratio,
+            "pitch_shift": pitch_shift,
+            "enable_audio_eq": enable_audio_eq,
+            "enable_hflip": enable_hflip,
+            "enable_color_grading": enable_color_grading,
+            "enable_micro_zoom": enable_micro_zoom
+        }
+        job = Job(
+            job_type="VideoTransformJob",
+            status="pending",
+            payload=json.dumps(payload)
+        )
+        db.add(job)
+        db.commit()
+        return JSONResponse({
+            "status": "success",
+            "message": f"Đã thêm tác vụ xử lý lách bản quyền 1:1 cho '{actual_title}' vào hàng đợi!",
+            "job_ids": [job.id]
+        })
+
+    # Handle multiple or single local file paths from Movie Library
+    created_jobs = []
+    for idx, path_str in enumerate(target_paths, 1):
+        # Resolve movie and title
+        item_movie_id = movie_id
+        if not item_movie_id:
+            ms = db.query(MovieSource).filter(MovieSource.file_path == path_str).first()
+            if ms:
+                item_movie_id = ms.movie_id
+                if not movie:
+                    movie = ms.movie
+
+        file_name = Path(path_str).name
+        if len(target_paths) > 1:
+            item_title = f"{movie.title if movie else 'Phim'} - Video {idx} ({file_name})"
         else:
-            actual_title = "Video 1:1"
+            item_title = (title or "").strip() or (f"{movie.title} ({file_name})" if movie else file_name)
 
-    payload = {
-        "youtube_url": youtube_url.strip() if youtube_url else None,
-        "file_path": source_file_path.strip() if source_file_path else None,
-        "title": actual_title,
-        "aspect_ratio": aspect_ratio,
-        "pitch_shift": pitch_shift,
-        "enable_audio_eq": enable_audio_eq,
-        "enable_hflip": enable_hflip,
-        "enable_color_grading": enable_color_grading,
-        "enable_micro_zoom": enable_micro_zoom
-    }
+        payload = {
+            "youtube_url": None,
+            "file_path": path_str,
+            "movie_id": item_movie_id,
+            "title": item_title,
+            "aspect_ratio": aspect_ratio,
+            "pitch_shift": pitch_shift,
+            "enable_audio_eq": enable_audio_eq,
+            "enable_hflip": enable_hflip,
+            "enable_color_grading": enable_color_grading,
+            "enable_micro_zoom": enable_micro_zoom
+        }
+        job = Job(
+            job_type="VideoTransformJob",
+            status="pending",
+            payload=json.dumps(payload)
+        )
+        db.add(job)
+        created_jobs.append(job)
 
-    job = Job(
-        job_type="VideoTransformJob",
-        status="pending",
-        payload=json.dumps(payload)
-    )
-    db.add(job)
     db.commit()
 
+    movie_name = movie.title if movie else "phim đã chọn"
     return JSONResponse({
         "status": "success",
-        "message": f"Đã thêm tác vụ xử lý lách bản quyền 1:1 cho '{actual_title}' vào hàng đợi!",
-        "job_id": job.id
+        "message": f"Đã thêm {len(created_jobs)} video của '{movie_name}' vào hàng đợi xử lý lách bản quyền 1:1!",
+        "job_ids": [j.id for j in created_jobs]
     })
 
 @router.post("/api/v1/videos/upload-and-transform")
