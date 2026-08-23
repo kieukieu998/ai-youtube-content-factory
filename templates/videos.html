@@ -200,13 +200,12 @@
                 </div>
 
                 <div class="p-2.5 space-y-2">
-                    <!-- Top row: Checkbox + Title/Episode + Badge on Left | Pass/Fail on Right -->
-                    <div class="flex items-center justify-between">
+                    <!-- Top row: Checkbox + Title/Episode on Left | Type Badge (Transform vs AI Render) on Right -->
+                    <div class="flex items-center justify-between gap-1">
                         <div class="flex items-center gap-1.5 min-w-0">
                             <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded my-0 flex-shrink-0" title="Chọn video này" onclick="event.stopPropagation()" />
                             {% if v.video_type == 'transformed_1_1' %}
-                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title }}">{{ v.title or '1:1 Lách Bản Quyền' }}</span>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none bg-purple-500/15 text-purple-300 border border-purple-500/30">1:1</span>
+                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title }}">{{ v.title or 'Video Lách Bản Quyền' }}</span>
                             {% else %}
                             <span class="font-bold text-white text-xs truncate leading-none flex items-center">Tập {{ ep_num }}</span>
                             {% set ver = v.render_version or 1 %}
@@ -214,11 +213,15 @@
                             {% endif %}
                         </div>
                         
-                        <div class="flex items-center">
-                            {% if v.qa_status == 'passed' %}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Pass</span>
+                        <div class="flex items-center flex-shrink-0">
+                            {% if v.video_type == 'transformed_1_1' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold leading-none bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm" title="Video Transform (Lách Bản Quyền)">
+                                <i data-lucide="shield-check" class="w-3 h-3 text-purple-400"></i> Transform
+                            </span>
                             {% else %}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold leading-none bg-rose-500/15 text-rose-300 border border-rose-500/30">Fail</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold leading-none bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm" title="Video Render (Kịch Bản AI Review)">
+                                <i data-lucide="sparkles" class="w-3 h-3 text-indigo-400"></i> AI Render
+                            </span>
                             {% endif %}
                         </div>
                     </div>
