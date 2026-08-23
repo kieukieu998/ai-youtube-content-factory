@@ -39,33 +39,33 @@
                 </button>
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="pending_episodes_grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5" id="pending_episodes_grid">
             {% for ep in episodes_pending %}
-            <div class="glass-card p-5 rounded-2xl border border-amber-500/30 shadow-lg flex flex-col justify-between" id="pending_card_{{ ep.id }}">
+            <div class="glass-card p-4 rounded-xl border border-amber-500/30 shadow-lg flex flex-col justify-between" id="pending_card_{{ ep.id }}">
                 <div>
-                    <div class="flex justify-between items-start mb-3">
+                    <div class="flex justify-between items-start mb-2.5">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">Tập {{ ep.episode_number }}</span>
-                        <span class="text-xs text-slate-400">{{ ep.script.movie.title if (ep.script and ep.script.movie) else 'Phim' }}</span>
+                        <span class="text-xs text-slate-400 truncate max-w-[200px]">{{ ep.script.movie.title if (ep.script and ep.script.movie) else 'Phim' }}</span>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="text-xs font-semibold text-rose-400 uppercase">Câu Hook 1-3s (Mở Đầu):</label>
+                    <div class="mb-2.5">
+                        <label class="text-[11px] font-semibold text-rose-400 uppercase">Câu Hook 1-3s (Mở Đầu):</label>
                         <input type="text" id="hook_input_{{ ep.id }}" value="{{ ep.hook_text or '' }}" class="input input-sm input-bordered w-full bg-slate-900 text-white font-medium mt-1" />
                     </div>
 
                     <div>
-                        <label class="text-xs font-semibold text-slate-400 uppercase">Lời Bình (Narrative Body):</label>
-                        <textarea id="content_input_{{ ep.id }}" rows="4" class="textarea textarea-sm textarea-bordered w-full bg-slate-900 text-slate-200 mt-1 leading-relaxed">{{ ep.content_text }}</textarea>
+                        <label class="text-[11px] font-semibold text-slate-400 uppercase">Lời Bình (Narrative Body):</label>
+                        <textarea id="content_input_{{ ep.id }}" rows="3" class="textarea textarea-sm textarea-bordered w-full bg-slate-900 text-slate-200 mt-1 leading-relaxed">{{ ep.content_text }}</textarea>
                     </div>
                 </div>
 
-                <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                <div class="mt-3 pt-2.5 border-t border-slate-800 flex justify-between items-center">
                     <span class="text-xs text-slate-400">Điểm Hook: <strong class="text-amber-400 font-mono">{{ "%.1f"|format(ep.hook_score) }}/100</strong></span>
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="deleteEpisode('{{ ep.id }}', 'Tập {{ ep.episode_number }}')" class="w-6 h-6 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition" title="Xóa tập này">
+                        <button type="button" onclick="deleteEpisode('{{ ep.id }}', 'Tập {{ ep.episode_number }}')" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition" title="Xóa tập này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button type="button" onclick="approveEpisode('{{ ep.id }}')" class="btn btn-xs bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-lg gap-1.5 shadow-sm font-semibold transition px-3 py-1.5 inline-flex items-center justify-center">
+                        <button type="button" onclick="approveEpisode('{{ ep.id }}')" class="h-7 inline-flex items-center justify-center gap-1.5 px-3 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-sm leading-none transition">
                             <i data-lucide="check" class="w-3.5 h-3.5"></i> Duyệt Tập Này
                         </button>
                     </div>
@@ -172,9 +172,9 @@
                 </div>
 
                 <!-- Episodes List inside this Folder -->
-                <div class="space-y-3">
+                <div class="space-y-2.5">
                     {% for ep in s.episodes %}
-                    <div class="p-4 bg-slate-900/60 rounded-xl border border-slate-800/80 hover:border-slate-700/80 transition flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    <div class="px-4 py-3 bg-slate-900/60 rounded-xl border border-slate-800/80 hover:border-slate-700/80 transition flex flex-col md:flex-row md:items-center justify-between gap-3"
                          id="ep_container_{{ ep.id }}"
                          data-movie="{{ s.movie.title if s.movie else s.title }}"
                          data-ep-num="{{ ep.episode_number }}"
@@ -182,7 +182,7 @@
                          data-body="{{ ep.content_text }}"
                          data-cta="{{ ep.call_to_action or '' }}"
                          data-status="{{ ep.status }}">
-                        <div class="space-y-1.5 flex-1">
+                        <div class="space-y-1 flex-1">
                             <div class="font-bold text-rose-400 text-xs flex items-center gap-2">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30">Tập {{ ep.episode_number }}</span>
                                 <span>Hook: "{{ ep.hook_text }}"</span>
@@ -190,7 +190,7 @@
                             <p id="ep_text_{{ ep.id }}" onclick="toggleExpandText('{{ ep.id }}')" class="text-xs text-slate-300 line-clamp-2 cursor-pointer hover:text-white transition leading-relaxed" title="Bấm để mở rộng / thu gọn lời bình">
                                 {{ ep.content_text }}
                             </p>
-                            <div class="flex flex-wrap items-center gap-3 pt-1">
+                            <div class="flex flex-wrap items-center gap-3 pt-0.5">
                                 <button type="button" onclick="toggleExpandText('{{ ep.id }}')" id="expand_btn_{{ ep.id }}" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium">
                                     [Xem toàn bộ lời bình]
                                 </button>
@@ -205,7 +205,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 self-end md:self-center">
+                        <div class="flex items-center gap-2 self-end md:self-center flex-shrink-0">
                             {% if ep.status == 'rendered' %}
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Đã Render
@@ -239,10 +239,12 @@
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-2xl">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div>
-                <h3 class="font-bold text-lg text-white" id="modal_ep_title">Chi Tiết Kịch Bản</h3>
+                <h3 class="font-bold text-base text-white" id="modal_ep_title">Chi Tiết Kịch Bản</h3>
                 <p class="text-xs text-indigo-400 font-mono" id="modal_movie_title"></p>
             </div>
-            <button onclick="document.getElementById('episode_detail_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="document.getElementById('episode_detail_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
         <div class="space-y-4 text-sm">
@@ -270,17 +272,17 @@
 
         <div class="modal-action flex justify-between items-center mt-6 pt-3 border-t border-slate-800">
             <div class="flex gap-2">
-                <button type="button" onclick="copyEpisodeText()" class="btn btn-sm bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 rounded-xl gap-1.5 transition">
-                    <i data-lucide="copy" class="w-4 h-4"></i> Copy
+                <button type="button" onclick="copyEpisodeText()" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition shadow-sm leading-none">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
                 </button>
-                <button type="button" id="modal_edit_btn" class="btn btn-sm bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-xl gap-1.5 font-medium transition">
-                    <i data-lucide="edit-3" class="w-4 h-4"></i> Sửa Kịch Bản
+                <button type="button" id="modal_edit_btn" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition leading-none">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Sửa Kịch Bản
                 </button>
             </div>
             <div class="flex gap-2">
-                <button type="button" onclick="document.getElementById('episode_detail_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Đóng</button>
-                <button type="button" id="modal_render_btn" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-1.5 shadow-lg shadow-indigo-600/25 font-semibold transition px-4">
-                    <i data-lucide="video" class="w-4 h-4"></i> Render 9:16
+                <button type="button" onclick="document.getElementById('episode_detail_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Đóng</button>
+                <button type="button" id="modal_render_btn" class="h-8 inline-flex items-center justify-center gap-1.5 px-4 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
+                    <i data-lucide="video" class="w-3.5 h-3.5"></i> Render 9:16
                 </button>
             </div>
         </div>
@@ -295,10 +297,12 @@
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-2xl">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div>
-                <h3 class="font-bold text-lg text-white" id="edit_modal_title">Chỉnh Sửa Kịch Bản</h3>
+                <h3 class="font-bold text-base text-white" id="edit_modal_title">Chỉnh Sửa Kịch Bản</h3>
                 <p class="text-xs text-slate-400" id="edit_modal_subtitle">Can thiệp và tinh chỉnh câu hook hoặc lời bình theo ý bạn</p>
             </div>
-            <button onclick="document.getElementById('edit_episode_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="document.getElementById('edit_episode_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
         <form id="edit_episode_form" onsubmit="saveEpisodeEdit(event)" class="space-y-4">
@@ -332,12 +336,12 @@
             </div>
 
             <div class="modal-action flex justify-between items-center pt-3 border-t border-slate-800">
-                <button type="button" onclick="triggerAiRewriteFromEditModal()" class="btn btn-sm btn-outline btn-secondary gap-1.5" title="Dùng AI viết lại nội dung tập này">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i> AI Viết Lại
+                <button type="button" onclick="triggerAiRewriteFromEditModal()" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 transition shadow-sm leading-none" title="Dùng AI viết lại nội dung tập này">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> AI Viết Lại
                 </button>
                 <div class="flex items-center gap-2">
-                    <button type="button" onclick="document.getElementById('edit_episode_modal').close()" class="btn btn-sm btn-ghost">Hủy Bỏ</button>
-                    <button type="submit" class="btn btn-sm btn-primary gap-1.5 px-6 shadow-lg shadow-indigo-600/30">
+                    <button type="button" onclick="document.getElementById('edit_episode_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                    <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
                         <i data-lucide="save" class="w-4 h-4"></i> Lưu Kịch Bản
                     </button>
                 </div>
@@ -354,10 +358,12 @@
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-3xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div>
-                <h3 class="font-bold text-lg text-white" id="full_script_title">Toàn Bộ Kịch Bản</h3>
+                <h3 class="font-bold text-base text-white" id="full_script_title">Toàn Bộ Kịch Bản</h3>
                 <p class="text-xs text-slate-400">Đầy đủ các tập và phân cảnh theo thứ tự.</p>
             </div>
-            <button onclick="document.getElementById('full_script_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="document.getElementById('full_script_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
         <div class="overflow-y-auto space-y-4 pr-1 flex-1" id="full_script_content">
@@ -365,25 +371,33 @@
         </div>
 
         <div class="modal-action flex justify-between items-center mt-4 pt-3 border-t border-slate-800">
-            <button type="button" onclick="copyFullScript()" class="btn btn-sm btn-outline gap-1.5 text-slate-200">
-                <i data-lucide="copy" class="w-4 h-4"></i> Copy Toàn Bộ Các Tập
+            <button type="button" onclick="copyFullScript()" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition leading-none">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Toàn Bộ Các Tập
             </button>
-            <button type="button" onclick="document.getElementById('full_script_modal').close()" class="btn btn-sm btn-primary">Đóng</button>
+            <button type="button" onclick="document.getElementById('full_script_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Đóng</button>
         </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <!-- Modal AI Viết Lại Kịch Bản 1 Tập -->
 <dialog id="ai_rewrite_episode_modal" class="modal">
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-xl">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div class="flex items-center gap-2.5">
-                <div class="p-2 bg-purple-600/20 border border-purple-500/30 rounded-xl text-purple-400">
-                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                <div class="p-1.5 bg-purple-600/20 border border-purple-500/30 rounded-xl text-purple-400">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
                 </div>
                 <div>
                     <h3 class="font-bold text-base text-white" id="ai_rewrite_modal_title">AI Viết Lại Kịch Bản Tập</h3>
                     <p class="text-xs text-slate-400" id="ai_rewrite_modal_subtitle">AI sẽ tự động sáng tạo lại Hook và Lời bình mới cho tập này</p>
                 </div>
             </div>
-            <button onclick="document.getElementById('ai_rewrite_episode_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="document.getElementById('ai_rewrite_episode_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
         <form id="ai_rewrite_form" onsubmit="submitAiRewrite(event)" class="space-y-4 text-sm">
@@ -415,8 +429,8 @@
             </div>
 
             <div class="modal-action flex justify-end gap-2 pt-3 border-t border-slate-800">
-                <button type="button" onclick="document.getElementById('ai_rewrite_episode_modal').close()" class="btn btn-sm btn-ghost">Hủy</button>
-                <button type="submit" id="btn_submit_ai_rewrite" class="btn btn-sm btn-secondary gap-1.5 px-6 shadow-lg shadow-purple-600/30">
+                <button type="button" onclick="document.getElementById('ai_rewrite_episode_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" id="btn_submit_ai_rewrite" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-600/25 leading-none transition">
                     <i data-lucide="sparkles" class="w-4 h-4"></i> Bắt Đầu Viết Lại
                 </button>
             </div>

@@ -177,13 +177,15 @@
 <dialog id="youtube_modal" class="modal">
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
                 <svg class="w-5 h-5 fill-red-500 flex-shrink-0" viewBox="0 0 24 24">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
                 <span>Thêm Phim Trực Tiếp Từ Link YouTube</span>
             </h3>
-            <button onclick="document.getElementById('youtube_modal').close()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="document.getElementById('youtube_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         <form onsubmit="handleAddYouTubeMovie(event)" class="space-y-3.5">
             <div class="form-control">
@@ -213,8 +215,8 @@
                 <textarea id="yt_input_synopsis" rows="3" placeholder="Tóm tắt ngắn cốt truyện (tùy chọn, để trống AI sẽ tự lấy)..." class="textarea textarea-bordered bg-slate-950 text-slate-200 text-xs leading-relaxed w-full"></textarea>
             </div>
             <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('youtube_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Hủy</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">
+                <button type="button" onclick="document.getElementById('youtube_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
                     <i data-lucide="download-cloud" class="w-4 h-4"></i> Tải Video & Thêm Vào Kho
                 </button>
             </div>
@@ -229,10 +231,12 @@
 <dialog id="edit_movie_modal" class="modal">
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-lg">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-            <h3 class="font-bold text-lg text-white flex items-center gap-2">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
                 <i data-lucide="edit-3" class="w-5 h-5 text-amber-400"></i> Chỉnh Sửa Thông Tin Phim
             </h3>
-            <button onclick="document.getElementById('edit_movie_modal').close()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
+            <button type="button" onclick="document.getElementById('edit_movie_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         <form onsubmit="handleSaveMovieEdit(event)" class="space-y-3.5">
             <input type="hidden" id="edit_movie_id" />
@@ -263,8 +267,8 @@
                 <textarea id="edit_movie_synopsis" rows="3" class="textarea textarea-bordered bg-slate-950 text-slate-200 text-xs leading-relaxed w-full"></textarea>
             </div>
             <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('edit_movie_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Hủy</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">
+                <button type="button" onclick="document.getElementById('edit_movie_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
                     <i data-lucide="save" class="w-4 h-4"></i> Lưu Thay Đổi
                 </button>
             </div>
@@ -280,12 +284,14 @@
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-md">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div>
-                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
                     <i data-lucide="pen-tool" class="w-5 h-5 text-indigo-400"></i> Tạo Kịch Bản Review
                 </h3>
                 <p class="text-xs text-indigo-400 font-mono" id="script_modal_movie_title"></p>
             </div>
-            <button onclick="document.getElementById('generate_script_modal').close()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
+            <button type="button" onclick="document.getElementById('generate_script_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         <form onsubmit="handleTriggerScript(event)" class="space-y-4">
             <input type="hidden" id="script_modal_movie_id" />
@@ -336,8 +342,8 @@
             </div>
 
             <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('generate_script_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Hủy</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">
+                <button type="button" onclick="document.getElementById('generate_script_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
                     <i data-lucide="sparkles" class="w-4 h-4"></i> Bắt Đầu Tạo Kịch Bản
                 </button>
             </div>
@@ -353,7 +359,7 @@
     <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-md">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
             <div>
-                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
                     <svg class="w-5 h-5 fill-red-500 flex-shrink-0" viewBox="0 0 24 24">
                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                     </svg>
@@ -361,7 +367,9 @@
                 </h3>
                 <p class="text-xs text-indigo-400 font-mono" id="trailer_modal_movie_title"></p>
             </div>
-            <button onclick="document.getElementById('fetch_trailer_modal').close()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
+            <button type="button" onclick="document.getElementById('fetch_trailer_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         
         <!-- Box hiển thị link YouTube cũ để người dùng kiểm tra -->
@@ -385,9 +393,9 @@
                 <input type="url" id="trailer_modal_yt_url" placeholder="https://www.youtube.com/watch?v=..." class="input input-sm input-bordered bg-slate-950 text-white font-mono text-xs w-full focus:border-red-500" />
                 <label class="label py-0.5"><span class="label-text-alt text-slate-400">Nếu để trống, AI sẽ tự động tìm trailer chính thức trên YouTube.</span></label>
             </div>
-            <div class="modal-action pt-3 border-t border-slate-800 flex justify-between">
-                <button type="button" onclick="document.getElementById('fetch_trailer_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Hủy</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">
+            <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('fetch_trailer_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
                     <i data-lucide="download" class="w-4 h-4"></i> Bắt Đầu Tải Trailer
                 </button>
             </div>
@@ -400,19 +408,26 @@
 
 <!-- Modal Upload Media Source -->
 <dialog id="upload_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
-        <h3 class="font-bold text-lg text-white mb-2 flex items-center gap-2">
-            <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-400"></i> Tải Lên Video Gốc Đã Cấp Phép
-        </h3>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-md">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="upload-cloud" class="w-5 h-5 text-indigo-400"></i> Tải Lên Video Gốc Đã Cấp Phép
+            </h3>
+            <button type="button" onclick="document.getElementById('upload_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
         <p class="text-xs text-slate-400 mb-4" id="upload_movie_title"></p>
         <form id="upload_form" onsubmit="handleUpload(event)">
             <input type="hidden" id="upload_movie_id" />
             <div class="form-control mb-4">
-                <input type="file" id="source_file_input" accept="video/mp4,video/mkv,video/webm" class="file-input file-input-bordered file-input-primary w-full bg-slate-800" required />
+                <input type="file" id="source_file_input" accept="video/mp4,video/mkv,video/webm" class="file-input file-input-bordered file-input-sm file-input-primary w-full bg-slate-800" required />
             </div>
             <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('upload_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Đóng</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">Tải Lên</button>
+                <button type="button" onclick="document.getElementById('upload_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
+                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Tải Lên
+                </button>
             </div>
         </form>
     </div>
@@ -423,26 +438,36 @@
 
 <!-- Modal Discover Movies -->
 <dialog id="discover_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
-        <h3 class="font-bold text-lg text-white mb-4 flex items-center gap-2">
-            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
-        </h3>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-md">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
+            </h3>
+            <button type="button" onclick="document.getElementById('discover_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
         <form onsubmit="handleDiscover(event)">
             <div class="form-control mb-3">
-                <label class="label"><span class="label-text text-slate-300">Thể loại phim:</span></label>
-                <input type="text" id="genre_input" value="Hành Động, Trinh Thám, Twist Đỉnh Cao" class="input input-bordered bg-slate-800 text-white w-full" required />
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Thể loại phim:</span></label>
+                <input type="text" id="genre_input" value="Hành Động, Trinh Thám, Twist Đỉnh Cao" class="input input-sm input-bordered bg-slate-800 text-white w-full" required />
             </div>
-            <div class="form-control mb-5">
-                <label class="label"><span class="label-text text-slate-300">Số lượng phim:</span></label>
-                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-bordered bg-slate-800 text-white w-full" required />
+            <div class="form-control mb-4">
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Số lượng phim:</span></label>
+                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-sm input-bordered bg-slate-800 text-white w-full" required />
             </div>
             <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="document.getElementById('discover_modal').close()" class="btn btn-sm btn-ghost text-slate-400 hover:text-white rounded-xl">Hủy</button>
-                <button type="submit" class="btn btn-sm bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/25 font-semibold transition px-6 inline-flex items-center justify-center">Bắt Đầu</button>
+                <button type="button" onclick="document.getElementById('discover_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Bắt Đầu
+                </button>
             </div>
         </form>
     </div>
     <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
         <button>close</button>
     </form>
 </dialog>
@@ -1185,7 +1210,9 @@
                     <p class="text-xs text-slate-400 font-mono" id="modal_source_movie_meta"></p>
                 </div>
             </div>
-            <button onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost btn-circle">✕</button>
+            <button type="button" onclick="closeSourcePlayerModal()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         
         <!-- Modal Body: 2 Columns (Player Left + Playlist Right) -->
@@ -1250,7 +1277,7 @@
 
         <!-- Modal Footer -->
         <div class="w-full flex items-center justify-end mt-4 pt-3 border-t border-slate-800">
-            <button type="button" onclick="closeSourcePlayerModal()" class="btn btn-sm btn-ghost text-slate-300">Đóng</button>
+            <button type="button" onclick="closeSourcePlayerModal()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">

@@ -180,25 +180,35 @@
 
 <!-- Modal Discover Movies -->
 <dialog id="discover_modal" class="modal">
-    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100">
-        <h3 class="font-bold text-lg text-white mb-4 flex items-center gap-2">
-            <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
-        </h3>
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-md">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i> AI Movie Hunter — Tìm Kiếm Phim
+            </h3>
+            <button type="button" onclick="document.getElementById('discover_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
         <form id="discover_form" onsubmit="handleDiscover(event)">
             <div class="form-control mb-3">
-                <label class="label"><span class="label-text text-slate-300">Thể loại phim muốn làm review:</span></label>
-                <input type="text" id="genre_input" value="Hành Động, Kinh Dị, Twist Bất Ngờ" class="input input-bordered bg-slate-800 text-white w-full" required />
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Thể loại phim muốn làm review:</span></label>
+                <input type="text" id="genre_input" value="Hành Động, Kinh Dị, Twist Bất Ngờ" class="input input-sm input-bordered bg-slate-800 text-white w-full" required />
             </div>
-            <div class="form-control mb-5">
-                <label class="label"><span class="label-text text-slate-300">Số lượng phim đề xuất:</span></label>
-                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-bordered bg-slate-800 text-white w-full" required />
+            <div class="form-control mb-4">
+                <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Số lượng phim đề xuất:</span></label>
+                <input type="number" id="limit_input" value="3" min="1" max="5" class="input input-sm input-bordered bg-slate-800 text-white w-full" required />
             </div>
-            <div class="modal-action">
-                <button type="button" onclick="document.getElementById('discover_modal').close()" class="btn btn-ghost">Hủy</button>
-                <button type="submit" class="btn btn-primary">Bắt Đầu Tìm Kiếm</button>
+            <div class="modal-action pt-3 border-t border-slate-800 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('discover_modal').close()" class="h-8 inline-flex items-center justify-center px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Hủy</button>
+                <button type="submit" class="h-8 inline-flex items-center justify-center gap-2 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white border-0 shadow-lg shadow-indigo-600/25 leading-none transition">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Bắt Đầu Tìm Kiếm
+                </button>
             </div>
         </form>
     </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
 </dialog>
 
 <script>

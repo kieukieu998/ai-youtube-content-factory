@@ -275,7 +275,9 @@
                     <p class="text-xs text-slate-400 truncate" id="modal_movie_title">Phim: Sát Thủ Vô Hình</p>
                 </div>
             </div>
-            <button onclick="closePlayerModal()" class="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-white">✕</button>
+            <button type="button" onclick="closePlayerModal()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
         
         <!-- Body: 2 Columns on desktop (Video Left, Full Script Right - Perfect height match) -->
@@ -331,7 +333,7 @@
                             <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-amber-400"></i> <span id="modal_meta_size">0 MB</span>
                         </span>
                     </div>
-                    <button onclick="copyModalScript()" class="btn btn-xs btn-outline gap-1 text-slate-300 hover:text-white" title="Sao chép kịch bản tập này">
+                    <button onclick="copyModalScript()" class="h-7 inline-flex items-center justify-center gap-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none" title="Sao chép kịch bản tập này">
                         <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Kịch Bản
                     </button>
                 </div>
@@ -341,14 +343,14 @@
         <!-- Action Footer -->
         <div class="modal-action w-full flex justify-between items-center mt-4 pt-3 border-t border-slate-800">
             <div class="flex items-center gap-2">
-                <button onclick="prevVideo()" id="modal_btn_prev" class="btn btn-sm btn-outline gap-1.5 text-xs px-4" title="Video trước (Phím ←)">
+                <button onclick="prevVideo()" id="modal_btn_prev" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition shadow-sm leading-none" title="Video trước (Phím ←)">
                     <i data-lucide="chevron-left" class="w-4 h-4"></i> Tập Trước
                 </button>
-                <button onclick="nextVideo()" id="modal_btn_next" class="btn btn-sm btn-outline gap-1.5 text-xs px-4" title="Video tiếp theo (Phím →)">
+                <button onclick="nextVideo()" id="modal_btn_next" class="h-8 inline-flex items-center justify-center gap-1.5 px-3 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition shadow-sm leading-none" title="Video tiếp theo (Phím →)">
                     Tập Tiếp <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </button>
             </div>
-            <button onclick="closePlayerModal()" class="btn btn-sm btn-primary px-6">Đóng</button>
+            <button onclick="closePlayerModal()" class="h-8 inline-flex items-center justify-center px-5 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition shadow-sm leading-none">Đóng</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop">
