@@ -50,6 +50,18 @@ class JobWorker:
         logger.warning(f"SYSTEM EMERGENCY STOP set to: {stop}")
 
     @classmethod
+    def _is_job_cancelled(cls, db, job_id: int) -> bool:
+        """Check if job was cancelled by user or emergency stop triggered."""
+        if cls._emergency_stop:
+            return True
+        try:
+            db.expire_all()
+            status = db.query(Job.status).filter(Job.id == job_id).scalar()
+            return status == "cancelled"
+        except Exception:
+            return False
+
+    @classmethod
     async def start_worker_loop(cls):
         """Infinite loop polling pending jobs from database."""
         cls._is_running = True
@@ -92,9 +104,10 @@ class JobWorker:
         except Exception as e:
             logger.error(f"Job execution failed: {e}")
             if 'job' in locals() and job:
-                job.status = "failed"
-                job.error_message = str(e)
-                db.commit()
+                if not cls._is_job_cancelled(db, job.id):
+                    job.status = "failed"
+                    job.error_message = str(e)
+                    db.commit()
         finally:
             db.close()
 
@@ -103,19 +116,31 @@ class JobWorker:
         genre = payload.get("genre", "Hành Động, Kinh Dị")
         limit = payload.get("limit", 3)
         
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before starting discovery.")
+            return
+
         # Query existing movies to prevent duplicates
         existing_movies = db.query(Movie).all()
         existing_titles = [m.title for m in existing_movies] + [m.original_title for m in existing_movies if m.original_title]
         
         hunter = MovieHunterAgent()
         candidates = await hunter.discover_movies(genre=genre, limit=limit, existing_titles=existing_titles)
+        
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after movie discovery.")
+            return
+
         job.progress = 50
         db.commit()
 
         created_movies = []
-        from app.video.youtube_downloader import YouTubeTrailerDownloader
 
         for c in candidates:
+            if cls._is_job_cancelled(db, job.id):
+                logger.warning(f"Job #{job.id} cancelled during movie trailer downloads.")
+                return
+
             movie = Movie(
                 title=c.title,
                 original_title=c.original_title,
@@ -131,12 +156,14 @@ class JobWorker:
 
             # Auto-fetch trailer from YouTube asynchronously in worker thread
             try:
+                from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
                 search_query = f"{c.original_title or c.title} {c.release_year or ''}"
+                clean_prefix = slugify_filename(c.title, c.release_year, fallback_title=c.original_title)
                 trailer_file = await asyncio.to_thread(
                     YouTubeTrailerDownloader.download_trailer,
                     query_or_url=search_query,
                     output_dir=str(settings.SOURCE_MEDIA_DIR),
-                    filename_prefix=f"movie_{movie.id}"
+                    filename_prefix=clean_prefix
                 )
                 if trailer_file:
                     source = MovieSource(
@@ -151,8 +178,13 @@ class JobWorker:
 
             created_movies.append(f"{movie.title} ({movie.original_title})")
 
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before final save.")
+            return
+
         job.status = "completed"
         job.progress = 100
+        job.error_message = None
         job.result = f"Đã tìm thấy {len(created_movies)} phim mới kèm Trailer: {', '.join(created_movies)}"
         db.commit()
         logger.info(f"Job #{job.id} completed. Added {len(created_movies)} movies.")
@@ -164,6 +196,10 @@ class JobWorker:
         target_duration_seconds = int(payload.get("target_duration_seconds", 60))
         style = payload.get("style", "dramatic")
         ai_provider = payload.get("ai_provider")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before script generation.")
+            return
 
         movie = db.query(Movie).filter(Movie.id == movie_id).first()
         if not movie:
@@ -181,6 +217,11 @@ class JobWorker:
             genre=movie.genre or "",
             target_episodes=target_episodes
         )
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after movie analysis.")
+            return
+
         job.progress = 50
         job.result = f"Đang viết {target_episodes} tập kịch bản ({target_duration_seconds // 60} phút)..."
         db.commit()
@@ -194,6 +235,11 @@ class JobWorker:
             target_episodes=target_episodes,
             target_duration_seconds=target_duration_seconds
         )
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after script writing.")
+            return
+
         job.progress = 85
         job.result = "Đang lưu kịch bản và phân cảnh vào cơ sở dữ liệu..."
         db.commit()
@@ -230,8 +276,14 @@ class JobWorker:
             db.add(episode)
 
         movie.status = "scripted"
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before script completion.")
+            return
+
         job.status = "completed"
         job.progress = 100
+        job.error_message = None
         job.result = f"Hoàn thành {len(script_pkg.episodes)} tập kịch bản (Đã đưa vào danh sách chờ duyệt)"
         db.commit()
         logger.info(f"Job #{job.id} completed. Generated {len(script_pkg.episodes)} episodes for Movie {movie.title}")
@@ -243,8 +295,47 @@ class JobWorker:
         if not episode:
             raise ValueError(f"Episode ID {episode_id} not found")
 
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before render start.")
+            return
+
         working_dir = settings.WORKING_MEDIA_DIR / f"ep_{episode.id}"
         working_dir.mkdir(parents=True, exist_ok=True)
+
+        # 0. Optional AI Script Refinement if user provided custom instruction
+        custom_instruction = payload.get("custom_instruction")
+        if custom_instruction and custom_instruction.strip():
+            job.progress = 10
+            short_inst = custom_instruction.strip()[:50]
+            job.result = f"AI đang tinh chỉnh kịch bản: \"{short_inst}...\""
+            db.commit()
+
+            try:
+                from app.agents.script_writer import ScriptWriterAgent
+                writer = ScriptWriterAgent()
+                movie_title = episode.script.movie.title if (episode.script and episode.script.movie) else "Bộ Phim"
+                total_episodes = len(episode.script.episodes) if (episode.script and episode.script.episodes) else 1
+                rewritten = await writer.rewrite_single_episode(
+                    movie_title=movie_title,
+                    episode_number=episode.episode_number,
+                    total_episodes=total_episodes,
+                    current_hook=episode.hook_text or "",
+                    current_content=episode.content_text or "",
+                    style="dramatic",
+                    custom_instruction=custom_instruction.strip()
+                )
+                episode.hook_text = rewritten.hook_draft
+                episode.content_text = rewritten.narrative_body
+                if rewritten.call_to_action:
+                    episode.call_to_action = rewritten.call_to_action
+                db.commit()
+                logger.info(f"AI refined episode {episode.id} script successfully based on instruction: {custom_instruction}")
+            except Exception as e:
+                logger.warning(f"Could not refine script with AI, proceeding with existing script: {e}")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after AI script refinement.")
+            return
         
         # 1. Voiceover Generation
         job.progress = 20
@@ -257,6 +348,11 @@ class JobWorker:
             output_audio_path=str(working_dir / "voice_raw.mp3"),
             voice=settings.DEFAULT_TTS_VOICE
         )
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after TTS generation.")
+            return
+
         job.progress = 40
         job.result = "Đang hòa âm nhạc nền kịch tính (Audio Ducking)..."
         db.commit()
@@ -282,6 +378,10 @@ class JobWorker:
         else:
             final_audio_path = voice_path
 
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after audio mixing.")
+            return
+
         # 2. Subtitle Agent (Kinetic ASS + SRT)
         job.progress = 55
         job.result = "Đang tạo phụ đề động chuẩn xác từng mili-giây..."
@@ -290,6 +390,10 @@ class JobWorker:
         ass_file = str(working_dir / "subs.ass")
         srt_file = str(working_dir / "subs.srt")
         SubtitleAgent.generate_subtitles(words, ass_file, srt_file)
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after subtitle creation.")
+            return
 
         # 3. Scene slicing & selection
         job.progress = 70
@@ -303,13 +407,14 @@ class JobWorker:
             # Auto-download trailer from YouTube asynchronously!
             logger.info(f"Movie {movie.title} has no source video. Auto-fetching YouTube trailer on-the-fly...")
             try:
-                from app.video.youtube_downloader import YouTubeTrailerDownloader
+                from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
                 search_query = f"{movie.original_title or movie.title} {movie.release_year or ''}"
+                clean_prefix = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
                 trailer_file = await asyncio.to_thread(
                     YouTubeTrailerDownloader.download_trailer,
                     query_or_url=search_query,
                     output_dir=str(settings.SOURCE_MEDIA_DIR),
-                    filename_prefix=f"movie_{movie.id}"
+                    filename_prefix=clean_prefix
                 )
                 if trailer_file and os.path.exists(trailer_file):
                     source = MovieSource(
@@ -324,6 +429,10 @@ class JobWorker:
                     logger.info(f"Auto-fetched trailer successfully: {source_media}")
             except Exception as e:
                 logger.warning(f"Could not auto-fetch trailer on-the-fly: {e}")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before scene slicing.")
+            return
 
         if source_media and os.path.exists(source_media):
             logger.info(f"Using source video for timeline scene slicing: {source_media}")
@@ -355,13 +464,17 @@ class JobWorker:
             )
             selected_clips = [dummy_clip]
 
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before FFmpeg render.")
+            return
+
         # 4. Render 9:16 Video in background thread with versioning (v1, v2, v3...)
         job.progress = 85
         job.result = "Đang xử lý FFmpeg render video dọc 9:16 (1080x1920)..."
         db.commit()
 
         from app.video.youtube_downloader import slugify_filename
-        clean_movie_title = slugify_filename(movie.title, movie.release_year)
+        clean_movie_title = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
         movie_output_folder = settings.OUTPUT_MEDIA_DIR / clean_movie_title
         movie_output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -378,6 +491,10 @@ class JobWorker:
             subtitle_ass_path=ass_file,
             enable_anti_shadowban=True
         )
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after video render.")
+            return
         
         # 5. QA Check in background thread
         job.progress = 95
@@ -386,6 +503,10 @@ class JobWorker:
 
         qa_result = await asyncio.to_thread(QAAgent.inspect_video, output_video)
         
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled before saving video record.")
+            return
+
         # 6. Save Video record
         video = Video(
             episode_id=episode.id,
@@ -400,6 +521,7 @@ class JobWorker:
         
         job.status = "completed"
         job.progress = 100
+        job.error_message = None
         job.result = f"Render video 9:16 thành công ({version_label}, {format_duration_str(duration)})!"
         db.commit()
         logger.info(f"Job #{job.id} render completed successfully for Episode {episode.id} -> {output_video}")

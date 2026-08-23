@@ -172,7 +172,7 @@ async def create_movie_from_youtube(
     final_file_path = None
     if info.get("file_path") and os.path.exists(info["file_path"]):
         orig_path = Path(info["file_path"])
-        clean_name = slugify_filename(movie.title, movie.release_year)
+        clean_name = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
         dest_path = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{orig_path.name}"
         try:
             orig_path.rename(dest_path)
@@ -209,7 +209,7 @@ async def upload_movie_source(
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
     from app.video.youtube_downloader import slugify_filename
-    clean_name = slugify_filename(movie.title, movie.release_year)
+    clean_name = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
 
     # Clean up old source records and files
     for old_s in movie.sources:
@@ -248,7 +248,7 @@ async def fetch_trailer_youtube(
     from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
     import asyncio
     search_query = youtube_url.strip() if youtube_url and youtube_url.strip() else f"{movie.original_title or movie.title} {movie.release_year or ''}"
-    clean_prefix = slugify_filename(movie.title, movie.release_year)
+    clean_prefix = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
 
     file_path = await asyncio.to_thread(
         YouTubeTrailerDownloader.download_trailer,
@@ -360,7 +360,7 @@ async def add_youtube_source(
 
     from app.video.youtube_downloader import YouTubeTrailerDownloader, slugify_filename
     import asyncio
-    clean_prefix = slugify_filename(movie.title, movie.release_year)
+    clean_prefix = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
     
     file_path = await asyncio.to_thread(
         YouTubeTrailerDownloader.download_trailer,
@@ -396,7 +396,7 @@ async def add_upload_source(
         raise HTTPException(status_code=404, detail="Không tìm thấy phim")
 
     from app.video.youtube_downloader import slugify_filename
-    clean_name = slugify_filename(movie.title, movie.release_year)
+    clean_name = slugify_filename(movie.title, movie.release_year, fallback_title=movie.original_title)
 
     dest_file = settings.SOURCE_MEDIA_DIR / f"{clean_name}_{file.filename}"
     with open(dest_file, "wb") as buffer:

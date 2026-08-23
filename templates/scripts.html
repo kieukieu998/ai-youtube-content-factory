@@ -441,6 +441,57 @@
     </form>
 </dialog>
 
+<!-- Modal Tùy Chọn Render Video Tập -->
+<dialog id="render_options_modal" class="modal">
+    <div class="modal-box bg-slate-900 border border-slate-800 text-slate-100 max-w-xl shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div class="flex items-center gap-2.5">
+                <div class="p-2 bg-indigo-600/20 border border-indigo-500/30 rounded-xl text-indigo-400">
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white" id="render_modal_title">Render Video 9:16 Tập</h3>
+                    <p class="text-xs text-indigo-300 font-medium" id="render_modal_subtitle">Phim: ...</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('render_options_modal').close()" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Đóng">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4 text-sm">
+            <input type="hidden" id="render_modal_episode_id" />
+
+            <div class="form-control">
+                <label class="label py-1">
+                    <span class="label-text text-purple-400 text-xs font-bold uppercase flex items-center gap-1.5">
+                        <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Yêu Cầu Bổ Sung Cho AI (Tùy Chọn):
+                    </span>
+                </label>
+                <textarea id="render_modal_instruction" rows="3" placeholder="Ví dụ: Làm câu hook gây sốc hơn, nhấn mạnh sự mâu thuẫn giữa 2 nhân vật chính..." class="textarea textarea-bordered w-full bg-slate-950 text-slate-200 text-xs leading-relaxed focus:border-purple-500"></textarea>
+                <span class="text-[11px] text-slate-400 mt-1">
+                    💡 Nhập yêu cầu nếu muốn AI viết lại Hook / Lời bình mới trước khi tạo video. Để trống nếu muốn giữ nguyên kịch bản hiện tại.
+                </span>
+            </div>
+
+            <div class="modal-action flex items-center justify-between pt-3 border-t border-slate-800">
+                <button type="button" onclick="document.getElementById('render_options_modal').close()" class="h-9 px-4 rounded-xl text-xs font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-300 transition">Hủy</button>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="btn_render_direct" onclick="submitDirectRender()" class="h-9 inline-flex items-center gap-1.5 px-4 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition" title="Giữ nguyên kịch bản cũ và render video">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Render Giữ Kịch Bản
+                    </button>
+                    <button type="button" id="btn_render_with_ai" onclick="submitAiRefineAndRender()" class="h-9 inline-flex items-center gap-1.5 px-5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-600/25 transition">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> AI Tinh Chỉnh & Render
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
 <script>
     let currentModalText = '';
     let currentFullScriptText = '';
@@ -797,7 +848,27 @@
     }
 
     function renderEpisode(episodeId) {
+        const container = $(`#ep_container_${episodeId}`);
+        const movie = container.attr('data-movie') || '';
+        const epNum = container.attr('data-ep-num') || '';
+
+        $('#render_modal_episode_id').val(episodeId);
+        $('#render_modal_title').text(`Render Video 9:16 Tập ${epNum}`);
+        $('#render_modal_subtitle').text(`Phim: ${movie}`);
+        $('#render_modal_instruction').val('');
+
+        lucide.createIcons();
+        document.getElementById('render_options_modal').showModal();
+    }
+
+    function submitDirectRender() {
+        const episodeId = $('#render_modal_episode_id').val();
+        const btn = $('#btn_render_direct');
+        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang gửi...');
+
         $.post('/api/v1/videos/render', { episode_id: episodeId }, function(res) {
+            document.getElementById('render_options_modal').close();
+            btn.prop('disabled', false).html('<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Render Giữ Kịch Bản');
             Swal.fire({
                 title: 'Đã Bắt Đầu Render!',
                 text: res.message,
@@ -809,6 +880,36 @@
             }).then(() => {
                 window.location.href = '/jobs';
             });
+        }).fail(function(err) {
+            btn.prop('disabled', false).html('<i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Render Giữ Kịch Bản');
+            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể bắt đầu render', 'error');
+        });
+    }
+
+    function submitAiRefineAndRender() {
+        const episodeId = $('#render_modal_episode_id').val();
+        const instruction = $('#render_modal_instruction').val().trim();
+        const btn = $('#btn_render_with_ai');
+
+        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
+
+        $.post('/api/v1/videos/render', { episode_id: episodeId, custom_instruction: instruction }, function(res) {
+            document.getElementById('render_options_modal').close();
+            btn.prop('disabled', false).html('<i data-lucide="sparkles" class="w-4 h-4"></i> AI Tinh Chỉnh & Render');
+            Swal.fire({
+                title: 'Đã Đưa Vào Hàng Đợi Render!',
+                text: instruction ? 'AI sẽ tự động tinh chỉnh kịch bản theo yêu cầu của bạn và render video 9:16 trong hàng đợi.' : res.message,
+                icon: 'success',
+                confirmButtonColor: '#6366f1',
+                confirmButtonText: 'Xem Tiến Độ Render (Queue)',
+                background: '#0f172a',
+                color: '#f8fafc'
+            }).then(() => {
+                window.location.href = '/jobs';
+            });
+        }).fail(function(err) {
+            btn.prop('disabled', false).html('<i data-lucide="sparkles" class="w-4 h-4"></i> AI Tinh Chỉnh & Render');
+            Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể bắt đầu render', 'error');
         });
     }
 

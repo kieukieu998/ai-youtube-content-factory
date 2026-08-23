@@ -7,13 +7,18 @@ from typing import Optional
 from loguru import logger
 from app.core.config import settings
 
-def slugify_filename(title: str, year: Optional[int] = None) -> str:
-    """Convert movie title and year to a clean safe filename string e.g. Tro_Choi_Tron_Tim_2019."""
-    if not title:
-        return "movie"
-    nfkd = unicodedata.normalize('NFKD', str(title))
-    ascii_text = nfkd.encode('ASCII', 'ignore').decode('ASCII')
-    clean = re.sub(r'[^a-zA-Z0-9]+', '_', ascii_text).strip('_')
+def slugify_filename(title: str, year: Optional[int] = None, fallback_title: Optional[str] = None) -> str:
+    """Convert movie title and year to a clean safe filename string e.g. Sat_Thu_Lai_Lua_2022."""
+    def _clean(t: Optional[str]) -> str:
+        if not t:
+            return ""
+        nfkd = unicodedata.normalize('NFKD', str(t))
+        ascii_text = nfkd.encode('ASCII', 'ignore').decode('ASCII')
+        return re.sub(r'[^a-zA-Z0-9]+', '_', ascii_text).strip('_')
+
+    clean = _clean(title)
+    if not clean and fallback_title:
+        clean = _clean(fallback_title)
     if not clean:
         clean = "movie"
     if year:

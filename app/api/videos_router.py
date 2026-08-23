@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Optional, List
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
 from starlette.responses import HTMLResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
@@ -77,16 +78,21 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
 @router.post("/api/v1/videos/render")
 async def trigger_render_video(
     episode_id: int = Form(...),
+    custom_instruction: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     episode = db.query(Episode).filter(Episode.id == episode_id).first()
     if not episode:
         raise HTTPException(status_code=404, detail="Không tìm thấy tập phim")
 
+    payload_data = {"episode_id": episode_id}
+    if custom_instruction and custom_instruction.strip():
+        payload_data["custom_instruction"] = custom_instruction.strip()
+
     job = Job(
         job_type="RenderEpisodeJob",
         status="pending",
-        payload=json.dumps({"episode_id": episode_id})
+        payload=json.dumps(payload_data)
     )
     db.add(job)
     db.commit()
@@ -99,7 +105,6 @@ async def stream_video(video_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Video không tồn tại")
     return FileResponse(video.file_path, media_type="video/mp4")
 
-from typing import List
 from pydantic import BaseModel
 
 class BulkDeleteRequest(BaseModel):
