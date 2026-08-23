@@ -185,7 +185,7 @@
                  data-search="{{ search_blob|lower }}">
                 
                 <!-- 100% Clean Video Thumbnail: Zero overlay badges or checkboxes -->
-                {% set play_title = v.title if v.video_type == "transformed_1_1" else (mv_title ~ " - Tập " ~ ep_num ~ " (v" ~ (v.render_version or 1) ~ ")") %}
+                {% set play_title = (mv_title ~ " - Video " ~ loop.index) if v.video_type == "transformed_1_1" else (mv_title ~ " - Tập " ~ ep_num ~ " (v" ~ (v.render_version or 1) ~ ")") %}
                 <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
                      onclick="playVideo('{{ v.id }}', '{{ play_title }}')"
                      title="Bấm để xem video">
@@ -205,7 +205,7 @@
                         <div class="flex items-center gap-1.5 min-w-0">
                             <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded my-0 flex-shrink-0" title="Chọn video này" onclick="event.stopPropagation()" />
                             {% if v.video_type == 'transformed_1_1' %}
-                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title }}">{{ v.title or 'Video Lách Bản Quyền' }}</span>
+                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title or v.file_path.split('\\')[-1] }}">Video {{ loop.index }}</span>
                             {% else %}
                             <span class="font-bold text-white text-xs truncate leading-none flex items-center">Tập {{ ep_num }}</span>
                             {% set ver = v.render_version or 1 %}
