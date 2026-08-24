@@ -15,6 +15,7 @@ from app.ai.gemini_provider import GeminiProvider
 class DubbingSegment(BaseModel):
     start: float
     end: float
+    gender: Optional[str] = "female"
     original_text: str = ""
     translated_text: str
 
@@ -29,8 +30,7 @@ def sanitize_tts_text(text: str) -> str:
     """Clean and sanitize Vietnamese text to prevent edge-tts WebSocket errors."""
     if not text:
         return ""
-    # Map Unicode replacement char \ufffd or  which often happens on Vietnamese 'đ' / 'Đ'
-    # Check if followed by capital vowel (Đóng, Đây, Đồng...)
+    # Map Unicode replacement char \ufffd or \uFFFD which often happens on Vietnamese 'đ' / 'Đ'
     text = re.sub(r'[\ufffd\uFFFD\u0080-\u009F](?=[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĂĐĨŨƠƯ])', 'Đ', text)
     text = re.sub(r'[\ufffd\uFFFD\u0080-\u009F]', 'đ', text)
     # Remove control characters and strange symbols
@@ -65,25 +65,24 @@ class DubbingEngine:
             "-b:a", "64k",
             str(out)
         ]
-        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if res.returncode != 0:
-            logger.error(f"Failed to extract audio for AI: {res.stderr}")
-            raise RuntimeError("Không thể trích xuất âm thanh từ video.")
+            raise RuntimeError(f"Lỗi trích xuất audio cho AI: {res.stderr.decode('utf-8', errors='ignore')}")
         return str(out)
 
     @classmethod
     async def transcribe_and_translate(
-        cls, 
-        audio_path: str, 
-        source_language: str = "auto",
-        gemini_provider: Optional[GeminiProvider] = None
+        cls,
+        audio_path: str,
+        source_language: str = "auto"
     ) -> List[DubbingSegment]:
         """
-        Send audio to Gemini Multimodal AI to transcribe spoken speech and translate to Vietnamese
-        with exact timestamp intervals.
+        Send audio to Google Gemini AI to transcribe dialogue with millisecond precision
+        and translate into natural cinematic Vietnamese.
         """
-        provider = gemini_provider or GeminiProvider()
-        provider._ensure_configured()
+        provider = GeminiProvider()
+        if not provider.client:
+            raise RuntimeError("Gemini AI Client không thể khởi tạo. Vui lòng kiểm tra GEMINI_API_KEY trong .env hoặc Cài Đặt.")
 
         audio_file = Path(audio_path).resolve()
         if not audio_file.exists():
@@ -102,28 +101,46 @@ class DubbingEngine:
         lang_instruction = f"Ngôn ngữ gốc của video: {source_language}" if source_language != "auto" else "Tự động phát hiện ngôn ngữ gốc (Tiếng Trung, Tiếng Anh, Tiếng Hàn, Tiếng Nhật...)"
 
         prompt = f"""
-Bạn là chuyên gia dịch thuật và lồng tiếng phim chuyên nghiệp.
-Nhiệm vụ: Lắng nghe toàn bộ file âm thanh được cung cấp.
+Bạn là chuyên gia phân tích âm thanh, dịch thuật và lồng tiếng phim chuyên nghiệp (Voice Dubbing & Lip-Sync Synchronization Expert).
+Nhiệm vụ: Lắng nghe toàn bộ file âm thanh được cung cấp để trích xuất câu thoại lồng tiếng khớp từng giây với nhân vật.
+
+CÁC QUY TẮC BẮT BUỘC ĐỂ KHỚP KHẨU HÌNH & KHỚP NHÂN VẬT:
 1. {lang_instruction}.
-2. Trích xuất toàn bộ các câu thoại / lời nói của nhân vật với mốc thời gian chính xác (start và end tính bằng giây, ví dụ: 1.25, 4.50).
-3. Dịch từng câu thoại sang Tiếng Việt tự nhiên, truyền cảm, phù hợp với ngữ cảnh điện ảnh và có độ dài câu tương đương câu thoại gốc để lồng tiếng.
-4. Bỏ qua các đoạn chỉ có nhạc nền hoặc khoảng lặng không có lời nói.
-5. Tuyệt đối KHÔNG sử dụng ký tự lạ, ký tự lỗi unicode hoặc emoji trong câu dịch tiếng Việt.
+2. TÁCH TỪNG CÂU THOẠI ĐƠN LẺ (SENTENCE-BY-SENTENCE / TURN-BY-TURN):
+   - Mỗi câu nói của MỘT nhân vật là MỘT mục riêng biệt.
+   - TUYỆT ĐỐI KHÔNG gộp nhiều câu thoại hoặc lời đối đáp của các nhân vật khác nhau vào chung một mục.
+   - Khi nhân vật ngừng nói hoặc đổi sang nhân vật khác, phải kết thúc câu thoại ngay.
+3. ĐỘ CHÍNH XÁC MỐC THỜI GIAN (START & END):
+   - "start": Giây chính xác nhân vật BẮT ĐẦU phát âm (ví dụ: 1.25).
+   - "end": Giây chính xác nhân vật KẾT THÚC phát âm (ví dụ: 3.40).
+   - Tuyệt đối không để start bị lệch hoặc kéo dài sang đoạn yên lặng.
+4. BẢN DỊCH TIẾNG VIỆT TƯƠNG ĐƯƠNG ĐỘ DÀI:
+   - Dịch sang Tiếng Việt tự nhiên, súc tích, độ dài câu tương ứng với thời lượng (end - start) giây để đọc vừa vặn trong khoảng thời gian đó.
+5. NHẬN DIỆN GIỚI TÍNH GIỌNG NÓI (GENDER):
+   - "gender": "female" nếu là giọng Nữ / Bé gái, "male" nếu là giọng Nam / Bé trai.
 
 YÊU CẦU ĐỊNH DẠNG:
 Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thích):
 [
   {{
-    "start": 0.5,
-    "end": 3.2,
-    "original_text": "Câu thoại gốc",
-    "translated_text": "Câu dịch tiếng Việt tự nhiên"
+    "start": 0.6,
+    "end": 1.3,
+    "gender": "female",
+    "original_text": "妈！",
+    "translated_text": "Mẹ!"
+  }},
+  {{
+    "start": 2.1,
+    "end": 2.8,
+    "gender": "female",
+    "original_text": "妈！",
+    "translated_text": "Mẹ!"
   }}
 ]
 """
 
         try:
-            models_to_try = [provider.model_name, "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash"]
+            models_to_try = [provider.model_name] + [m for m in getattr(provider, "CANDIDATE_MODELS", []) if m != provider.model_name]
             raw_text = None
             last_err = None
 
@@ -164,13 +181,15 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
             segments: List[DubbingSegment] = []
             for item in parsed_list:
                 s_start = float(item.get("start", 0.0))
-                s_end = float(item.get("end", s_start + 2.0))
+                s_end = float(item.get("end", s_start + 1.5))
+                gender = str(item.get("gender", "female")).lower()
                 orig = str(item.get("original_text", "")).strip()
                 trans = sanitize_tts_text(str(item.get("translated_text", "")))
-                if trans and len(trans) >= 2:
+                if trans and len(trans) >= 1:
                     segments.append(DubbingSegment(
                         start=max(0.0, s_start),
-                        end=max(s_start + 0.5, s_end),
+                        end=max(s_start + 0.4, s_end),
+                        gender="male" if "male" in gender and "female" not in gender else "female",
                         original_text=orig,
                         translated_text=trans
                     ))
@@ -186,8 +205,9 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
                     None,
                     lambda: provider.client.files.delete(name=uploaded_file.name)
                 )
+                logger.info(f"Temporary Gemini audio file deleted: {uploaded_file.name}")
             except Exception as e:
-                logger.debug(f"File delete notice: {e}")
+                logger.warning(f"Failed to delete temp Gemini file: {e}")
 
     @classmethod
     async def synthesize_dubbing_track(
@@ -218,14 +238,21 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
 
         async def process_clip(idx: int, seg: DubbingSegment):
             clean_text = sanitize_tts_text(seg.translated_text)
-            if not clean_text or len(clean_text) < 2:
+            if not clean_text or len(clean_text) < 1:
                 return None
 
             clip_path = tts_clips_dir / f"clip_{idx:03d}.mp3"
+            
+            # Select gender-appropriate voice
+            if seg.gender == "male":
+                actual_voice = "vi-VN-NamMinhNeural"
+            else:
+                actual_voice = voice_name if "HoaiMy" in voice_name or "Nu" in voice_name else "vi-VN-HoaiMyNeural"
+
             async with sem:
                 for attempt in range(2):
                     try:
-                        communicate = edge_tts.Communicate(text=clean_text, voice=voice_name)
+                        communicate = edge_tts.Communicate(text=clean_text, voice=actual_voice)
                         await asyncio.wait_for(communicate.save(str(clip_path)), timeout=15.0)
                         if clip_path.exists() and clip_path.stat().st_size > 100:
                             break
@@ -237,6 +264,7 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
             if not clip_path.exists() or clip_path.stat().st_size < 100:
                 return None
 
+            # Get clip duration via ffprobe
             probe_cmd = [
                 settings.FFPROBE_PATH, "-v", "error",
                 "-show_entries", "format=duration",
@@ -246,11 +274,12 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
             probe_res = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             clip_dur = float(probe_res.stdout.strip()) if probe_res.stdout.strip() else 1.0
 
-            target_slot = max(0.5, seg.end - seg.start)
+            target_slot = max(0.4, seg.end - seg.start)
             final_clip_path = clip_path
 
-            if clip_dur > target_slot * 1.08:
-                speed_ratio = min(1.35, clip_dur / target_slot)
+            # Adjust tempo so voice finishes exactly when the character stops speaking
+            if clip_dur > target_slot * 1.05:
+                speed_ratio = min(1.65, clip_dur / target_slot)
                 speedup_clip = tts_clips_dir / f"clip_{idx:03d}_fast.wav"
                 res_speed = subprocess.run([
                     settings.FFMPEG_PATH, "-y",
@@ -260,6 +289,7 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 if res_speed.returncode == 0 and speedup_clip.exists() and speedup_clip.stat().st_size > 100:
                     final_clip_path = speedup_clip
+                    clip_dur = clip_dur / speed_ratio
 
             return {
                 "path": str(final_clip_path),
