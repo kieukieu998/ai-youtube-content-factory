@@ -98,22 +98,66 @@ class DubbingEngine:
         )
         logger.info(f"Audio file uploaded to Gemini: {uploaded_file.name}")
 
+        # Probe total audio duration to anchor Gemini timestamps
+        probe_cmd = [
+            settings.FFPROBE_PATH, "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(audio_file)
+        ]
+        probe_res = subprocess.run(probe_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        total_audio_dur = float(probe_res.stdout.strip()) if probe_res.stdout.strip() else 120.0
+
         lang_instruction = f"Ngôn ngữ gốc của video: {source_language}" if source_language != "auto" else "Tự động phát hiện ngôn ngữ gốc (Tiếng Trung, Tiếng Anh, Tiếng Hàn, Tiếng Nhật...)"
 
-        prompt = f"""
-Bạn là chuyên gia phân tích âm thanh, dịch thuật và lồng tiếng phim chuyên nghiệp (Voice Dubbing & Lip-Sync Synchronization Expert).
-Nhiệm vụ: Lắng nghe toàn bộ file âm thanh được cung cấp để trích xuất câu thoại lồng tiếng khớp từng giây với nhân vật.
+        # Prepare audio chunks (45s each) to prevent Gemini timestamp drift
+        chunk_len = 45.0
+        chunks_info = []
+        curr_t = 0.0
+        while curr_t < total_audio_dur:
+            dur = min(chunk_len, total_audio_dur - curr_t)
+            chunks_info.append((curr_t, dur))
+            curr_t += chunk_len
 
-CÁC QUY TẮC BẮT BUỘC ĐỂ KHỚP KHẨU HÌNH & KHỚP NHÂN VẬT:
+        logger.info(f"Splitting {total_audio_dur:.1f}s audio into {len(chunks_info)} chunk(s) for zero-drift transcription...")
+
+        all_segments: List[DubbingSegment] = []
+
+        for chunk_idx, (c_start, c_dur) in enumerate(chunks_info):
+            # Extract slice
+            chunk_file = audio_file.parent / f"chunk_{chunk_idx:02d}.mp3"
+            cmd_slice = [
+                settings.FFMPEG_PATH, "-y",
+                "-ss", f"{c_start:.3f}",
+                "-t", f"{c_dur:.3f}",
+                "-i", str(audio_file),
+                "-c", "copy",
+                str(chunk_file)
+            ]
+            subprocess.run(cmd_slice, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            if not chunk_file.exists() or chunk_file.stat().st_size < 100:
+                continue
+
+            uploaded_file = await loop.run_in_executor(
+                None,
+                lambda p=chunk_file: provider.client.files.upload(file=str(p))
+            )
+
+            prompt = f"""
+Bạn là chuyên gia phân tích âm thanh, dịch thuật và lồng tiếng phim chuyên nghiệp (Voice Dubbing & Lip-Sync Synchronization Expert).
+Nhiệm vụ: Lắng nghe toàn bộ file âm thanh này (bắt đầu từ giây 0.0s đến {c_dur:.1f}s của đoạn cắt này).
+Trích xuất TẤT CẢ các câu thoại của nhân vật xuất hiện trong đoạn này.
+
+CÁC QUY TẮC BẮT BUỘC:
 1. {lang_instruction}.
 2. TÁCH TỪNG CÂU THOẠI ĐƠN LẺ (SENTENCE-BY-SENTENCE / TURN-BY-TURN):
    - Mỗi câu nói của MỘT nhân vật là MỘT mục riêng biệt.
    - TUYỆT ĐỐI KHÔNG gộp nhiều câu thoại hoặc lời đối đáp của các nhân vật khác nhau vào chung một mục.
    - Khi nhân vật ngừng nói hoặc đổi sang nhân vật khác, phải kết thúc câu thoại ngay.
 3. ĐỘ CHÍNH XÁC MỐC THỜI GIAN (START & END):
-   - "start": Giây chính xác nhân vật BẮT ĐẦU phát âm (ví dụ: 1.25).
-   - "end": Giây chính xác nhân vật KẾT THÚC phát âm (ví dụ: 3.40).
-   - Tuyệt đối không để start bị lệch hoặc kéo dài sang đoạn yên lặng.
+   - "start": Giây chính xác nhân vật BẮT ĐẦU phát âm (tính từ 0.0s của đoạn này).
+   - "end": Giây chính xác nhân vật KẾT THÚC phát âm (tính từ 0.0s của đoạn này).
 4. BẢN DỊCH TIẾNG VIỆT TƯƠNG ĐƯƠNG ĐỘ DÀI:
    - Dịch sang Tiếng Việt tự nhiên, súc tích, độ dài câu tương ứng với thời lượng (end - start) giây để đọc vừa vặn trong khoảng thời gian đó.
 5. NHẬN DIỆN GIỚI TÍNH GIỌNG NÓI (GENDER):
@@ -128,86 +172,72 @@ Trả về DUY NHẤT một JSON Array hợp lệ (Không bọc text giải thí
     "gender": "female",
     "original_text": "妈！",
     "translated_text": "Mẹ!"
-  }},
-  {{
-    "start": 2.1,
-    "end": 2.8,
-    "gender": "female",
-    "original_text": "妈！",
-    "translated_text": "Mẹ!"
   }}
 ]
 """
 
-        try:
-            models_to_try = [provider.model_name] + [m for m in getattr(provider, "CANDIDATE_MODELS", []) if m != provider.model_name]
-            raw_text = None
-            last_err = None
-
-            for model in models_to_try:
-                try:
-                    logger.info(f"Transcribing audio with Gemini model: {model}...")
-                    response = await loop.run_in_executor(
-                        None,
-                        lambda m=model: provider.client.models.generate_content(
-                            model=m,
-                            contents=[uploaded_file, prompt]
-                        )
-                    )
-                    if response and response.text:
-                        raw_text = response.text.strip()
-                        break
-                except Exception as e:
-                    last_err = e
-                    logger.warning(f"Model {model} failed on audio: {e}")
-                    await asyncio.sleep(1.0)
-                    continue
-
-            if not raw_text:
-                raise RuntimeError(f"Gemini AI không thể xử lý âm thanh: {last_err}")
-
-            # Clean JSON text
-            clean_json = raw_text.strip()
-            code_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_json)
-            if code_match:
-                clean_json = code_match.group(1).strip()
-            else:
-                first_bracket = clean_json.find('[')
-                last_bracket = clean_json.rfind(']')
-                if first_bracket != -1 and last_bracket != -1:
-                    clean_json = clean_json[first_bracket:last_bracket + 1]
-
-            parsed_list = json.loads(clean_json)
-            segments: List[DubbingSegment] = []
-            for item in parsed_list:
-                s_start = float(item.get("start", 0.0))
-                s_end = float(item.get("end", s_start + 1.5))
-                gender = str(item.get("gender", "female")).lower()
-                orig = str(item.get("original_text", "")).strip()
-                trans = sanitize_tts_text(str(item.get("translated_text", "")))
-                if trans and len(trans) >= 1:
-                    segments.append(DubbingSegment(
-                        start=max(0.0, s_start),
-                        end=max(s_start + 0.4, s_end),
-                        gender="male" if "male" in gender and "female" not in gender else "female",
-                        original_text=orig,
-                        translated_text=trans
-                    ))
-
-            # Sort segments by start time
-            segments.sort(key=lambda s: s.start)
-            logger.info(f"Successfully transcribed & translated {len(segments)} dubbing segments.")
-            return segments
-
-        finally:
             try:
-                await loop.run_in_executor(
-                    None,
-                    lambda: provider.client.files.delete(name=uploaded_file.name)
-                )
-                logger.info(f"Temporary Gemini audio file deleted: {uploaded_file.name}")
-            except Exception as e:
-                logger.warning(f"Failed to delete temp Gemini file: {e}")
+                models_to_try = [provider.model_name] + [m for m in getattr(provider, "CANDIDATE_MODELS", []) if m != provider.model_name]
+                raw_text = None
+                for model in models_to_try:
+                    try:
+                        logger.info(f"Transcribing chunk #{chunk_idx+1}/{len(chunks_info)} ({c_start:.1f}s - {c_start+c_dur:.1f}s) with {model}...")
+                        response = await loop.run_in_executor(
+                            None,
+                            lambda m=model: provider.client.models.generate_content(
+                                model=m,
+                                contents=[uploaded_file, prompt]
+                            )
+                        )
+                        if response and response.text:
+                            raw_text = response.text.strip()
+                            break
+                    except Exception as e:
+                        logger.warning(f"Chunk model {model} failed: {e}")
+                        await asyncio.sleep(0.5)
+                        continue
+
+                if raw_text:
+                    clean_json = raw_text.strip()
+                    code_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", clean_json)
+                    if code_match:
+                        clean_json = code_match.group(1).strip()
+                    else:
+                        first_bracket = clean_json.find('[')
+                        last_bracket = clean_json.rfind(']')
+                        if first_bracket != -1 and last_bracket != -1:
+                            clean_json = clean_json[first_bracket:last_bracket + 1]
+
+                    try:
+                        parsed_list = json.loads(clean_json)
+                        for item in parsed_list:
+                            s_start = float(item.get("start", 0.0)) + c_start
+                            s_end = float(item.get("end", s_start - c_start + 1.5)) + c_start
+                            gender = str(item.get("gender", "female")).lower()
+                            orig = str(item.get("original_text", "")).strip()
+                            trans = sanitize_tts_text(str(item.get("translated_text", "")))
+                            if trans and len(trans) >= 1:
+                                all_segments.append(DubbingSegment(
+                                    start=max(0.0, s_start),
+                                    end=max(s_start + 0.4, s_end),
+                                    gender="male" if "male" in gender and "female" not in gender else "female",
+                                    original_text=orig,
+                                    translated_text=trans
+                                ))
+                    except Exception as parse_e:
+                        logger.warning(f"Could not parse chunk #{chunk_idx} JSON: {parse_e}")
+            finally:
+                try:
+                    await loop.run_in_executor(None, lambda: provider.client.files.delete(name=uploaded_file.name))
+                    if chunk_file.exists():
+                        chunk_file.unlink()
+                except Exception:
+                    pass
+
+        # Sort all merged segments by start time
+        all_segments.sort(key=lambda s: s.start)
+        logger.info(f"Successfully transcribed & translated {len(all_segments)} dubbing segments across {len(chunks_info)} chunks.")
+        return all_segments
 
     @classmethod
     async def synthesize_dubbing_track(

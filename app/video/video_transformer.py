@@ -175,9 +175,15 @@ class VideoTransformerService:
                     "[1:a]volume=1.20,aformat=sample_rates=48000:channel_layouts=stereo[voice_dub]; "
                     "[bg_duck][voice_dub]amix=inputs=2:duration=first:dropout_transition=2[a_final]"
                 )
+            elif has_audio:
+                # Replace Mode: Dubbed voice primary at 120%, subtle ambient soundbed at 6% to prevent dead-silence gaps
+                filter_complex_a = (
+                    "[0:a]volume=0.06,aformat=sample_rates=48000:channel_layouts=stereo[bg_subtle]; "
+                    "[1:a]volume=1.20,aformat=sample_rates=48000:channel_layouts=stereo[voice_dub]; "
+                    "[bg_subtle][voice_dub]amix=inputs=2:duration=first:dropout_transition=2[a_final]"
+                )
             else:
-                # Full replacement with dubbed voice
-                filter_complex_a = "[1:a]volume=1.15,aformat=sample_rates=48000:channel_layouts=stereo[a_final]"
+                filter_complex_a = "[1:a]volume=1.20,aformat=sample_rates=48000:channel_layouts=stereo[a_final]"
             a_map = "[a_final]"
         elif has_audio:
             a_chain = []
