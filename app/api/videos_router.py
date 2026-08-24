@@ -6,7 +6,7 @@ from starlette.responses import HTMLResponse, JSONResponse, FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.templates import templates
-from app.database.session import get_db
+from app.database.session import get_db, SessionLocal
 from app.database.models import Video, Episode, Job
 
 router = APIRouter()
