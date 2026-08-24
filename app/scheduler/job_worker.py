@@ -607,6 +607,7 @@ class JobWorker:
         # 2.1 AI Dubbing Pipeline (if enabled)
         dubbed_audio_track = None
         subtitles_srt_track = None
+        enable_auto_subtitles = payload.get("enable_auto_subtitles", False)
 
         if enable_dubbing:
             job.progress = 20
@@ -660,8 +661,37 @@ class JobWorker:
                 logger.error(f"AI Dubbing error: {e}", exc_info=True)
                 raise RuntimeError(f"Lỗi trong quá trình dịch & lồng tiếng AI: {e}")
 
+        elif enable_auto_subtitles:
+            job.progress = 20
+            job.result = "Đang nhận diện lời thoại để tạo phụ đề tự động bằng faster-whisper..."
+            db.commit()
+
+            subs_working_dir = settings.WORKING_MEDIA_DIR / f"subs_{job.id}"
+            subs_working_dir.mkdir(parents=True, exist_ok=True)
+            extracted_audio = str(subs_working_dir / "source_audio.mp3")
+
+            await asyncio.to_thread(
+                DubbingEngine.extract_audio_for_ai,
+                input_video_or_audio=input_source_file,
+                output_audio_path=extracted_audio
+            )
+
+            job.progress = 30
+            job.result = "Đang tạo file phụ đề ASS chuẩn nét cho video..."
+            db.commit()
+
+            try:
+                subtitles_srt_track = await DubbingEngine.generate_auto_subtitles_ass(
+                    audio_path=extracted_audio,
+                    language=source_language if source_language != "auto" else "auto",
+                    output_ass_path=str(subs_working_dir / "auto_subtitles.ass")
+                )
+                logger.info(f"Generated auto-subtitles file: {subtitles_srt_track}")
+            except Exception as sub_err:
+                logger.warning(f"Failed to generate auto-subtitles: {sub_err}")
+
         if cls._is_job_cancelled(db, job.id):
-            logger.warning(f"Job #{job.id} cancelled after AI Dubbing step.")
+            logger.warning(f"Job #{job.id} cancelled after audio processing step.")
             return
 
         if split_parts > 1 and source_dur > 5.0:

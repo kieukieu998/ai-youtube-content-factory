@@ -323,6 +323,18 @@
                                 </div>
                                 <input type="checkbox" id="chk_hflip" class="toggle toggle-sm toggle-error" />
                             </label>
+
+                            <!-- Standalone Auto Subtitles for Original/Vietnamese Audio -->
+                            <label class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800 cursor-pointer hover:border-cyan-500/40 transition md:col-span-2">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="subtitles" class="w-4 h-4 text-cyan-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-cyan-300">Tạo Phụ Đề Tự Động (Auto Captions)</div>
+                                        <div class="text-[10px] text-slate-400">Tự động nhận diện lời thoại & ghép phụ đề chuẩn nét (Giữ nguyên giọng nói gốc, không lồng tiếng mới)</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_auto_subtitles" class="toggle toggle-sm toggle-accent" />
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -708,6 +720,7 @@
         const enableColorGrading = $('#chk_color_grading').is(':checked');
         const enableMicroZoom = $('#chk_micro_zoom').is(':checked');
         const enableHflip = $('#chk_hflip').is(':checked');
+        const enableAutoSubtitles = $('#chk_auto_subtitles').is(':checked');
 
         const enableDubbing = $('#chk_enable_dubbing').is(':checked');
         const sourceLanguage = $('#inp_source_language').val();
@@ -732,6 +745,7 @@
                 enable_color_grading: enableColorGrading,
                 enable_micro_zoom: enableMicroZoom,
                 enable_hflip: enableHflip,
+                enable_auto_subtitles: enableAutoSubtitles,
                 enable_dubbing: enableDubbing,
                 source_language: sourceLanguage,
                 vietnamese_voice: vietnameseVoice,

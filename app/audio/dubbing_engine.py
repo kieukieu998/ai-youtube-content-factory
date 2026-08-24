@@ -479,12 +479,71 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
             start_str = format_ass_time(seg.start)
             end_str = format_ass_time(seg.end)
-            dialogue_lines.append(f"Dialogue: 0,{start_str},{end_str},DubbingStyle,,0,0,0,,{wrapped_text}")
+            dialogue_lines.append(
+                f"Dialogue: 0,{start_str},{end_str},DubbingStyle,,0,0,0,,{wrapped_text}"
+            )
 
         with open(out, "w", encoding="utf-8") as f:
             f.write(ass_header + "\n".join(dialogue_lines) + "\n")
 
+        logger.info(f"Generated ASS subtitles with {len(dialogue_lines)} events: {out}")
         return str(out)
+
+    @classmethod
+    async def generate_auto_subtitles_ass(
+        cls,
+        audio_path: str,
+        language: str = "auto",
+        output_ass_path: str = None
+    ) -> Optional[str]:
+        """
+        Transcribe speech from audio using faster-whisper and export into native ASS subtitles.
+        Works seamlessly for Vietnamese or any language without requiring AI TTS voice dubbing.
+        """
+        audio_file = Path(audio_path).resolve()
+        if not audio_file.exists():
+            return None
+
+        loop = asyncio.get_event_loop()
+
+        def run_whisper_transcription():
+            from faster_whisper import WhisperModel
+            whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+            lang = language if language not in ["auto", "", None] else None
+            raw_segs, info = whisper_model.transcribe(
+                str(audio_file),
+                language=lang,
+                beam_size=5,
+                vad_filter=True,
+                vad_parameters=dict(min_silence_duration_ms=350)
+            )
+            segs = []
+            for s in raw_segs:
+                txt = s.text.strip()
+                if txt and len(txt) >= 1:
+                    segs.append(DubbingSegment(
+                        start=round(s.start, 2),
+                        end=round(s.end, 2),
+                        gender="female",
+                        original_text=txt,
+                        translated_text=txt
+                    ))
+            return segs
+
+        try:
+            logger.info(f"Generating auto-subtitles with faster-whisper for: {audio_file.name} (lang={language})...")
+            segments = await loop.run_in_executor(None, run_whisper_transcription)
+            if not segments:
+                logger.warning(f"No speech detected for auto-subtitles in: {audio_path}")
+                return None
+
+            if not output_ass_path:
+                output_ass_path = str(audio_file.parent / "auto_subtitles.ass")
+
+            return cls.generate_subtitles_ass(segments, output_ass_path)
+        except Exception as e:
+            logger.error(f"Error generating auto subtitles: {e}", exc_info=True)
+            return None
 
     @classmethod
     def generate_subtitles_srt(cls, segments: List[DubbingSegment], output_srt_path: str) -> str:
