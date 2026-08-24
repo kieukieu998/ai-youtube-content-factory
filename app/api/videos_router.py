@@ -61,11 +61,40 @@ def enrich_video_display(v: Video, movie_title: str = ""):
         v.play_title = title
     else:
         ep_num = v.episode.episode_number if v.episode else 1
-        ver = getattr(v, "render_version", 1)
         v.display_label = f"Tập {ep_num}"
-        v.display_sub_badge = f"v{ver}"
-        v.sort_order = (ep_num, ver, str(v.created_at or ""))
-        v.play_title = f"{movie_title} - Tập {ep_num} (v{ver})"
+        v.display_sub_badge = None
+        v.sort_order = (ep_num, 0, str(v.created_at or ""))
+        v.play_title = f"{movie_title} - Tập {ep_num}"
+
+
+def process_movie_videos_with_versions(v_list: List[Video], movie_title: str = "") -> List[Video]:
+    """Enrich all videos and assign version badges (v1, v2, v3...) per unique episode/part label."""
+    from collections import defaultdict
+
+    # 1. Base enrichment
+    for v in v_list:
+        enrich_video_display(v, movie_title)
+
+    # 2. Group by display_label to assign version index
+    label_map = defaultdict(list)
+    for v in sorted(v_list, key=lambda x: (x.created_at or x.id or 0)):
+        label_map[v.display_label].append(v)
+
+    for label, group in label_map.items():
+        for idx, vid in enumerate(group, 1):
+            vid.render_version = idx
+            vid.render_version_label = f"v{idx}"
+            vid.display_sub_badge = f"v{idx}"
+            if vid.video_type == "transformed_1_1":
+                clean_t = vid.title or Path(vid.file_path).stem
+                vid.play_title = f"{clean_t} (v{idx})"
+            else:
+                vid.play_title = f"{movie_title} - {vid.display_label} (v{idx})"
+            base_order = getattr(vid, "sort_order", (0, 0, ""))
+            vid.sort_order = (base_order[0], base_order[1], idx, str(vid.created_at or ""))
+
+    return sorted(v_list, key=lambda x: getattr(x, "sort_order", (0, 0, 0, "")))
+
 
 @router.get("/videos", response_class=HTMLResponse)
 async def videos_page(request: Request, db: Session = Depends(get_db)):
@@ -74,16 +103,6 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
     
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
     approved_episodes = db.query(Episode).filter(Episode.status.in_(["approved", "draft"])).all()
-    
-    # Group videos by Episode to determine version index
-    ep_videos_map = defaultdict(list)
-    for v in sorted(videos, key=lambda x: x.created_at or x.id):
-        ep_videos_map[v.episode_id].append(v)
-        
-    for ep_id, v_sub_list in ep_videos_map.items():
-        for idx, vid in enumerate(v_sub_list, 1):
-            vid.render_version = idx
-            vid.render_version_label = f"v{idx}"
 
     # Group videos by Movie Folder
     movie_dict = defaultdict(list)
@@ -102,12 +121,10 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
         if movie_id != 0:
             movie = db.query(Movie).filter(Movie.id == movie_id).first()
             mv_title = movie.title if movie else ""
-            for v in v_list:
-                enrich_video_display(v, mv_title)
+            v_list_sorted = process_movie_videos_with_versions(v_list, mv_title)
 
-            v_list_sorted = sorted(v_list, key=lambda x: getattr(x, "sort_order", (0, 0, "")))
             script = db.query(Script).filter(Script.movie_id == movie_id).first()
-            total_eps = len(script.episodes) if script else len(v_list)
+            total_eps = len(script.episodes) if script else len(v_list_sorted)
             
             movie_folders.append({
                 "movie": movie,
@@ -117,9 +134,7 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
                 "is_complete": len(v_list_sorted) >= total_eps and total_eps > 0
             })
         else:
-            for v in v_list:
-                enrich_video_display(v, "Video Khác")
-            v_list_sorted = sorted(v_list, key=lambda x: getattr(x, "sort_order", (0, 0, "")))
+            v_list_sorted = process_movie_videos_with_versions(v_list, "Video Khác")
             movie_folders.append({
                 "movie": None,
                 "videos": v_list_sorted,
@@ -162,11 +177,16 @@ async def trigger_render_video(
     return JSONResponse({"status": "success", "message": f"Đã thêm tác vụ render video tập {episode.episode_number} vào hàng đợi", "job_id": job.id})
 
 @router.get("/api/v1/videos/{video_id}/stream")
-async def stream_video(video_id: int, db: Session = Depends(get_db)):
-    video = db.query(Video).filter(Video.id == video_id).first()
-    if not video or not Path(video.file_path).exists():
-        raise HTTPException(status_code=404, detail="Video không tồn tại")
-    return FileResponse(video.file_path, media_type="video/mp4")
+def stream_video(video_id: int):
+    with SessionLocal() as db:
+        video = db.query(Video).filter(Video.id == video_id).first()
+        if not video:
+            raise HTTPException(status_code=404, detail="Video không tồn tại")
+        file_path = video.file_path
+
+    if not file_path or not Path(file_path).exists():
+        raise HTTPException(status_code=404, detail="File video không tồn tại trên ổ cứng")
+    return FileResponse(file_path, media_type="video/mp4")
 
 from pydantic import BaseModel
 

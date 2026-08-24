@@ -543,6 +543,11 @@ class JobWorker:
         enable_hflip = bool(payload.get("enable_hflip", False))
         enable_color_grading = bool(payload.get("enable_color_grading", True))
         enable_micro_zoom = bool(payload.get("enable_micro_zoom", True))
+        enable_dubbing = bool(payload.get("enable_dubbing", False))
+        source_language = payload.get("source_language", "auto")
+        vietnamese_voice = payload.get("vietnamese_voice", "vi-VN-HoaiMyNeural")
+        dubbing_mode = payload.get("dubbing_mode", "voiceover")
+        burn_subtitles = bool(payload.get("burn_subtitles", False))
 
         if cls._is_job_cancelled(db, job.id):
             logger.warning(f"Job #{job.id} cancelled before starting transformation.")
@@ -578,6 +583,7 @@ class JobWorker:
         # 2. Prepare output folder and check splitting
         from app.video.youtube_downloader import slugify_filename
         from app.video.video_transformer import VideoTransformerService
+        from app.audio.dubbing_engine import DubbingEngine
 
         clean_name = slugify_filename(title)
         transform_folder = settings.OUTPUT_MEDIA_DIR / "transformed"
@@ -597,6 +603,66 @@ class JobWorker:
             ms = db.query(MovieSource).filter(MovieSource.file_path == input_source_file).first()
             if ms:
                 movie_id = ms.movie_id
+
+        # 2.1 AI Dubbing Pipeline (if enabled)
+        dubbed_audio_track = None
+        subtitles_srt_track = None
+
+        if enable_dubbing:
+            job.progress = 20
+            job.result = "Đang trích xuất audio để AI nhận dạng lời thoại & dịch sang Tiếng Việt..."
+            db.commit()
+
+            dub_working_dir = settings.WORKING_MEDIA_DIR / f"dubbing_{job.id}"
+            dub_working_dir.mkdir(parents=True, exist_ok=True)
+            extracted_ai_audio = str(dub_working_dir / "source_ai_audio.mp3")
+
+            await asyncio.to_thread(
+                DubbingEngine.extract_audio_for_ai,
+                input_video_or_audio=input_source_file,
+                output_audio_path=extracted_ai_audio
+            )
+
+            job.progress = 25
+            job.result = "AI Gemini đang dịch thuật câu thoại sang Tiếng Việt chuẩn ngữ cảnh..."
+            db.commit()
+
+            try:
+                segments = await DubbingEngine.transcribe_and_translate(
+                    audio_path=extracted_ai_audio,
+                    source_language=source_language
+                )
+
+                if cls._is_job_cancelled(db, job.id):
+                    logger.warning(f"Job #{job.id} cancelled after AI translation.")
+                    return
+
+                if segments:
+                    job.progress = 35
+                    job.result = f"Đang sinh {len(segments)} câu lồng tiếng AI Tiếng Việt ({vietnamese_voice.split('-')[-1]})..."
+                    db.commit()
+
+                    dubbed_audio_track = await DubbingEngine.synthesize_dubbing_track(
+                        segments=segments,
+                        voice_name=vietnamese_voice,
+                        total_duration=source_dur,
+                        working_dir=dub_working_dir
+                    )
+
+                    if burn_subtitles:
+                        subtitles_srt_track = DubbingEngine.generate_subtitles_ass(
+                            segments=segments,
+                            output_ass_path=str(dub_working_dir / "dubbing_subs.ass")
+                        )
+                else:
+                    logger.info(f"Không phát hiện câu thoại nào cần lồng tiếng trong video: {input_source_file}")
+            except Exception as e:
+                logger.error(f"AI Dubbing error: {e}", exc_info=True)
+                raise RuntimeError(f"Lỗi trong quá trình dịch & lồng tiếng AI: {e}")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"Job #{job.id} cancelled after AI Dubbing step.")
+            return
 
         if split_parts > 1 and source_dur > 5.0:
             part_dur = source_dur / split_parts
@@ -641,6 +707,9 @@ class JobWorker:
                     enable_micro_zoom=enable_micro_zoom,
                     start_time=part_start,
                     duration=part_dur,
+                    dubbed_audio_path=dubbed_audio_track,
+                    dubbing_mode=dubbing_mode,
+                    subtitles_srt_path=subtitles_srt_track,
                     progress_callback=on_part_progress
                 )
 
@@ -659,7 +728,7 @@ class JobWorker:
                     duration_seconds=dur,
                     file_size_bytes=os.path.getsize(rendered_path) if os.path.exists(rendered_path) else 0,
                     qa_status="passed",
-                    qa_notes=f"Xử lý lách bản quyền 1:1 - Tập {p_idx}/{split_parts} hoàn tất"
+                    qa_notes=f"Xử lý lách bản quyền 1:1 {'+ Lồng Tiếng AI' if enable_dubbing else ''} - Tập {p_idx}/{split_parts} hoàn tất"
                 )
                 db.add(video)
                 db.commit()
@@ -668,7 +737,7 @@ class JobWorker:
             job.status = "completed"
             job.progress = 100
             job.error_message = None
-            job.result = f"Xử lý video 1:1 lách bản quyền thành công! Đã chia {split_parts} tập ({', '.join(created_videos)})"
+            job.result = f"Xử lý video 1:1 {'+ Lồng tiếng AI ' if enable_dubbing else ''}thành công! Đã chia {split_parts} tập ({', '.join(created_videos)})"
             db.commit()
             logger.info(f"Job #{job.id} video split transform completed -> {created_videos}")
 
@@ -678,7 +747,7 @@ class JobWorker:
             output_file_path = str(transform_folder / output_file_name)
 
             job.progress = 40
-            job.result = f"Đang áp dụng bộ lọc âm thanh (Pitch {pitch_shift:+.2f}, EQ 48kHz) & biến đổi hình ảnh..."
+            job.result = f"Đang áp dụng bộ lọc âm thanh & biến đổi hình ảnh..."
             db.commit()
 
             if cls._is_job_cancelled(db, job.id):
@@ -708,6 +777,9 @@ class JobWorker:
                 enable_hflip=enable_hflip,
                 enable_color_grading=enable_color_grading,
                 enable_micro_zoom=enable_micro_zoom,
+                dubbed_audio_path=dubbed_audio_track,
+                dubbing_mode=dubbing_mode,
+                subtitles_srt_path=subtitles_srt_track,
                 progress_callback=on_transform_progress
             )
 

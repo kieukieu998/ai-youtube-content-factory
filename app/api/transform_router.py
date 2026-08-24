@@ -40,12 +40,17 @@ async def trigger_video_transform(
     enable_color_grading: bool = Form(True),
     enable_micro_zoom: bool = Form(True),
     split_parts: int = Form(1),
+    enable_dubbing: bool = Form(False),
+    source_language: str = Form("auto"),
+    vietnamese_voice: str = Form("vi-VN-HoaiMyNeural"),
+    dubbing_mode: str = Form("voiceover"),
+    burn_subtitles: bool = Form(False),
     movie_id: Optional[int] = Form(None),
     source_file_path: Optional[str] = Form(None),
     source_file_paths: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Trigger background job(s) to transform video(s) with anti-copyright 1:1 filters."""
+    """Trigger background job(s) to transform video(s) with anti-copyright 1:1 filters and optional AI Dubbing."""
     from app.database.models import MovieSource, Movie
 
     target_paths = []
@@ -78,7 +83,12 @@ async def trigger_video_transform(
             "enable_hflip": enable_hflip,
             "enable_color_grading": enable_color_grading,
             "enable_micro_zoom": enable_micro_zoom,
-            "split_parts": split_parts
+            "split_parts": split_parts,
+            "enable_dubbing": enable_dubbing,
+            "source_language": source_language,
+            "vietnamese_voice": vietnamese_voice,
+            "dubbing_mode": dubbing_mode,
+            "burn_subtitles": burn_subtitles
         }
         job = Job(
             job_type="VideoTransformJob",
@@ -122,7 +132,12 @@ async def trigger_video_transform(
             "enable_hflip": enable_hflip,
             "enable_color_grading": enable_color_grading,
             "enable_micro_zoom": enable_micro_zoom,
-            "split_parts": split_parts
+            "split_parts": split_parts,
+            "enable_dubbing": enable_dubbing,
+            "source_language": source_language,
+            "vietnamese_voice": vietnamese_voice,
+            "dubbing_mode": dubbing_mode,
+            "burn_subtitles": burn_subtitles
         }
         job = Job(
             job_type="VideoTransformJob",
@@ -152,9 +167,14 @@ async def upload_and_transform(
     enable_color_grading: bool = Form(True),
     enable_micro_zoom: bool = Form(True),
     split_parts: int = Form(1),
+    enable_dubbing: bool = Form(False),
+    source_language: str = Form("auto"),
+    vietnamese_voice: str = Form("vi-VN-HoaiMyNeural"),
+    dubbing_mode: str = Form("voiceover"),
+    burn_subtitles: bool = Form(False),
     db: Session = Depends(get_db)
 ):
-    """Upload MP4 file from computer and queue a 1:1 transformation job."""
+    """Upload MP4 file from computer and queue a 1:1 transformation job with optional AI Dubbing."""
     if not file or not file.filename:
         raise HTTPException(status_code=400, detail="Vui lòng chọn file video hợp lệ.")
 
@@ -177,7 +197,12 @@ async def upload_and_transform(
         "enable_hflip": enable_hflip,
         "enable_color_grading": enable_color_grading,
         "enable_micro_zoom": enable_micro_zoom,
-        "split_parts": split_parts
+        "split_parts": split_parts,
+        "enable_dubbing": enable_dubbing,
+        "source_language": source_language,
+        "vietnamese_voice": vietnamese_voice,
+        "dubbing_mode": dubbing_mode,
+        "burn_subtitles": burn_subtitles
     }
 
     job = Job(

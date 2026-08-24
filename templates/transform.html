@@ -327,6 +327,102 @@
                     </div>
                 </div>
 
+                <!-- Divider -->
+                <div class="border-t border-slate-800/80"></div>
+
+                <!-- 3. AI Dubbing & Voice Translation Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="mic" class="w-4 h-4 text-pink-400"></i>
+                            <h2 class="text-base font-bold text-white">3. Dịch & Lồng Tiếng AI Tiếng Việt (AI Dubbing)</h2>
+                            <span class="badge badge-xs bg-pink-500/20 text-pink-300 border border-pink-500/40">✨ Mới</span>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer bg-slate-950/70 px-3 py-1.5 rounded-xl border border-pink-500/30 hover:border-pink-500/60 transition">
+                            <span class="text-xs font-bold text-pink-300">Bật Lồng Tiếng</span>
+                            <input type="checkbox" id="chk_enable_dubbing" onchange="toggleDubbingPanel(this.checked)" class="toggle toggle-sm toggle-secondary" />
+                        </label>
+                    </div>
+
+                    <!-- Dubbing Configuration Panel (Hidden by default) -->
+                    <div id="dubbing_settings_panel" class="hidden p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900/90 to-purple-950/30 border border-pink-500/30 space-y-4 text-xs transition-all duration-300">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Source Language -->
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text text-slate-300 font-semibold flex items-center gap-1.5">
+                                        <i data-lucide="languages" class="w-3.5 h-3.5 text-pink-400"></i>
+                                        Ngôn Ngữ Video Gốc:
+                                    </span>
+                                </label>
+                                <select id="inp_source_language" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-pink-500 focus:outline-none text-xs font-medium w-full transition">
+                                    <option value="auto" selected>🌐 Tự động nhận diện (Auto)</option>
+                                    <option value="zh">🇨🇳 Tiếng Trung Quốc (Chinese)</option>
+                                    <option value="en">🇺🇸 Tiếng Anh (English)</option>
+                                    <option value="ko">🇰🇷 Tiếng Hàn Quốc (Korean)</option>
+                                    <option value="ja">🇯🇵 Tiếng Nhật (Japanese)</option>
+                                    <option value="th">🇹🇭 Tiếng Thái (Thai)</option>
+                                    <option value="fr">🇫🇷 Tiếng Pháp (French)</option>
+                                </select>
+                            </div>
+
+                            <!-- Vietnamese Voice Model -->
+                            <div class="form-control">
+                                <label class="label py-1">
+                                    <span class="label-text text-slate-300 font-semibold flex items-center gap-1.5">
+                                        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-purple-400"></i>
+                                        Giọng Đọc AI Tiếng Việt:
+                                    </span>
+                                </label>
+                                <select id="inp_vietnamese_voice" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-purple-500 focus:outline-none text-xs font-medium w-full transition">
+                                    <option value="vi-VN-HoaiMyNeural" selected>👩 Hoài My (Nữ truyền cảm, giọng chuẩn)</option>
+                                    <option value="vi-VN-NamMinhNeural">👨 Nam Minh (Nam trầm ấm, tự nhiên)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Dubbing Mode (Voiceover Ducking vs Replace) -->
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-slate-300 font-semibold flex items-center gap-1.5">
+                                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                    Kiểu Hòa Âm Lồng Tiếng:
+                                </span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-2 mt-1">
+                                <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/70 cursor-pointer hover:border-pink-500/50 transition">
+                                    <input type="radio" name="dubbing_mode" value="voiceover" checked class="radio radio-xs radio-secondary" />
+                                    <div>
+                                        <div class="font-bold text-slate-200">Thuyết Minh (Voiceover)</div>
+                                        <div class="text-[10px] text-slate-400">Giữ âm thanh gốc nhỏ 18% + giọng Việt to rõ</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950/70 cursor-pointer hover:border-pink-500/50 transition">
+                                    <input type="radio" name="dubbing_mode" value="replace" class="radio radio-xs radio-secondary" />
+                                    <div>
+                                        <div class="font-bold text-slate-200">Lồng Tiếng Sạch (Replace)</div>
+                                        <div class="text-[10px] text-slate-400">Tắt hẳn giọng gốc, chỉ phát giọng Tiếng Việt</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Subtitles Option -->
+                        <div class="pt-2 border-t border-slate-800/80">
+                            <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 cursor-pointer hover:border-pink-500/40 transition">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="subtitles" class="w-4 h-4 text-amber-400"></i>
+                                    <div>
+                                        <div class="font-semibold text-slate-200">Ghép Phụ Đề Tiếng Việt Vào Video</div>
+                                        <div class="text-[10px] text-slate-400">Burn phụ đề chữ nét cao vào giữa video dọc 9:16</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" id="chk_burn_subtitles" class="checkbox checkbox-xs checkbox-secondary rounded" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Submit Action -->
                 <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
                     <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
@@ -578,6 +674,14 @@
         }
     }
 
+    function toggleDubbingPanel(checked) {
+        if (checked) {
+            $('#dubbing_settings_panel').removeClass('hidden');
+        } else {
+            $('#dubbing_settings_panel').addClass('hidden');
+        }
+    }
+
     function submitVideoTransform() {
         const movieId = $('#inp_movie_select').val();
         if (!movieId) {
@@ -605,6 +709,12 @@
         const enableMicroZoom = $('#chk_micro_zoom').is(':checked');
         const enableHflip = $('#chk_hflip').is(':checked');
 
+        const enableDubbing = $('#chk_enable_dubbing').is(':checked');
+        const sourceLanguage = $('#inp_source_language').val();
+        const vietnameseVoice = $('#inp_vietnamese_voice').val();
+        const dubbingMode = $('input[name="dubbing_mode"]:checked').val() || 'voiceover';
+        const burnSubtitles = $('#chk_burn_subtitles').is(':checked');
+
         const btn = $('#btn_submit_transform');
         btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
 
@@ -621,7 +731,12 @@
                 enable_audio_eq: enableAudioEq,
                 enable_color_grading: enableColorGrading,
                 enable_micro_zoom: enableMicroZoom,
-                enable_hflip: enableHflip
+                enable_hflip: enableHflip,
+                enable_dubbing: enableDubbing,
+                source_language: sourceLanguage,
+                vietnamese_voice: vietnameseVoice,
+                dubbing_mode: dubbingMode,
+                burn_subtitles: burnSubtitles
             },
             success: function(res) {
                 btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');

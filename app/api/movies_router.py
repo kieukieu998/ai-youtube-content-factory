@@ -460,14 +460,15 @@ async def delete_movie_source(
     return JSONResponse({"status": "success", "message": "Đã xóa nguồn video thành công!"})
 
 @router.get("/api/v1/movies/{movie_id}/source-stream")
-async def stream_movie_source(movie_id: int, db: Session = Depends(get_db)):
+def stream_movie_source(movie_id: int):
     """Stream or redirect to the source media file/trailer for verification."""
-    movie = db.query(Movie).filter(Movie.id == movie_id).first()
-    if not movie or not movie.sources:
-        raise HTTPException(status_code=404, detail="Phim chưa có nguồn video media nào")
-
-    source = movie.sources[0]
-    file_path = source.file_path
+    from app.database.session import SessionLocal
+    with SessionLocal() as db:
+        movie = db.query(Movie).filter(Movie.id == movie_id).first()
+        if not movie or not movie.sources:
+            raise HTTPException(status_code=404, detail="Phim chưa có nguồn video media nào")
+        source = movie.sources[0]
+        file_path = source.file_path
 
     if file_path.startswith("http://") or file_path.startswith("https://"):
         from fastapi.responses import RedirectResponse

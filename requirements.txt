@@ -26,6 +26,8 @@ python-dotenv>=1.0.1
 # AUDIO (TTS) & SUBTITLES
 # ==========================================
 edge-tts>=6.1.10
+pydub>=0.25.1
+audioop-lts>=0.2.2
 
 # ==========================================
 # VIDEO PROCESSING & SCENE DETECTION
