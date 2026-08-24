@@ -36,43 +36,99 @@
         <!-- Input & Settings Column (7 cols) -->
         <div class="lg:col-span-7 space-y-6">
             <div class="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/80 p-6 shadow-xl space-y-6">
-                <!-- Source Input Tabs -->
+                <!-- Source Input: Movie Library Direct Selection -->
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2 mb-4">
-                        <i data-lucide="video" class="w-4 h-4 text-purple-400"></i>
+                        <i data-lucide="folder-check" class="w-4 h-4 text-purple-400"></i>
                         1. Chọn Phim & Video Nguồn
                     </h2>
 
-                    <!-- Tabs Header: Default to Library -->
-                    <div class="grid grid-cols-3 gap-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-semibold mb-4">
-                        <button type="button" onclick="switchSourceTab('library')" id="tab_btn_library" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm">
-                            <i data-lucide="folder" class="w-3.5 h-3.5"></i> Kho Phim Sẵn Có
-                        </button>
-                        <button type="button" onclick="switchSourceTab('yt')" id="tab_btn_yt" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-slate-400 hover:text-white transition">
-                            <i data-lucide="link" class="w-3.5 h-3.5"></i> Link YouTube
-                        </button>
-                        <button type="button" onclick="switchSourceTab('upload')" id="tab_btn_upload" class="py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-slate-400 hover:text-white transition">
-                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Tải File MP4
-                        </button>
-                    </div>
-
-                    <!-- Tab 1 (Default): Select from Movie Library with Multi-video checklist -->
-                    <div id="tab_panel_library" class="space-y-4">
+                    <div class="space-y-4">
                         <div class="form-control">
                             <label class="label py-1 flex justify-between">
-                                <span class="label-text text-slate-300 text-xs font-semibold">Chọn Phim trong hệ thống:</span>
+                                <span class="label-text text-slate-300 text-xs font-semibold">Chọn Phim từ Kho Phim:</span>
                                 <a href="/movies" class="text-[11px] text-purple-400 hover:underline flex items-center gap-1">
                                     <i data-lucide="plus" class="w-3 h-3"></i> Thêm phim mới vào kho
                                 </a>
                             </label>
-                            <select id="inp_movie_select" onchange="onMovieSelectChange(this)" class="select select-sm select-bordered w-full bg-slate-950 text-slate-200 text-xs focus:border-purple-500">
-                                <option value="" data-title="">-- Chọn phim cần lách bản quyền --</option>
-                                {% for m in existing_movies %}
-                                <option value="{{ m.id }}" data-title="{{ m.title }}" data-sources-count="{{ m.sources | length }}">
-                                    🎬 {{ m.title }} ({{ m.release_year or 'N/A' }}) — {{ m.sources | length }} video nguồn
-                                </option>
-                                {% endfor %}
-                            </select>
+                            <!-- Custom Searchable Movie Dropdown -->
+                            <div class="relative w-full" id="movie_select_container">
+                                <!-- Trigger Button -->
+                                <div tabindex="0" role="button" id="movie_dropdown_trigger" onclick="toggleMovieDropdown(event)" class="w-full h-9 flex items-center justify-between gap-2 bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-purple-500/80 rounded-xl px-3 text-xs font-medium cursor-pointer transition shadow-sm select-none">
+                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                        <i data-lucide="film" class="w-3.5 h-3.5 text-purple-400 flex-shrink-0" id="selected_movie_icon"></i>
+                                        <span id="selected_movie_label" class="truncate text-slate-300">-- Chọn phim cần lách bản quyền --</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <span id="selected_movie_badge" class="hidden badge badge-xs bg-purple-500/20 text-purple-300 border border-purple-500/40"></span>
+                                        <i data-lucide="chevron-down" id="movie_dropdown_chevron" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden Input for Form/JS compatibility -->
+                                <input type="hidden" id="inp_movie_select" value="" />
+
+                                <!-- Dropdown Menu with Search Box -->
+                                <div id="movie_dropdown_menu" class="hidden absolute top-full left-0 right-0 mt-1.5 z-50 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl p-2 space-y-2">
+                                    <!-- Search Input -->
+                                    <div class="relative flex items-center">
+                                        <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 text-slate-400 pointer-events-none"></i>
+                                        <input type="text" id="movie_search_box" oninput="filterMovieDropdown(this.value)" placeholder="Gõ tìm kiếm tên phim, năm..." class="input input-xs bg-slate-950/90 text-white pl-8 pr-7 py-1.5 w-full border border-slate-800 rounded-lg focus:border-purple-500 focus:outline-none text-xs transition placeholder:text-slate-500" autocomplete="off" />
+                                        <button type="button" id="btn_clear_movie_search" onclick="clearMovieSearch()" class="hidden absolute right-2.5 text-slate-500 hover:text-slate-300">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Movies Options List -->
+                                    <div id="movie_options_list" class="max-h-56 overflow-y-auto space-y-0.5 pr-1 text-xs">
+                                        <!-- Clear/Default option -->
+                                        <div onclick="selectMovieOption('', '', 0, '-- Chọn phim cần lách bản quyền --')" class="movie-option-item flex items-center justify-between p-2 rounded-lg text-slate-400 hover:bg-slate-800/80 hover:text-white cursor-pointer transition select-none" data-id="" data-title="" data-keywords="">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-2 h-2 rounded-full bg-slate-600"></span>
+                                                <span class="font-normal text-slate-400">-- Bỏ chọn phim --</span>
+                                            </div>
+                                        </div>
+
+                                        {% for m in existing_movies %}
+                                        <div onclick="selectMovieOption('{{ m.id }}', '{{ m.title | replace('\'', '\\\'') }}', {{ m.sources | length }}, '{{ m.title | replace('\'', '\\\'') }} ({{ m.release_year or 'N/A' }})')" 
+                                             class="movie-option-item flex items-center justify-between p-2 rounded-xl hover:bg-purple-600/20 hover:text-purple-200 cursor-pointer transition select-none group" 
+                                             data-id="{{ m.id }}"
+                                             data-title="{{ m.title }}" 
+                                             data-year="{{ m.release_year or '' }}"
+                                             data-sources="{{ m.sources | length }}"
+                                             data-keywords="{{ m.title | lower }} {{ m.original_title | lower if m.original_title else '' }} {{ m.release_year or '' }} {{ m.genre | lower if m.genre else '' }}">
+                                            <div class="flex items-center gap-2.5 min-w-0">
+                                                <div class="w-6 h-6 rounded-lg bg-slate-800/90 border border-slate-700/60 flex items-center justify-center flex-shrink-0 group-hover:border-purple-500/50 group-hover:bg-purple-950/40 transition">
+                                                    <i data-lucide="film" class="w-3 h-3 text-purple-400"></i>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="font-semibold text-slate-200 group-hover:text-white truncate movie-item-title">{{ m.title }}</div>
+                                                    <div class="text-[10px] text-slate-400 flex items-center gap-1.5 leading-tight">
+                                                        <span>{{ m.release_year or 'N/A' }}</span>
+                                                        {% if m.genre %}
+                                                        <span>•</span>
+                                                        <span class="truncate max-w-[130px]">{{ m.genre }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                                <span class="badge badge-xs {{ 'bg-purple-500/20 text-purple-300 border-purple-500/40' if (m.sources | length > 0) else 'bg-slate-800 text-slate-500 border-slate-700' }} border">
+                                                    {{ m.sources | length }} video
+                                                </span>
+                                                <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 hidden movie-check-icon" id="check_movie_{{ m.id }}"></i>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+
+                                        <!-- Empty Search Result State -->
+                                        <div id="movie_empty_search" class="hidden py-6 text-center text-slate-500 text-xs">
+                                            <i data-lucide="search-x" class="w-6 h-6 mx-auto mb-1.5 opacity-40 text-purple-400"></i>
+                                            <div>Không tìm thấy phim nào khớp với từ khóa</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Dynamic Movie Video Checklist Panels -->
@@ -114,37 +170,14 @@
                             </div>
                             {% endfor %}
                         </div>
-                    </div>
 
-                    <!-- Tab 2: YouTube URL -->
-                    <div id="tab_panel_yt" class="hidden space-y-3">
+                        <!-- Custom Title -->
                         <div class="form-control">
                             <label class="label py-1">
-                                <span class="label-text text-slate-300 text-xs font-semibold">Dán Link Video YouTube:</span>
+                                <span class="label-text text-slate-300 text-xs font-semibold">Tên Ghi Nhớ Video (Tùy chọn):</span>
                             </label>
-                            <div class="relative">
-                                <i data-lucide="youtube" class="w-4 h-4 text-rose-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                <input type="url" id="inp_youtube_url" placeholder="https://www.youtube.com/watch?v=... hoặc link video" class="input input-sm input-bordered w-full bg-slate-950 text-white pl-10 text-xs focus:border-purple-500" />
-                            </div>
+                            <input type="text" id="inp_video_title" placeholder="Tự động lấy theo tên phim nếu để trống..." class="input input-sm input-bordered w-full bg-slate-950 text-white text-xs focus:border-purple-500" />
                         </div>
-                    </div>
-
-                    <!-- Tab 3: Upload File -->
-                    <div id="tab_panel_upload" class="hidden space-y-3">
-                        <div class="form-control">
-                            <label class="label py-1">
-                                <span class="label-text text-slate-300 text-xs font-semibold">Chọn file video MP4 từ máy tính:</span>
-                            </label>
-                            <input type="file" id="inp_file_upload" onchange="onFileUploadChange(this)" accept="video/mp4,video/mkv,video/mov" class="file-input file-input-sm file-input-bordered w-full bg-slate-950 text-slate-200 text-xs focus:border-purple-500" />
-                        </div>
-                    </div>
-
-                    <!-- Custom Title -->
-                    <div class="form-control mt-3">
-                        <label class="label py-1">
-                            <span class="label-text text-slate-300 text-xs font-semibold">Tên Ghi Nhớ Video (Tùy chọn):</span>
-                        </label>
-                        <input type="text" id="inp_video_title" placeholder="Tự động lấy theo tên phim nếu để trống..." class="input input-sm input-bordered w-full bg-slate-950 text-white text-xs focus:border-purple-500" />
                     </div>
                 </div>
 
@@ -201,13 +234,48 @@
                                 </span>
                                 <span id="pitch_val_label" class="text-xs font-mono font-bold text-purple-400">+2.0% (Thanh nhẹ - Đề xuất)</span>
                             </label>
-                            <select id="inp_pitch_shift" onchange="updatePitchLabel(this.value)" class="select select-sm select-bordered w-full bg-slate-950 text-slate-200 focus:border-purple-500">
-                                <option value="1.00">0.0% (Giữ nguyên cao độ gốc)</option>
-                                <option value="1.02" selected>+2.0% (Lệch nhẹ - Khuyên dùng)</option>
-                                <option value="1.04">+4.0% (Giọng thanh hơn)</option>
-                                <option value="0.98">-2.0% (Giọng trầm ấm nhẹ)</option>
-                                <option value="0.96">-4.0% (Giọng trầm hơn)</option>
+                            <select id="inp_pitch_shift" onchange="updatePitchLabel(this.value)" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-purple-500 focus:outline-none text-xs font-medium w-full transition">
+                                <option value="1.00" class="bg-slate-900 text-white">0.0% (Giữ nguyên cao độ gốc)</option>
+                                <option value="1.02" class="bg-slate-900 text-white" selected>+2.0% (Lệch nhẹ - Khuyên dùng)</option>
+                                <option value="1.04" class="bg-slate-900 text-white">+4.0% (Giọng thanh hơn)</option>
+                                <option value="0.98" class="bg-slate-900 text-white">-2.0% (Giọng trầm ấm nhẹ)</option>
+                                <option value="0.96" class="bg-slate-900 text-white">-4.0% (Giọng trầm hơn)</option>
                             </select>
+                        </div>
+
+                        <!-- Video Splitting (Interactive Stepper + Preset Buttons) -->
+                        <div class="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/40 transition space-y-2">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                                        <i data-lucide="scissors" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-slate-200 text-xs">Chia Video Thành Nhiều Tập</div>
+                                        <div class="text-[10px] text-slate-400" id="split_desc_hint">Giữ nguyên 1 tập hoàn chỉnh từ đầu đến cuối.</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center gap-2 self-end sm:self-auto">
+                                    <!-- Quick Preset Pills -->
+                                    <div class="inline-flex rounded-xl bg-slate-900/90 p-1 border border-slate-800 gap-1">
+                                        <button type="button" onclick="setSplitParts(1)" id="btn_split_1" class="split-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm transition">1 Tập</button>
+                                        <button type="button" onclick="setSplitParts(2)" id="btn_split_2" class="split-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">2 Tập</button>
+                                        <button type="button" onclick="setSplitParts(3)" id="btn_split_3" class="split-preset-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">3 Tập</button>
+                                    </div>
+
+                                    <!-- Stepper Input -->
+                                    <div class="inline-flex items-center rounded-xl bg-slate-900/90 border border-slate-700/80 p-0.5 shadow-sm">
+                                        <button type="button" onclick="changeSplitParts(-1)" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition" title="Giảm">
+                                            <i data-lucide="minus" class="w-3 h-3"></i>
+                                        </button>
+                                        <input type="number" id="inp_split_parts" value="1" min="1" max="10" oninput="onSplitInput(this.value)" class="w-8 text-center font-mono font-bold text-xs bg-transparent text-cyan-300 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                        <button type="button" onclick="changeSplitParts(1)" class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition" title="Tăng">
+                                            <i data-lucide="plus" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Toggles Grid -->
@@ -272,51 +340,20 @@
             </div>
         </div>
 
-        <!-- Movie Folders & Transformed Videos Column (5 cols) -->
+        <!-- Transformed Videos Column (5 cols) -->
         <div class="lg:col-span-5 space-y-6">
-            <!-- Movie Folders Quick Access -->
-            <div class="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/80 p-6 shadow-xl space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i data-lucide="folder-open" class="w-4 h-4 text-indigo-400"></i>
-                        Thư Mục Phim (Trang Videos)
-                    </h2>
-                    <a href="/videos" class="text-xs text-indigo-400 hover:underline flex items-center gap-1">
-                        Mở tất cả <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                    </a>
-                </div>
-                <p class="text-xs text-slate-400">Mọi video sau khi xử lý lách bản quyền 1:1 sẽ tự động nằm trong thư mục của Phim tại trang Video 9:16.</p>
-
-                <div class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                    {% for m in existing_movies %}
-                    <a href="/videos" class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/90 hover:border-indigo-500/50 hover:bg-slate-800/40 transition group">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-8 h-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-105 transition flex-shrink-0">
-                                <i data-lucide="folder" class="w-4 h-4"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-xs font-bold text-white truncate group-hover:text-indigo-300 transition">{{ m.title }}</div>
-                                <div class="text-[10px] text-slate-500 font-mono">{{ m.release_year or 'N/A' }} • {{ m.sources | length }} video nguồn</div>
-                            </div>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500 group-hover:text-indigo-300 transition flex-shrink-0"></i>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-
             <!-- Recent Transformed Videos Quick Preview -->
             <div class="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800/80 p-6 shadow-xl space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i data-lucide="film" class="w-4 h-4 text-emerald-400"></i>
+                        <i data-lucide="film" class="w-4 h-4 text-purple-400"></i>
                         Video 1:1 Vừa Xử Lý
                     </h2>
-                    <span class="badge badge-sm badge-success">{{ transformed_videos | length }} Video</span>
+                    <span class="badge badge-sm bg-purple-500/20 text-purple-300 border border-purple-500/40">{{ transformed_videos | length }} Video</span>
                 </div>
 
                 <!-- Video List -->
-                <div class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                <div class="space-y-2.5 max-h-[560px] overflow-y-auto pr-1">
                     {% if transformed_videos and transformed_videos | length > 0 %}
                         {% for v in transformed_videos %}
                         <div class="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/90 hover:border-purple-500/40 transition flex items-center justify-between gap-3">
@@ -325,14 +362,14 @@
                                     {{ v.title or v.file_path.split('\\')[-1] }}
                                 </div>
                                 <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-1">
-                                    <span class="text-emerald-400 font-semibold">{{ "%02d:%02d" | format((v.duration_seconds // 60) | int, (v.duration_seconds % 60) | int) }}</span>
+                                    <span class="text-purple-400 font-semibold">{{ "%02d:%02d" | format((v.duration_seconds // 60) | int, (v.duration_seconds % 60) | int) }}</span>
                                     <span>•</span>
                                     <span>{{ v.resolution }}</span>
                                     <span>•</span>
                                     <span>{{ (v.file_size_bytes / (1024*1024)) | round(1) }} MB</span>
                                     {% if v.movie %}
                                     <span>•</span>
-                                    <span class="text-purple-400 truncate max-w-[120px]">{{ v.movie.title }}</span>
+                                    <span class="text-indigo-400 truncate max-w-[120px]">{{ v.movie.title }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -347,10 +384,10 @@
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="py-8 text-center text-slate-500">
+                        <div class="py-12 text-center text-slate-500">
                             <i data-lucide="clapperboard" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>
-                            <p class="text-xs">Chưa có video 1:1 nào được tạo.</p>
-                            <p class="text-[10px] text-slate-600 mt-1">Chọn phim bên trái để bắt đầu xử lý!</p>
+                            <p class="text-xs font-semibold text-slate-400">Chưa có video 1:1 nào được tạo.</p>
+                            <p class="text-[11px] text-slate-500 mt-1">Chọn phim hoặc dán link YouTube bên trái để bắt đầu xử lý!</p>
                         </div>
                     {% endif %}
                 </div>
@@ -378,38 +415,102 @@
 </dialog>
 
 <script>
-    let activeSourceTab = 'library';
+    let isMovieDropdownOpen = false;
 
-    function switchSourceTab(tab) {
-        activeSourceTab = tab;
-        $('#tab_btn_yt').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
-        $('#tab_btn_upload').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
-        $('#tab_btn_library').removeClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').addClass('text-slate-400 hover:text-white');
-
-        $('#tab_panel_yt').addClass('hidden');
-        $('#tab_panel_upload').addClass('hidden');
-        $('#tab_panel_library').addClass('hidden');
-
-        if (tab === 'library') {
-            $('#tab_btn_library').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
-            $('#tab_panel_library').removeClass('hidden');
-        } else if (tab === 'yt') {
-            $('#tab_btn_yt').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
-            $('#tab_panel_yt').removeClass('hidden');
-        } else if (tab === 'upload') {
-            $('#tab_btn_upload').addClass('bg-purple-600/30 text-purple-200 border border-purple-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white');
-            $('#tab_panel_upload').removeClass('hidden');
+    function toggleMovieDropdown(e) {
+        if (e) e.stopPropagation();
+        const menu = $('#movie_dropdown_menu');
+        const chevron = $('#movie_dropdown_chevron');
+        
+        if (menu.hasClass('hidden')) {
+            menu.removeClass('hidden');
+            chevron.addClass('rotate-180');
+            isMovieDropdownOpen = true;
+            setTimeout(() => {
+                $('#movie_search_box').focus();
+            }, 50);
+        } else {
+            closeMovieDropdown();
         }
     }
 
-    function onMovieSelectChange(el) {
-        const movieId = $(el).val();
-        const selectedOption = $(el).find('option:selected');
-        const title = selectedOption.data('title');
+    function closeMovieDropdown() {
+        $('#movie_dropdown_menu').addClass('hidden');
+        $('#movie_dropdown_chevron').removeClass('rotate-180');
+        isMovieDropdownOpen = false;
+    }
 
-        // Hide all source checklist panels
+    function filterMovieDropdown(query) {
+        query = (query || '').toLowerCase().trim();
+        const items = $('.movie-option-item');
+        let matchCount = 0;
+
+        if (query) {
+            $('#btn_clear_movie_search').removeClass('hidden');
+        } else {
+            $('#btn_clear_movie_search').addClass('hidden');
+        }
+
+        items.each(function() {
+            const el = $(this);
+            const id = el.data('id');
+            if (id === '' || id === undefined) {
+                if (query) {
+                    el.addClass('hidden');
+                } else {
+                    el.removeClass('hidden');
+                }
+                return;
+            }
+
+            const keywords = (el.data('keywords') || '').toString().toLowerCase();
+            const title = (el.data('title') || '').toString().toLowerCase();
+            
+            if (!query || keywords.includes(query) || title.includes(query)) {
+                el.removeClass('hidden');
+                matchCount++;
+            } else {
+                el.addClass('hidden');
+            }
+        });
+
+        if (matchCount === 0 && query) {
+            $('#movie_empty_search').removeClass('hidden');
+        } else {
+            $('#movie_empty_search').addClass('hidden');
+        }
+    }
+
+    function clearMovieSearch() {
+        $('#movie_search_box').val('');
+        filterMovieDropdown('');
+        $('#movie_search_box').focus();
+    }
+
+    function selectMovieOption(movieId, title, sourceCount, displayLabel) {
+        $('#inp_movie_select').val(movieId);
+        
+        // Update Trigger Label & Badge
+        if (movieId) {
+            $('#selected_movie_label').text(displayLabel || title).addClass('text-white font-medium').removeClass('text-slate-300');
+            $('#selected_movie_badge').text(`${sourceCount} video`).removeClass('hidden');
+            $('#selected_movie_icon').removeClass('text-slate-400').addClass('text-purple-400');
+        } else {
+            $('#selected_movie_label').text('-- Chọn phim cần lách bản quyền --').removeClass('text-white font-medium').addClass('text-slate-300');
+            $('#selected_movie_badge').addClass('hidden');
+            $('#selected_movie_icon').removeClass('text-purple-400').addClass('text-slate-400');
+        }
+
+        // Update active checkmarks & styling
+        $('.movie-check-icon').addClass('hidden');
+        $('.movie-option-item').removeClass('bg-purple-600/20 text-purple-200');
+        if (movieId) {
+            $(`#check_movie_${movieId}`).removeClass('hidden');
+            $(`.movie-option-item[data-id="${movieId}"]`).addClass('bg-purple-600/20 text-purple-200');
+        }
+
+        // Hide all source checklist panels and reveal active
         $('.movie-source-panel').addClass('hidden');
-
         if (movieId) {
             $(`#movie_sources_panel_${movieId}`).removeClass('hidden');
             if (title) {
@@ -418,18 +519,21 @@
         } else {
             $('#inp_video_title').val('');
         }
+
+        closeMovieDropdown();
+        if (window.lucide) lucide.createIcons();
     }
+
+    // Close dropdown when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#movie_select_container').length) {
+            closeMovieDropdown();
+        }
+    });
 
     function toggleSelectAllSources(movieId, masterCheckbox) {
         const isChecked = $(masterCheckbox).is(':checked');
         $(`input[name="movie_source_${movieId}"]`).prop('checked', isChecked);
-    }
-
-    function onFileUploadChange(el) {
-        if (el.files && el.files[0]) {
-            const fileName = el.files[0].name.replace(/\.[^/.]+$/, "");
-            $('#inp_video_title').val(fileName);
-        }
     }
 
     function updatePitchLabel(val) {
@@ -443,155 +547,99 @@
         $('#pitch_val_label').text(labels[val] || `${val}x`);
     }
 
+    function setSplitParts(val) {
+        val = parseInt(val) || 1;
+        val = Math.max(1, Math.min(10, val));
+        $('#inp_split_parts').val(val);
+        updateSplitUI(val);
+    }
+
+    function changeSplitParts(delta) {
+        let current = parseInt($('#inp_split_parts').val()) || 1;
+        setSplitParts(current + delta);
+    }
+
+    function onSplitInput(val) {
+        let num = parseInt(val) || 1;
+        num = Math.max(1, Math.min(10, num));
+        updateSplitUI(num);
+    }
+
+    function updateSplitUI(val) {
+        $('.split-preset-btn').removeClass('bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm').addClass('text-slate-400 hover:text-white hover:bg-slate-800');
+        if (val >= 1 && val <= 3) {
+            $(`#btn_split_${val}`).addClass('bg-cyan-600/30 text-cyan-200 border border-cyan-500/40 shadow-sm').removeClass('text-slate-400 hover:text-white hover:bg-slate-800');
+        }
+        
+        if (val === 1) {
+            $('#split_desc_hint').text('Giữ nguyên 1 tập hoàn chỉnh từ đầu đến cuối.');
+        } else {
+            $('#split_desc_hint').text(`Tự động cắt đều thời lượng video thành ${val} tập riêng biệt (Tập 1 -> Tập ${val}).`);
+        }
+    }
+
     function submitVideoTransform() {
+        const movieId = $('#inp_movie_select').val();
+        if (!movieId) {
+            Swal.fire('Lỗi', 'Vui lòng chọn một phim từ Kho Phim.', 'warning');
+            return;
+        }
+
+        const checkedBoxes = $(`input[name="movie_source_${movieId}"]:checked`);
+        if (checkedBoxes.length === 0) {
+            Swal.fire('Lỗi', 'Vui lòng tick chọn ít nhất 1 video nguồn của phim để xử lý.', 'warning');
+            return;
+        }
+
+        const selectedPaths = [];
+        checkedBoxes.each(function() {
+            selectedPaths.push($(this).val());
+        });
+
         let title = $('#inp_video_title').val().trim();
         const aspectRatio = $('input[name="aspect_ratio"]:checked').val();
         const pitchShift = $('#inp_pitch_shift').val();
+        const splitParts = parseInt($('#inp_split_parts').val() || '1');
         const enableAudioEq = $('#chk_audio_eq').is(':checked');
         const enableColorGrading = $('#chk_color_grading').is(':checked');
         const enableMicroZoom = $('#chk_micro_zoom').is(':checked');
         const enableHflip = $('#chk_hflip').is(':checked');
 
         const btn = $('#btn_submit_transform');
+        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
 
-        if (activeSourceTab === 'upload') {
-            const fileInput = document.getElementById('inp_file_upload');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                Swal.fire('Lỗi', 'Vui lòng chọn file MP4 từ máy tính để tải lên.', 'warning');
-                return;
+        $.ajax({
+            url: '/api/v1/videos/transform',
+            type: 'POST',
+            data: {
+                movie_id: movieId,
+                source_file_paths: JSON.stringify(selectedPaths),
+                title: title,
+                aspect_ratio: aspectRatio,
+                pitch_shift: pitchShift,
+                split_parts: splitParts,
+                enable_audio_eq: enableAudioEq,
+                enable_color_grading: enableColorGrading,
+                enable_micro_zoom: enableMicroZoom,
+                enable_hflip: enableHflip
+            },
+            success: function(res) {
+                btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                Swal.fire({
+                    title: 'Đã Thêm Vào Hàng Đợi!',
+                    text: res.message,
+                    icon: 'success',
+                    confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
+                    confirmButtonColor: '#6366f1'
+                }).then(() => {
+                    window.location.href = '/jobs';
+                });
+            },
+            error: function(err) {
+                btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
+                Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
             }
-
-            if (!title) {
-                title = fileInput.files[0].name.replace(/\.[^/.]+$/, "");
-            }
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-            formData.append('title', title);
-            formData.append('aspect_ratio', aspectRatio);
-            formData.append('pitch_shift', pitchShift);
-            formData.append('enable_audio_eq', enableAudioEq);
-            formData.append('enable_color_grading', enableColorGrading);
-            formData.append('enable_micro_zoom', enableMicroZoom);
-            formData.append('enable_hflip', enableHflip);
-
-            btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tải file lên...');
-
-            $.ajax({
-                url: '/api/v1/videos/upload-and-transform',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(res) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire({
-                        title: 'Đã Thêm Vào Hàng Đợi!',
-                        text: res.message,
-                        icon: 'success',
-                        confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
-                        confirmButtonColor: '#6366f1'
-                    }).then(() => {
-                        window.location.href = '/jobs';
-                    });
-                },
-                error: function(err) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
-                }
-            });
-        } else if (activeSourceTab === 'library') {
-            const movieId = $('#inp_movie_select').val();
-            if (!movieId) {
-                Swal.fire('Lỗi', 'Vui lòng chọn một phim từ Kho Phim.', 'warning');
-                return;
-            }
-
-            const checkedBoxes = $(`input[name="movie_source_${movieId}"]:checked`);
-            if (checkedBoxes.length === 0) {
-                Swal.fire('Lỗi', 'Vui lòng tick chọn ít nhất 1 video nguồn của phim để xử lý.', 'warning');
-                return;
-            }
-
-            const selectedPaths = [];
-            checkedBoxes.each(function() {
-                selectedPaths.push($(this).val());
-            });
-
-            btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
-
-            $.ajax({
-                url: '/api/v1/videos/transform',
-                type: 'POST',
-                data: {
-                    movie_id: movieId,
-                    source_file_paths: JSON.stringify(selectedPaths),
-                    title: title,
-                    aspect_ratio: aspectRatio,
-                    pitch_shift: pitchShift,
-                    enable_audio_eq: enableAudioEq,
-                    enable_color_grading: enableColorGrading,
-                    enable_micro_zoom: enableMicroZoom,
-                    enable_hflip: enableHflip
-                },
-                success: function(res) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire({
-                        title: 'Đã Thêm Vào Hàng Đợi!',
-                        text: res.message,
-                        icon: 'success',
-                        confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
-                        confirmButtonColor: '#6366f1'
-                    }).then(() => {
-                        window.location.href = '/jobs';
-                    });
-                },
-                error: function(err) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
-                }
-            });
-        } else {
-            // YouTube URL Tab
-            const ytUrl = $('#inp_youtube_url').val().trim();
-            if (!ytUrl) {
-                Swal.fire('Lỗi', 'Vui lòng nhập đường link video YouTube.', 'warning');
-                return;
-            }
-
-            btn.prop('disabled', true).html('<span class="loading loading-spinner loading-xs"></span> Đang tạo tác vụ...');
-
-            $.ajax({
-                url: '/api/v1/videos/transform',
-                type: 'POST',
-                data: {
-                    youtube_url: ytUrl,
-                    title: title,
-                    aspect_ratio: aspectRatio,
-                    pitch_shift: pitchShift,
-                    enable_audio_eq: enableAudioEq,
-                    enable_color_grading: enableColorGrading,
-                    enable_micro_zoom: enableMicroZoom,
-                    enable_hflip: enableHflip
-                },
-                success: function(res) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire({
-                        title: 'Đã Thêm Vào Hàng Đợi!',
-                        text: res.message,
-                        icon: 'success',
-                        confirmButtonText: 'Xem Tiến Độ Tại Hàng Đợi',
-                        confirmButtonColor: '#6366f1'
-                    }).then(() => {
-                        window.location.href = '/jobs';
-                    });
-                },
-                error: function(err) {
-                    btn.prop('disabled', false).html('<i data-lucide="wand-2" class="w-4 h-4"></i> Bắt Đầu Xử Lý 1:1');
-                    Swal.fire('Lỗi', err.responseJSON?.detail || 'Không thể tạo tác vụ', 'error');
-                }
-            });
-        }
+        });
     }
 
     function playTransformedVideo(id, title, url) {

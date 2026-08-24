@@ -7,7 +7,7 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white">Video 9:16 Render</h1>
+            <h1 class="text-2xl font-bold text-white">Video 9:16</h1>
             <p class="text-slate-400 text-sm">Quản lý video ngắn theo cấu trúc thư mục từng bộ phim.</p>
         </div>
         
@@ -167,15 +167,17 @@
             {% for v in folder.videos %}
             {% set ep_num = v.episode.episode_number if v.episode else 1 %}
             {% set ep_hook = (v.episode.hook_text or '') if v.episode else '' %}
-            {% set mv_title = (v.episode.script.movie.title or '') if (v.episode and v.episode.script and v.episode.script.movie) else f_title %}
-            {% set search_blob = "tập " ~ ep_num ~ " tap " ~ ep_num ~ " ep " ~ ep_num ~ " v" ~ (v.render_version or 1) ~ " " ~ mv_title ~ " " ~ ep_hook ~ " " ~ v.qa_status %}
+            {% set mv_title = (v.episode.script.movie.title or '') if (v.episode and v.episode.script and v.episode.script.movie) else (folder.movie.title if folder.movie else f_title) %}
+            {% set disp_label = v.display_label or ('Tập ' ~ ep_num) %}
+            {% set search_blob = disp_label ~ " " ~ (v.display_sub_badge or '') ~ " " ~ (v.play_title or '') ~ " " ~ mv_title ~ " " ~ ep_hook ~ " " ~ v.qa_status %}
             <div class="video-card glass-card rounded-xl overflow-hidden flex flex-col justify-between border border-slate-800/80 hover:border-indigo-500/50 transition-all duration-200 hover:scale-[1.02] shadow-lg group relative"
                  id="video_card_{{ v.id }}"
                  data-id="{{ v.id }}"
-                 data-title="{{ mv_title|lower }}"
+                 data-title="{{ (v.play_title or mv_title)|lower }}"
                  data-movie="{{ mv_title }}"
+                 data-ep-label="{{ disp_label }}"
                  data-ep-num="{{ ep_num }}"
-                 data-version="v{{ v.render_version or 1 }}"
+                 data-version="{{ v.display_sub_badge or 'v1' }}"
                  data-hook="{{ ep_hook }}"
                  data-body="{{ (v.episode.content_text or '') if v.episode else '' }}"
                  data-cta="{{ (v.episode.call_to_action or '') if v.episode else '' }}"
@@ -185,11 +187,11 @@
                  data-search="{{ search_blob|lower }}">
                 
                 <!-- 100% Clean Video Thumbnail: Zero overlay badges or checkboxes -->
-                {% set play_title = (mv_title ~ " - Tập " ~ loop.index ~ " (Transform)") if v.video_type == "transformed_1_1" else (mv_title ~ " - Tập " ~ ep_num ~ " (v" ~ (v.render_version or 1) ~ ")") %}
+                {% set play_title = v.play_title or (mv_title ~ " - " ~ disp_label) %}
                 <div class="relative bg-black aspect-[9/16] flex items-center justify-center overflow-hidden cursor-pointer select-none group"
-                     onclick="playVideo('{{ v.id }}', '{{ play_title }}')"
+                     onclick="playVideo('{{ v.id }}', '{{ play_title | replace('\'', '\\\'') }}')"
                      title="Bấm để xem video">
-                    <video src="/api/v1/videos/{{ v.id }}/stream" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
+                    <video src="/api/v1/videos/{{ v.id }}/stream#t=1.5" class="w-full h-full object-cover pointer-events-none" preload="metadata"></video>
                     
                     <!-- Hover overlay: Play button icon -->
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
@@ -204,12 +206,9 @@
                     <div class="flex items-center justify-between gap-1">
                         <div class="flex items-center gap-1.5 min-w-0">
                             <input type="checkbox" value="{{ v.id }}" onchange="onVideoCheckChange(this)" class="video-checkbox checkbox checkbox-xs checkbox-primary rounded my-0 flex-shrink-0" title="Chọn video này" onclick="event.stopPropagation()" />
-                            {% if v.video_type == 'transformed_1_1' %}
-                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title or v.file_path.split('\\')[-1] }}">Tập {{ loop.index }}</span>
-                            {% else %}
-                            <span class="font-bold text-white text-xs truncate leading-none flex items-center">Tập {{ ep_num }}</span>
-                            {% set ver = v.render_version or 1 %}
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none bg-sky-500/15 text-sky-300 border border-sky-500/30">v{{ ver }}</span>
+                            <span class="font-bold text-white text-xs truncate leading-none flex items-center" title="{{ v.title or v.file_path.split('\\')[-1] }}">{{ disp_label }}</span>
+                            {% if v.display_sub_badge %}
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold leading-none {% if v.video_type == 'transformed_1_1' %}bg-purple-500/15 text-purple-300 border border-purple-500/30{% else %}bg-sky-500/15 text-sky-300 border border-sky-500/30{% endif %}">{{ v.display_sub_badge }}</span>
                             {% endif %}
                         </div>
                         
@@ -237,7 +236,7 @@
                                 <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-amber-400"></i> {{ (v.file_size_bytes / (1024*1024))|round(1) }} MB
                             </span>
                         </div>
-                        <button onclick="deleteVideo('{{ v.id }}', '{{ mv_title }} - Tập {{ ep_num }} (v{{ v.render_version or 1 }})')" class="w-5 h-5 inline-flex items-center justify-center rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition" title="Xóa video này">
+                        <button onclick="deleteVideo('{{ v.id }}', '{{ play_title | replace('\'', '\\\'') }}')" class="w-5 h-5 inline-flex items-center justify-center rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 transition" title="Xóa video này">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -379,8 +378,9 @@
         
         container.each(function() {
             const vId = $(this).attr('data-id');
+            const epLabel = $(this).attr('data-ep-label') || 'Tập 1';
             const epNum = $(this).attr('data-ep-num') || '1';
-            const version = $(this).attr('data-version') || 'v1';
+            const version = $(this).attr('data-version') || '';
             const movie = $(this).attr('data-movie') || '';
             const hook = $(this).attr('data-hook') || '';
             const body = $(this).attr('data-body') || '';
@@ -388,12 +388,13 @@
             const duration = $(this).attr('data-duration') || '00:00';
             const size = $(this).attr('data-size') || '0 MB';
             const qa = $(this).attr('data-qa') || 'passed';
-            const title = `Tập ${epNum} (${version})`;
+            const title = version ? `${epLabel} (${version})` : epLabel;
 
             if (vId) {
                 currentPlaylist.push({
                     id: vId,
                     title: title,
+                    epLabel: epLabel,
                     epNum: epNum,
                     version: version,
                     movie: movie,
@@ -413,11 +414,14 @@
         currentVideoIdx = currentPlaylist.findIndex(item => String(item.id) === String(videoId));
         if (currentVideoIdx === -1) {
             const card = $(`#video_card_${videoId}`);
+            const epLabel = card.attr('data-ep-label') || 'Tập 1';
+            const version = card.attr('data-version') || '';
             currentPlaylist = [{
                 id: videoId,
-                title: title || 'Video Review',
+                title: title || (version ? `${epLabel} (${version})` : epLabel),
+                epLabel: epLabel,
                 epNum: card.attr('data-ep-num') || '1',
-                version: card.attr('data-version') || 'v1',
+                version: version,
                 movie: card.attr('data-movie') || '',
                 hook: card.attr('data-hook') || '',
                 body: card.attr('data-body') || '',

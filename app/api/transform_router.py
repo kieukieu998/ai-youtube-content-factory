@@ -39,6 +39,7 @@ async def trigger_video_transform(
     enable_hflip: bool = Form(False),
     enable_color_grading: bool = Form(True),
     enable_micro_zoom: bool = Form(True),
+    split_parts: int = Form(1),
     movie_id: Optional[int] = Form(None),
     source_file_path: Optional[str] = Form(None),
     source_file_paths: Optional[str] = Form(None),
@@ -76,7 +77,8 @@ async def trigger_video_transform(
             "enable_audio_eq": enable_audio_eq,
             "enable_hflip": enable_hflip,
             "enable_color_grading": enable_color_grading,
-            "enable_micro_zoom": enable_micro_zoom
+            "enable_micro_zoom": enable_micro_zoom,
+            "split_parts": split_parts
         }
         job = Job(
             job_type="VideoTransformJob",
@@ -119,7 +121,8 @@ async def trigger_video_transform(
             "enable_audio_eq": enable_audio_eq,
             "enable_hflip": enable_hflip,
             "enable_color_grading": enable_color_grading,
-            "enable_micro_zoom": enable_micro_zoom
+            "enable_micro_zoom": enable_micro_zoom,
+            "split_parts": split_parts
         }
         job = Job(
             job_type="VideoTransformJob",
@@ -148,6 +151,7 @@ async def upload_and_transform(
     enable_hflip: bool = Form(False),
     enable_color_grading: bool = Form(True),
     enable_micro_zoom: bool = Form(True),
+    split_parts: int = Form(1),
     db: Session = Depends(get_db)
 ):
     """Upload MP4 file from computer and queue a 1:1 transformation job."""
@@ -172,7 +176,8 @@ async def upload_and_transform(
         "enable_audio_eq": enable_audio_eq,
         "enable_hflip": enable_hflip,
         "enable_color_grading": enable_color_grading,
-        "enable_micro_zoom": enable_micro_zoom
+        "enable_micro_zoom": enable_micro_zoom,
+        "split_parts": split_parts
     }
 
     job = Job(

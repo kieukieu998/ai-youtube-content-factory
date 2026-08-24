@@ -458,7 +458,7 @@ class JobWorker:
                 subprocess.run,
                 [
                     settings.FFMPEG_PATH, "-y", "-f", "lavfi",
-                    "-i", f"color=c=0x0f172a:s=1080x1920:d={int(duration)+3}",
+                    "-i", f"gradients=s=1080x1920:c0=0x6366f1:c1=0x1e1b4b:c2=0x4338ca:c3=0x0f172a:speed=0.005:d={int(duration)+3}",
                     "-c:v", "libx264", "-pix_fmt", "yuv420p", dummy_clip
                 ],
                 stdout=subprocess.PIPE,
@@ -575,7 +575,7 @@ class JobWorker:
             logger.warning(f"Job #{job.id} cancelled after video acquisition.")
             return
 
-        # 2. Prepare output file path
+        # 2. Prepare output folder and check splitting
         from app.video.youtube_downloader import slugify_filename
         from app.video.video_transformer import VideoTransformerService
 
@@ -583,38 +583,12 @@ class JobWorker:
         transform_folder = settings.OUTPUT_MEDIA_DIR / "transformed"
         transform_folder.mkdir(parents=True, exist_ok=True)
         
-        output_file_name = f"AntiCopy_{clean_name}_{aspect_ratio}.mp4"
-        output_file_path = str(transform_folder / output_file_name)
+        split_parts = int(payload.get("split_parts", 1))
+        if split_parts not in [1, 2, 3]:
+            split_parts = 1
 
-        job.progress = 40
-        job.result = f"Đang áp dụng bộ lọc âm thanh (Pitch {pitch_shift:+.2f}, EQ 48kHz) & biến đổi hình ảnh..."
-        db.commit()
-
-        if cls._is_job_cancelled(db, job.id):
-            logger.warning(f"Job #{job.id} cancelled before FFmpeg processing.")
-            return
-
-        # 3. Process video via VideoTransformerService in background thread
-        rendered_path = await asyncio.to_thread(
-            VideoTransformerService.transform_full_length_video,
-            input_video_path=input_source_file,
-            output_video_path=output_file_path,
-            aspect_ratio=aspect_ratio,
-            pitch_shift=pitch_shift,
-            enable_audio_eq=enable_audio_eq,
-            enable_hflip=enable_hflip,
-            enable_color_grading=enable_color_grading,
-            enable_micro_zoom=enable_micro_zoom
-        )
-
-        if cls._is_job_cancelled(db, job.id):
-            logger.warning(f"Job #{job.id} cancelled after video transformation.")
-            return
-
-        # 4. Probe result and save to Database
-        media_info = VideoTransformerService.get_media_info(rendered_path)
-        dur = media_info.get("duration", 0.0)
-        res_str = f"{media_info.get('width', 1080)}x{media_info.get('height', 1920)}"
+        source_info = VideoTransformerService.get_media_info(input_source_file)
+        source_dur = source_info.get("duration", 0.0)
 
         # Resolve movie_id if not explicitly in payload
         movie_id = payload.get("movie_id")
@@ -624,31 +598,153 @@ class JobWorker:
             if ms:
                 movie_id = ms.movie_id
 
-        job.progress = 95
-        job.result = "Đang lưu trữ bản ghi video hoàn tất..."
-        db.commit()
+        if split_parts > 1 and source_dur > 5.0:
+            part_dur = source_dur / split_parts
+            created_videos = []
+            
+            for p_idx in range(1, split_parts + 1):
+                if cls._is_job_cancelled(db, job.id):
+                    logger.warning(f"Job #{job.id} cancelled during split processing at part {p_idx}.")
+                    return
 
-        video = Video(
-            movie_id=movie_id,
-            episode_id=None,
-            title=title or "Video 1:1 Biến Đổi",
-            video_type="transformed_1_1",
-            file_path=rendered_path,
-            resolution=res_str,
-            duration_seconds=dur,
-            file_size_bytes=os.path.getsize(rendered_path) if os.path.exists(rendered_path) else 0,
-            qa_status="passed",
-            qa_notes="Xử lý lách bản quyền 1:1 Full Length hoàn tất"
-        )
-        db.add(video)
+                part_start = (p_idx - 1) * part_dur
+                output_file_name = f"AntiCopy_{clean_name}_Tap_{p_idx}_{aspect_ratio}.mp4"
+                output_file_path = str(transform_folder / output_file_name)
 
-        if cls._is_job_cancelled(db, job.id):
-            logger.warning(f"Job #{job.id} cancelled before final commit.")
-            return
+                def on_part_progress(pct: float, current_p=p_idx, total_p=split_parts):
+                    try:
+                        overall_pct = ((current_p - 1) + pct) / total_p
+                        progress_val = min(92, int(40 + overall_pct * 52))
+                        with SessionLocal() as progress_db:
+                            pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                            if pj:
+                                pj.status = "processing"
+                                pj.progress = progress_val
+                                pj.result = f"Đang xử lý Tập {current_p}/{total_p} ({int(pct*100)}%): Áp dụng bộ lọc âm thanh & hình ảnh..."
+                                progress_db.commit()
+                    except Exception:
+                        pass
 
-        job.status = "completed"
-        job.progress = 100
-        job.error_message = None
-        job.result = f"Xử lý video 1:1 lách bản quyền thành công! Thời lượng: {format_duration_str(dur)} (File: {Path(rendered_path).name})"
-        db.commit()
-        logger.info(f"Job #{job.id} full-length video transform completed -> {rendered_path}")
+                job.progress = int(40 + ((p_idx - 1) / split_parts) * 52)
+                job.result = f"Đang bắt đầu xử lý Tập {p_idx}/{split_parts}..."
+                db.commit()
+
+                rendered_path = await asyncio.to_thread(
+                    VideoTransformerService.transform_full_length_video,
+                    input_video_path=input_source_file,
+                    output_video_path=output_file_path,
+                    aspect_ratio=aspect_ratio,
+                    pitch_shift=pitch_shift,
+                    enable_audio_eq=enable_audio_eq,
+                    enable_hflip=enable_hflip,
+                    enable_color_grading=enable_color_grading,
+                    enable_micro_zoom=enable_micro_zoom,
+                    start_time=part_start,
+                    duration=part_dur,
+                    progress_callback=on_part_progress
+                )
+
+                media_info = VideoTransformerService.get_media_info(rendered_path)
+                dur = media_info.get("duration", part_dur)
+                res_str = f"{media_info.get('width', 1080)}x{media_info.get('height', 1920)}"
+
+                part_title = f"{title} - Tập {p_idx}" if title else f"Video 1:1 - Tập {p_idx}"
+                video = Video(
+                    movie_id=movie_id,
+                    episode_id=None,
+                    title=part_title,
+                    video_type="transformed_1_1",
+                    file_path=rendered_path,
+                    resolution=res_str,
+                    duration_seconds=dur,
+                    file_size_bytes=os.path.getsize(rendered_path) if os.path.exists(rendered_path) else 0,
+                    qa_status="passed",
+                    qa_notes=f"Xử lý lách bản quyền 1:1 - Tập {p_idx}/{split_parts} hoàn tất"
+                )
+                db.add(video)
+                db.commit()
+                created_videos.append(Path(rendered_path).name)
+
+            job.status = "completed"
+            job.progress = 100
+            job.error_message = None
+            job.result = f"Xử lý video 1:1 lách bản quyền thành công! Đã chia {split_parts} tập ({', '.join(created_videos)})"
+            db.commit()
+            logger.info(f"Job #{job.id} video split transform completed -> {created_videos}")
+
+        else:
+            # Single video full length transformation
+            output_file_name = f"AntiCopy_{clean_name}_{aspect_ratio}.mp4"
+            output_file_path = str(transform_folder / output_file_name)
+
+            job.progress = 40
+            job.result = f"Đang áp dụng bộ lọc âm thanh (Pitch {pitch_shift:+.2f}, EQ 48kHz) & biến đổi hình ảnh..."
+            db.commit()
+
+            if cls._is_job_cancelled(db, job.id):
+                logger.warning(f"Job #{job.id} cancelled before FFmpeg processing.")
+                return
+
+            def on_transform_progress(pct: float):
+                try:
+                    progress_val = min(92, int(40 + pct * 52))
+                    with SessionLocal() as progress_db:
+                        pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                        if pj:
+                            pj.status = "processing"
+                            pj.progress = progress_val
+                            pj.result = f"Đang biến đổi video 1:1 ({int(pct*100)}%): Áp dụng bộ lọc âm thanh & hình ảnh..."
+                            progress_db.commit()
+                except Exception:
+                    pass
+
+            rendered_path = await asyncio.to_thread(
+                VideoTransformerService.transform_full_length_video,
+                input_video_path=input_source_file,
+                output_video_path=output_file_path,
+                aspect_ratio=aspect_ratio,
+                pitch_shift=pitch_shift,
+                enable_audio_eq=enable_audio_eq,
+                enable_hflip=enable_hflip,
+                enable_color_grading=enable_color_grading,
+                enable_micro_zoom=enable_micro_zoom,
+                progress_callback=on_transform_progress
+            )
+
+            if cls._is_job_cancelled(db, job.id):
+                logger.warning(f"Job #{job.id} cancelled after video transformation.")
+                return
+
+            # 4. Probe result and save to Database
+            media_info = VideoTransformerService.get_media_info(rendered_path)
+            dur = media_info.get("duration", 0.0)
+            res_str = f"{media_info.get('width', 1080)}x{media_info.get('height', 1920)}"
+
+            job.progress = 95
+            job.result = "Đang lưu trữ bản ghi video hoàn tất..."
+            db.commit()
+
+            video = Video(
+                movie_id=movie_id,
+                episode_id=None,
+                title=title or "Video 1:1 Biến Đổi",
+                video_type="transformed_1_1",
+                file_path=rendered_path,
+                resolution=res_str,
+                duration_seconds=dur,
+                file_size_bytes=os.path.getsize(rendered_path) if os.path.exists(rendered_path) else 0,
+                qa_status="passed",
+                qa_notes="Xử lý lách bản quyền 1:1 Full Length hoàn tất"
+            )
+            db.add(video)
+
+            if cls._is_job_cancelled(db, job.id):
+                logger.warning(f"Job #{job.id} cancelled before final commit.")
+                return
+
+            job.status = "completed"
+            job.progress = 100
+            job.error_message = None
+            job.result = f"Xử lý video 1:1 lách bản quyền thành công! Thời lượng: {format_duration_str(dur)} (File: {Path(rendered_path).name})"
+            db.commit()
+            logger.info(f"Job #{job.id} full-length video transform completed -> {rendered_path}")

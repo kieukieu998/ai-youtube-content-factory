@@ -298,46 +298,46 @@
 
             <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Số Lượng Tập Kịch Bản:</span></label>
-                <select id="script_modal_episodes" class="select select-sm select-bordered bg-slate-950 text-white w-full">
-                    <option value="1">1 Tập (Trọn gói 1 video duy nhất)</option>
-                    <option value="2">2 Tập (Phần 1 Mở đầu + Phần 2 Cao trào)</option>
-                    <option value="3" selected>3 Tập (Tiêu chuẩn: Mở đầu -> Xung đột -> Đại kết cục)</option>
-                    <option value="4">4 Tập (Bóc tách chi tiết nhiều twist)</option>
-                    <option value="5">5 Tập (Series dài tập cho phim phức tạp)</option>
+                <select id="script_modal_episodes" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
+                    <option value="1" class="bg-slate-900 text-white">1 Tập (Trọn gói 1 video duy nhất)</option>
+                    <option value="2" class="bg-slate-900 text-white">2 Tập (Phần 1 Mở đầu + Phần 2 Cao trào)</option>
+                    <option value="3" class="bg-slate-900 text-white" selected>3 Tập (Tiêu chuẩn: Mở đầu -> Xung đột -> Đại kết cục)</option>
+                    <option value="4" class="bg-slate-900 text-white">4 Tập (Bóc tách chi tiết nhiều twist)</option>
+                    <option value="5" class="bg-slate-900 text-white">5 Tập (Series dài tập cho phim phức tạp)</option>
                 </select>
             </div>
 
             <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-200 text-xs font-bold">Thời Lượng Mỗi Tập (Tùy Chọn):</span></label>
-                <select id="script_modal_duration" class="select select-sm select-bordered bg-slate-950 text-white w-full">
-                    <option value="60" selected>60 Giây (Shorts / TikTok chuẩn ~150 từ)</option>
-                    <option value="180">3 Phút (Review ngắn ~450 từ)</option>
-                    <option value="300">5 Phút (Tóm tắt vừa ~750 từ)</option>
-                    <option value="420">7 Phút (Tóm tắt mở rộng ~1.050 từ)</option>
-                    <option value="600">10 Phút (Tóm tắt chi tiết ~1.500 từ)</option>
-                    <option value="900">15 Phút (Tóm tắt sâu ~2.250 từ)</option>
-                    <option value="1200">20 Phút (Full Movie Recap dài tập ~3.000 từ)</option>
+                <select id="script_modal_duration" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
+                    <option value="60" class="bg-slate-900 text-white" selected>60 Giây (Shorts / TikTok chuẩn ~150 từ)</option>
+                    <option value="180" class="bg-slate-900 text-white">3 Phút (Review ngắn ~450 từ)</option>
+                    <option value="300" class="bg-slate-900 text-white">5 Phút (Tóm tắt vừa ~750 từ)</option>
+                    <option value="420" class="bg-slate-900 text-white">7 Phút (Tóm tắt mở rộng ~1.050 từ)</option>
+                    <option value="600" class="bg-slate-900 text-white">10 Phút (Tóm tắt chi tiết ~1.500 từ)</option>
+                    <option value="900" class="bg-slate-900 text-white">15 Phút (Tóm tắt sâu ~2.250 từ)</option>
+                    <option value="1200" class="bg-slate-900 text-white">20 Phút (Full Movie Recap dài tập ~3.000 từ)</option>
                 </select>
                 <label class="label py-0.5"><span class="label-text-alt text-slate-400 text-[11px] leading-tight">💡 Sau khi AI tạo kịch bản, bạn có thể vào trang <b>Kịch Bản</b> để chỉnh sửa độ dài, câu từ từng tập riêng biệt theo ý muốn.</span></label>
             </div>
 
             <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">Giọng Điệu & Phong Cách:</span></label>
-                <select id="script_modal_style" class="select select-sm select-bordered bg-slate-950 text-white w-full">
-                    <option value="dramatic" selected>Kịch Tính, Dồn Dập (Dramatic / Action)</option>
-                    <option value="suspense">Hồi Hộp, Rùng Rợn (Suspense / Thriller)</option>
-                    <option value="humorous">Hài Hước, Châm Biếm (Humorous / Sarcastic)</option>
-                    <option value="emotional">Xúc Động, Sâu Lắng (Emotional / Deep)</option>
+                <select id="script_modal_style" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
+                    <option value="dramatic" class="bg-slate-900 text-white" selected>Kịch Tính, Dồn Dập (Dramatic / Action)</option>
+                    <option value="suspense" class="bg-slate-900 text-white">Hồi Hộp, Rùng Rợn (Suspense / Thriller)</option>
+                    <option value="humorous" class="bg-slate-900 text-white">Hài Hước, Châm Biếm (Humorous / Sarcastic)</option>
+                    <option value="emotional" class="bg-slate-900 text-white">Xúc Động, Sâu Lắng (Emotional / Deep)</option>
                 </select>
             </div>
 
             <div class="form-control">
                 <label class="label py-1"><span class="label-text text-slate-300 text-xs font-medium">AI Provider Sử Dụng:</span></label>
-                <select id="script_modal_provider" class="select select-sm select-bordered bg-slate-950 text-white w-full">
-                    <option value="" selected>Theo Cấu Hình Hệ Thống</option>
-                    <option value="gemini_free">Google Gemini Free</option>
-                    <option value="deepseek">DeepSeek Chat</option>
-                    <option value="openai">OpenAI GPT-4o</option>
+                <select id="script_modal_provider" class="select select-sm bg-slate-900/90 text-white border border-slate-700/80 rounded-xl focus:border-indigo-500 focus:outline-none text-xs font-medium w-full transition">
+                    <option value="" class="bg-slate-900 text-white" selected>Theo Cấu Hình Hệ Thống</option>
+                    <option value="gemini_free" class="bg-slate-900 text-white">Google Gemini Free</option>
+                    <option value="deepseek" class="bg-slate-900 text-white">DeepSeek Chat</option>
+                    <option value="openai" class="bg-slate-900 text-white">OpenAI GPT-4o</option>
                 </select>
             </div>
 

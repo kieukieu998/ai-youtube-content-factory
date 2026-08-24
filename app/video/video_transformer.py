@@ -1,7 +1,8 @@
 import os
+import re
 import subprocess
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 from loguru import logger
 from app.core.config import settings
 
@@ -39,54 +40,59 @@ class VideoTransformerService:
 
         try:
             # Check video stream dimensions
-            cmd_v = [
+            cmd_dim = [
                 settings.FFPROBE_PATH, "-v", "error",
                 "-select_streams", "v:0",
                 "-show_entries", "stream=width,height",
                 "-of", "csv=s=x:p=0",
                 str(video_path)
             ]
-            res_v = subprocess.run(cmd_v, stdout=subprocess.PIPE, text=True, check=True)
-            dims = res_v.stdout.strip().split("x")
-            if len(dims) == 2:
-                info["width"] = int(dims[0])
-                info["height"] = int(dims[1])
+            res_dim = subprocess.run(cmd_dim, stdout=subprocess.PIPE, text=True, check=True)
+            dim_str = res_dim.stdout.strip()
+            if "x" in dim_str:
+                parts = dim_str.split("x")
+                info["width"] = int(parts[0])
+                info["height"] = int(parts[1])
         except Exception:
             pass
 
         try:
-            # Check audio stream
-            cmd_a = [
+            # Check audio stream presence and sample rate
+            cmd_aud = [
                 settings.FFPROBE_PATH, "-v", "error",
                 "-select_streams", "a:0",
                 "-show_entries", "stream=sample_rate",
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 str(video_path)
             ]
-            res_a = subprocess.run(cmd_a, stdout=subprocess.PIPE, text=True, check=True)
-            if res_a.stdout.strip():
+            res_aud = subprocess.run(cmd_aud, stdout=subprocess.PIPE, text=True, check=True)
+            aud_str = res_aud.stdout.strip()
+            if aud_str:
                 info["has_audio"] = True
-                info["audio_sample_rate"] = int(res_a.stdout.strip())
+                info["audio_sample_rate"] = int(aud_str)
         except Exception:
             pass
 
         return info
 
-    @staticmethod
+    @classmethod
     def transform_full_length_video(
+        cls,
         input_video_path: str,
         output_video_path: str,
-        aspect_ratio: str = "original", # "original", "blurred_stack_9_16", "center_crop_9_16"
-        pitch_shift: float = 1.02, # 1.0 = normal, 1.02 = +2% pitch, 0.98 = -2% pitch
+        aspect_ratio: str = "original",
+        pitch_shift: float = 1.02,
+        audio_volume: float = 1.0,
         enable_audio_eq: bool = True,
         enable_hflip: bool = False,
         enable_color_grading: bool = True,
         enable_micro_zoom: bool = True,
-        audio_volume: float = 1.0
+        start_time: Optional[float] = None,
+        duration: Optional[float] = None,
+        progress_callback: Optional[Callable[[float], None]] = None
     ) -> str:
         """
-        Processes and re-encodes a full-length video (1:1 duration preserved).
-        Returns the absolute path to the output video.
+        Execute 1:1 full-length transformation or segmented part transformation with dynamic progress tracking.
         """
         in_path = Path(input_video_path).resolve()
         out_path = Path(output_video_path).resolve()
@@ -95,93 +101,99 @@ class VideoTransformerService:
         if not in_path.exists():
             raise FileNotFoundError(f"Input video not found: {in_path}")
 
-        media_info = VideoTransformerService.get_media_info(str(in_path))
-        has_audio = media_info.get("has_audio", False)
+        media_info = cls.get_media_info(str(in_path))
         orig_sr = media_info.get("audio_sample_rate", 44100)
+        has_audio = media_info.get("has_audio", False)
+        orig_dur = media_info.get("duration", 0.0)
 
         # 1. Build Video Filter Graph
-        v_filters = []
+        filter_complex_v = ""
+        v_map = "[0:v]"
 
         if aspect_ratio == "blurred_stack_9_16":
             filter_complex_v = (
-                f"[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=8:1,setsar=1[bg]; "
-                f"[0:v]scale=1080:-2,setsar=1[fg]; "
-                f"[bg][fg]overlay=(W-w)/2:(H-h)/2[v_base]"
+                "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=8:1,setsar=1[bg]; "
+                "[0:v]scale=1080:-2,setsar=1[fg]; "
+                "[bg][fg]overlay=(W-w)/2:(H-h)/2[v_base]"
             )
-            v_current = "[v_base]"
+            v_map = "[v_base]"
         elif aspect_ratio == "center_crop_9_16":
-            filter_complex_v = "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_base]"
-            v_current = "[v_base]"
-        else:
-            # Original aspect ratio (ensure even dimensions for H.264)
-            filter_complex_v = "[0:v]scale=trunc(iw/2)*2:trunc(ih/2)*2,setsar=1[v_base]"
-            v_current = "[v_base]"
+            filter_complex_v = (
+                "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1[v_base]"
+            )
+            v_map = "[v_base]"
 
-        v_chain = []
-        if enable_hflip:
-            v_chain.append("hflip")
+        v_mods = []
         if enable_color_grading:
-            # Shift contrast, brightness, saturation, gamma by 2-4%
-            v_chain.append("eq=contrast=1.03:brightness=0.01:saturation=1.05:gamma=1.02")
+            v_mods.append("eq=contrast=1.03:brightness=0.01:saturation=1.05:gamma=1.02")
+
         if enable_micro_zoom:
-            # 102% micro-zoom
-            v_chain.append("crop=iw*0.98:ih*0.98,scale=iw:ih")
+            v_mods.append("crop=iw*0.98:ih*0.98,scale=iw:ih")
 
-        if v_chain:
-            combined_v_chain = ",".join(v_chain)
-            filter_complex_v += f"; {v_current}{combined_v_chain}[v_final]"
+        if enable_hflip:
+            v_mods.append("hflip")
+
+        if v_mods:
+            mod_str = ",".join(v_mods)
+            if filter_complex_v:
+                filter_complex_v += f"; {v_map}{mod_str}[v_final]"
+            else:
+                filter_complex_v = f"[0:v]{mod_str}[v_final]"
             v_map = "[v_final]"
-        else:
-            v_map = v_current
 
-        # 2. Build Audio Filter Graph (if audio exists)
+        # 2. Build Audio Filter Graph
         filter_complex_a = ""
-        a_map = "0:a"
+        a_map = "[0:a]"
+
         if has_audio:
             a_chain = []
-            
-            # Pitch shift without changing duration (via asetrate + atempo)
-            if abs(pitch_shift - 1.0) > 0.001:
+            if pitch_shift != 1.0:
                 shifted_sr = int(orig_sr * pitch_shift)
                 tempo_comp = 1.0 / pitch_shift
                 a_chain.append(f"asetrate={shifted_sr},atempo={tempo_comp:.4f}")
-            
+
             if enable_audio_eq:
-                # Displace spectral frequencies (equalizer curve)
                 a_chain.append("equalizer=f=1000:t=q:w=1.2:g=2.0,equalizer=f=3500:t=q:w=1.2:g=-1.5")
             
             if audio_volume != 1.0:
                 a_chain.append(f"volume={audio_volume:.2f}")
 
-            # Re-sample to standard studio 48kHz stereo
             a_chain.append("aformat=sample_rates=48000:channel_layouts=stereo")
-
             filter_complex_a = f"[0:a]{','.join(a_chain)}[a_final]"
             a_map = "[a_final]"
 
         # 3. Combine filter_complex
-        if filter_complex_a:
+        if filter_complex_a and filter_complex_v:
             full_filter_complex = f"{filter_complex_v}; {filter_complex_a}"
-        else:
+        elif filter_complex_v:
             full_filter_complex = filter_complex_v
+        elif filter_complex_a:
+            full_filter_complex = filter_complex_a
+        else:
+            full_filter_complex = None
 
         # 4. Construct FFmpeg command
-        cmd = [
-            settings.FFMPEG_PATH, "-y",
-            "-i", str(in_path),
-            "-filter_complex", full_filter_complex,
-            "-map", v_map
-        ]
+        cmd = [settings.FFMPEG_PATH, "-y"]
 
-        if has_audio:
-            cmd.extend(["-map", a_map])
+        if start_time is not None and start_time > 0:
+            cmd.extend(["-ss", f"{start_time:.2f}"])
+        if duration is not None and duration > 0:
+            cmd.extend(["-t", f"{duration:.2f}"])
+
+        cmd.extend(["-i", str(in_path)])
+
+        if full_filter_complex:
+            cmd.extend(["-filter_complex", full_filter_complex])
+            cmd.extend(["-map", v_map])
+            if has_audio:
+                cmd.extend(["-map", a_map])
 
         cmd.extend([
             "-c:v", "libx264",
-            "-preset", "fast",
+            "-preset", "veryfast",
             "-crf", "20",
             "-pix_fmt", "yuv420p",
-            "-map_metadata", "-1" # Strip all previous metadata
+            "-map_metadata", "-1"
         ])
 
         if has_audio:
@@ -195,10 +207,35 @@ class VideoTransformerService:
         logger.info(f"Starting 1:1 Full-Length Video Transformation: {in_path.name} -> {out_path.name}")
         logger.debug(f"FFmpeg command: {' '.join(cmd)}")
 
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode != 0:
-            logger.error(f"FFmpeg transform failed: {result.stderr}")
-            raise RuntimeError(f"FFmpeg error: {result.stderr[-400:]}")
+        # Run with live progress stream
+        total_duration = duration if (duration and duration > 0) else (orig_dur if orig_dur > 0 else 1.0)
+        time_pattern = re.compile(r"time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)")
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        last_reported_pct = 0.0
+        for line in process.stdout:
+            match = time_pattern.search(line)
+            if match:
+                hrs, mins, secs = match.groups()
+                curr_sec = int(hrs) * 3600 + int(mins) * 60 + float(secs)
+                pct = min(1.0, curr_sec / total_duration)
+                if pct - last_reported_pct >= 0.02: # Update every 2%
+                    last_reported_pct = pct
+                    if progress_callback:
+                        progress_callback(pct)
+
+        process.wait()
+        if process.returncode != 0:
+            logger.error(f"FFmpeg transform failed with code {process.returncode}")
+            raise RuntimeError(f"FFmpeg error code: {process.returncode}")
 
         logger.info(f"Video Transformation completed successfully: {out_path}")
         return str(out_path)

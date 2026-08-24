@@ -11,6 +11,62 @@ from app.database.models import Video, Episode, Job
 
 router = APIRouter()
 
+import re
+
+def enrich_video_display(v: Video, movie_title: str = ""):
+    """Enrich video object with display_label, display_sub_badge, play_title, and sort_order."""
+    if v.video_type == "transformed_1_1":
+        title = (v.title or Path(v.file_path).stem).strip()
+        mv_t = (movie_title or "").strip()
+        
+        # Check if title has double episode notation like "Tập 01 – Tập 1" or "Tập 01 - Tập 2"
+        match_combo = re.search(r'(Tập\s*\d+\s*[-–—]\s*Tập\s*\d+)', title, re.IGNORECASE)
+        match_single = re.search(r'(Tập\s*\d+)', title, re.IGNORECASE)
+        
+        is_split_part = False
+        part_num = 1
+        if match_combo:
+            is_split_part = True
+            v.display_label = match_combo.group(1)
+            p_match = re.search(r'[-–—]\s*Tập\s*(\d+)$', match_combo.group(1), re.IGNORECASE)
+            if p_match:
+                part_num = int(p_match.group(1))
+        elif mv_t and title.lower().startswith(mv_t.lower()) and title.lower() != mv_t.lower():
+            suffix = title[len(mv_t):].strip()
+            match_suffix = re.search(r'^[-–—_]\s*(?:Tập|Tap|Part)\s*(\d+)$', suffix, re.IGNORECASE)
+            if match_suffix:
+                is_split_part = True
+                part_num = int(match_suffix.group(1))
+                if match_single:
+                    v.display_label = f"{match_single.group(1)} – Tập {part_num}"
+                else:
+                    v.display_label = f"Tập {part_num}"
+        
+        if not is_split_part:
+            # Full 1:1 original
+            if match_single:
+                v.display_label = f"{match_single.group(1)} - Full"
+                main_ep = int(re.search(r'\d+', match_single.group(1)).group(0))
+                v.sort_order = (main_ep, 0, str(v.created_at or ""))
+            else:
+                v.display_label = "Bản 1:1 - Full"
+                v.sort_order = (0, 0, str(v.created_at or ""))
+        else:
+            main_ep = 0
+            if match_single:
+                main_ep = int(re.search(r'\d+', match_single.group(1)).group(0))
+            v.sort_order = (main_ep, part_num, str(v.created_at or ""))
+            
+        v.display_sub_badge = None
+        v.play_title = title
+    else:
+        ep_num = v.episode.episode_number if v.episode else 1
+        ver = getattr(v, "render_version", 1)
+        v.display_label = f"Tập {ep_num}"
+        v.display_sub_badge = f"v{ver}"
+        v.sort_order = (ep_num, ver, str(v.created_at or ""))
+        v.play_title = f"{movie_title} - Tập {ep_num} (v{ver})"
+
 @router.get("/videos", response_class=HTMLResponse)
 async def videos_page(request: Request, db: Session = Depends(get_db)):
     from collections import defaultdict
@@ -45,10 +101,11 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
     for movie_id, v_list in movie_dict.items():
         if movie_id != 0:
             movie = db.query(Movie).filter(Movie.id == movie_id).first()
-            v_list_sorted = sorted(
-                v_list, 
-                key=lambda x: (x.episode.episode_number if x.episode else 0, getattr(x, "render_version", 1))
-            )
+            mv_title = movie.title if movie else ""
+            for v in v_list:
+                enrich_video_display(v, mv_title)
+
+            v_list_sorted = sorted(v_list, key=lambda x: getattr(x, "sort_order", (0, 0, "")))
             script = db.query(Script).filter(Script.movie_id == movie_id).first()
             total_eps = len(script.episodes) if script else len(v_list)
             
@@ -60,11 +117,14 @@ async def videos_page(request: Request, db: Session = Depends(get_db)):
                 "is_complete": len(v_list_sorted) >= total_eps and total_eps > 0
             })
         else:
+            for v in v_list:
+                enrich_video_display(v, "Video Khác")
+            v_list_sorted = sorted(v_list, key=lambda x: getattr(x, "sort_order", (0, 0, "")))
             movie_folders.append({
                 "movie": None,
-                "videos": v_list,
-                "rendered_count": len(v_list),
-                "total_episodes": len(v_list),
+                "videos": v_list_sorted,
+                "rendered_count": len(v_list_sorted),
+                "total_episodes": len(v_list_sorted),
                 "is_complete": True
             })
             
