@@ -43,6 +43,27 @@ def init_db():
                     logger.info("Migrated column stories.characters_json")
             except Exception:
                 pass
+
+            # Check new columns in publishes
+            try:
+                cols_p = [c[1] for c in conn.execute(text("PRAGMA table_info(publishes)")).fetchall()]
+                if len(cols_p) > 0:
+                    if "story_id" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN story_id INTEGER REFERENCES stories(id)"))
+                    if "platform_video_id" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN platform_video_id VARCHAR(100)"))
+                    if "video_url" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN video_url VARCHAR(500)"))
+                    if "video_aspect" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN video_aspect VARCHAR(20)"))
+                    if "privacy_status" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN privacy_status VARCHAR(50) DEFAULT 'public'"))
+                    if "created_at" not in cols_p:
+                        conn.execute(text("ALTER TABLE publishes ADD COLUMN created_at DATETIME"))
+                    conn.commit()
+                    logger.info("Migrated publishes table columns for YouTube integration")
+            except Exception as pe:
+                logger.warning(f"Publishes migration notice: {pe}")
     except Exception as e:
         logger.warning(f"Column migration notice: {e}")
     

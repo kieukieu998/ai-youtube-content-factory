@@ -19,6 +19,7 @@ from app.api.jobs_router import router as jobs_router
 from app.api.settings_router import router as settings_router
 from app.api.transform_router import router as transform_router
 from app.api.stories_router import router as stories_router
+from app.api.publishing_router import router as publishing_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -87,6 +88,7 @@ app.include_router(transform_router, tags=["Transformer"])
 app.include_router(stories_router, tags=["Stories"])
 app.include_router(jobs_router, tags=["Jobs"])
 app.include_router(settings_router, tags=["Settings"])
+app.include_router(publishing_router, tags=["Publishing"])
 
 if __name__ == "__main__":
     uvicorn.run(

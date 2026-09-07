@@ -7,7 +7,7 @@ from datetime import datetime
 from loguru import logger
 
 from app.database.session import SessionLocal
-from app.database.models import Job, Movie, MovieSource, Script, Episode, MediaFile, Video, Setting, Story
+from app.database.models import Job, Movie, MovieSource, Script, Episode, MediaFile, Video, Setting, Story, Publish
 from app.core.config import settings
 
 # Agents and Services
@@ -105,6 +105,8 @@ class JobWorker:
                 await cls._handle_story_audio(db, job, payload)
             elif job.job_type == "StoryVideoRenderJob":
                 await cls._handle_story_video_render(db, job, payload)
+            elif job.job_type in ["YouTubePublishJob", "PublishJob"]:
+                await cls._handle_youtube_publish(db, job, payload)
             else:
                 job.status = "completed"
                 job.progress = 100
@@ -129,6 +131,19 @@ class JobWorker:
                                     st.error_message = str(e)
                         except Exception as sync_err:
                             logger.error(f"Error syncing story status on job failure: {sync_err}")
+
+                    # Also synchronize publish status if it's a publish job!
+                    if job.job_type in ["YouTubePublishJob", "PublishJob"]:
+                        try:
+                            payload_data = json.loads(job.payload) if job.payload else {}
+                            pub_id = payload_data.get("publish_id")
+                            if pub_id:
+                                pb = db.query(Publish).filter(Publish.id == pub_id).first()
+                                if pb:
+                                    pb.status = "failed"
+                                    pb.error_message = str(e)
+                        except Exception as sync_err:
+                            logger.error(f"Error syncing publish status on job failure: {sync_err}")
 
                     db.commit()
         finally:
@@ -1017,5 +1032,76 @@ class JobWorker:
         job.result = f"Render video truyện đa giọng ({story.video_aspect}) thành công!"
         db.commit()
         logger.info(f"Story #{story_id} video render completed -> {rendered_paths}")
+
+    @classmethod
+    async def _handle_youtube_publish(cls, db, job: Job, payload: Dict[str, Any]):
+        """
+        Handle asynchronous background YouTube video upload with live progress reporting.
+        """
+        publish_id = payload.get("publish_id")
+        file_path = payload.get("file_path")
+        title = payload.get("title", "Video").strip()
+        description = payload.get("description", "").strip()
+        tags = payload.get("tags", [])
+        privacy_status = payload.get("privacy_status", "public")
+        category_id = payload.get("category_id", "24")
+        is_shorts = payload.get("is_shorts", False)
+
+        publish = db.query(Publish).filter(Publish.id == publish_id).first() if publish_id else None
+        if publish:
+            publish.status = "publishing"
+            db.commit()
+
+        def update_pub_progress(pct: float, message: str):
+            try:
+                progress_val = min(98, max(5, int(pct * 100)))
+                with SessionLocal() as progress_db:
+                    pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                    if pj:
+                        pj.status = "processing"
+                        pj.progress = progress_val
+                        pj.result = message
+                        progress_db.commit()
+            except Exception:
+                pass
+
+        update_pub_progress(0.08, "Đang kết nối YouTube API & khởi tạo tải video...")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"YouTubePublishJob #{job.id} cancelled before upload.")
+            return
+
+        from app.publishing.youtube_publisher import YouTubePublisher
+
+        upload_res = await asyncio.to_thread(
+            YouTubePublisher.upload_video,
+            file_path=file_path,
+            title=title,
+            description=description,
+            tags=tags,
+            privacy_status=privacy_status,
+            category_id=category_id,
+            is_shorts=is_shorts,
+            progress_callback=update_pub_progress
+        )
+
+        video_id = upload_res.get("video_id")
+        video_url = upload_res.get("video_url")
+
+        if publish:
+            publish.status = "published"
+            publish.platform_video_id = video_id
+            publish.video_url = video_url
+            publish.published_at = datetime.utcnow()
+            publish.error_message = None
+            db.commit()
+
+        job.status = "completed"
+        job.progress = 100
+        job.error_message = None
+        job.result = f"Đăng video lên YouTube thành công! Link: {video_url}"
+        db.commit()
+        logger.info(f"YouTubePublishJob #{job.id} completed successfully -> {video_url}")
+
 
 

@@ -133,17 +133,24 @@ class Publish(Base):
     __tablename__ = "publishes"
     
     id = Column(Integer, primary_key=True, index=True)
-    video_id = Column(Integer, ForeignKey("videos.id"), nullable=False)
-    platform = Column(String(50), default="tiktok", index=True) # tiktok, youtube_shorts, facebook_reels
+    video_id = Column(Integer, ForeignKey("videos.id"), nullable=True)
+    story_id = Column(Integer, ForeignKey("stories.id"), nullable=True)
+    platform = Column(String(50), default="youtube", index=True) # youtube, youtube_shorts, tiktok
     title = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     hashtags = Column(Text, nullable=True)
+    platform_video_id = Column(String(100), nullable=True) # e.g. YouTube video ID
     tiktok_post_id = Column(String(100), nullable=True)
+    video_url = Column(String(500), nullable=True) # https://youtu.be/...
+    video_aspect = Column(String(20), nullable=True) # 9:16, 16:9
+    privacy_status = Column(String(50), default="public") # public, private, unlisted
     published_at = Column(DateTime, nullable=True)
     status = Column(String(50), default="scheduled", index=True) # scheduled, publishing, published, failed
     error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     video = relationship("Video", back_populates="publishes")
+    story = relationship("Story", backref="publishes")
     analytics = relationship("Analytics", back_populates="publish", cascade="all, delete-orphan")
 
 class Analytics(Base):
