@@ -42,7 +42,7 @@ class BGMMixer:
         ]
         
         logger.info(f"Mixing voice & BGM: {' '.join(cmd)}")
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="ignore")
         if result.returncode != 0:
             logger.error(f"FFmpeg Audio Ducking failed: {result.stderr}")
             raise RuntimeError(f"FFmpeg Audio Ducking error: {result.stderr}")

@@ -7,7 +7,7 @@ from datetime import datetime
 from loguru import logger
 
 from app.database.session import SessionLocal
-from app.database.models import Job, Movie, MovieSource, Script, Episode, MediaFile, Video, Setting
+from app.database.models import Job, Movie, MovieSource, Script, Episode, MediaFile, Video, Setting, Story
 from app.core.config import settings
 
 # Agents and Services
@@ -22,6 +22,9 @@ from app.agents.video_editor import VideoEditorAgent
 from app.agents.qa_agent import QAAgent
 from app.agents.seo_agent import SEOAgent
 from app.video.scene_slicer import SceneSlicer
+from app.story.audiobook_generator import AudiobookGenerator
+from app.story.story_video_renderer import StoryVideoRenderer
+from app.story.story_image_generator import StoryImageGenerator
 
 def format_duration_str(seconds: float | int | None) -> str:
     """Format duration into digital timecode format: MM:SS or H:MM:SS (e.g. 01:06, 17:51, 3:35:36)"""
@@ -98,6 +101,10 @@ class JobWorker:
                 await cls._handle_render_episode(db, job, payload)
             elif job.job_type == "VideoTransformJob":
                 await cls._handle_video_transform(db, job, payload)
+            elif job.job_type == "StoryAudioJob":
+                await cls._handle_story_audio(db, job, payload)
+            elif job.job_type == "StoryVideoRenderJob":
+                await cls._handle_story_video_render(db, job, payload)
             else:
                 job.status = "completed"
                 job.progress = 100
@@ -109,6 +116,20 @@ class JobWorker:
                 if not cls._is_job_cancelled(db, job.id):
                     job.status = "failed"
                     job.error_message = str(e)
+
+                    # Also synchronize story status if it's a story job!
+                    if job.job_type in ["StoryVideoRenderJob", "StoryAudioJob"]:
+                        try:
+                            payload_data = json.loads(job.payload) if job.payload else {}
+                            sid = payload_data.get("story_id")
+                            if sid:
+                                st = db.query(Story).filter(Story.id == sid).first()
+                                if st:
+                                    st.status = "failed"
+                                    st.error_message = str(e)
+                        except Exception as sync_err:
+                            logger.error(f"Error syncing story status on job failure: {sync_err}")
+
                     db.commit()
         finally:
             db.close()
@@ -850,3 +871,151 @@ class JobWorker:
             job.result = f"Xử lý video 1:1 lách bản quyền thành công! Thời lượng: {format_duration_str(dur)} (File: {Path(rendered_path).name})"
             db.commit()
             logger.info(f"Job #{job.id} full-length video transform completed -> {rendered_path}")
+
+    @classmethod
+    async def _handle_story_audio(cls, db, job: Job, payload: Dict[str, Any]):
+        story_id = payload.get("story_id")
+        story = db.query(Story).filter(Story.id == story_id).first()
+        if not story:
+            raise ValueError(f"Story #{story_id} not found.")
+
+        def update_audio_progress(pct: float, message: str):
+            try:
+                progress_val = min(98, max(5, int(pct * 100)))
+                with SessionLocal() as progress_db:
+                    pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                    if pj:
+                        pj.status = "processing"
+                        pj.progress = progress_val
+                        pj.result = message
+                        progress_db.commit()
+            except Exception:
+                pass
+
+        update_audio_progress(0.1, "AI đang phân tích nhân vật và chia đoạn kịch bản đa giọng...")
+
+        if cls._is_job_cancelled(db, job.id):
+            return
+
+        # Generate multi-voice audio & subtitles
+        audio_path, duration, characters, _ = await AudiobookGenerator.generate_story_audio(
+            story_id=story.id,
+            content=story.content,
+            aspect_ratio="16:9",
+            bgm_filename=story.bgm_name or "suspense_bgm.mp3",
+            progress_callback=update_audio_progress
+        )
+
+        update_audio_progress(0.95, "Đang lưu trữ dữ liệu âm thanh...")
+
+        story.audio_path = audio_path
+        story.duration_seconds = duration
+        story.characters_json = json.dumps(characters, ensure_ascii=False)
+        story.status = "audio_ready"
+        story.error_message = None
+
+        job.status = "completed"
+        job.progress = 100
+        job.error_message = None
+        char_names = ", ".join(characters) if characters else "Người dẫn chuyện"
+        job.result = f"Tạo âm thanh kịch đa giọng thành công ({char_names})! Thời lượng: {format_duration_str(duration)}"
+        db.commit()
+        logger.info(f"Story #{story_id} multi-voice audio ready -> {audio_path} ({duration:.1f}s)")
+
+    @classmethod
+    async def _handle_story_video_render(cls, db, job: Job, payload: Dict[str, Any]):
+        story_id = payload.get("story_id")
+        aspect_ratio = payload.get("aspect_ratio", "16:9")
+        story = db.query(Story).filter(Story.id == story_id).first()
+        if not story:
+            raise ValueError(f"Story #{story_id} not found.")
+
+        def update_video_progress(pct: float, message: str):
+            try:
+                progress_val = min(98, max(5, int(pct * 100)))
+                with SessionLocal() as progress_db:
+                    pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                    if pj:
+                        pj.status = "processing"
+                        pj.progress = progress_val
+                        pj.result = message
+                        progress_db.commit()
+            except Exception:
+                pass
+
+        ass_path = f"media/working/stories/story_{story.id}_subtitles.ass"
+
+        # 1. Ensure audio & subtitles exist
+        if not story.audio_path or not os.path.exists(story.audio_path) or not os.path.exists(ass_path):
+            update_video_progress(0.08, "AI đang phân tích nhân vật, lồng tiếng đa giọng & tạo phụ đề...")
+            
+            if cls._is_job_cancelled(db, job.id):
+                return
+                
+            audio_path, duration, characters, generated_ass = await AudiobookGenerator.generate_story_audio(
+                story_id=story.id,
+                content=story.content,
+                aspect_ratio=aspect_ratio,
+                bgm_filename=story.bgm_name or "suspense_bgm.mp3",
+                progress_callback=lambda pct, msg: update_video_progress(pct * 0.45, msg)
+            )
+            story.audio_path = audio_path
+            story.duration_seconds = duration
+            story.characters_json = json.dumps(characters, ensure_ascii=False)
+            ass_path = generated_ass
+            db.commit()
+
+        if cls._is_job_cancelled(db, job.id):
+            return
+
+        ratios_to_render = ["9:16", "16:9"] if aspect_ratio in ["both", "all", "2"] else [aspect_ratio]
+        rendered_paths = []
+
+        for i, asp in enumerate(ratios_to_render):
+            if cls._is_job_cancelled(db, job.id):
+                return
+
+            # 2. Automatically generate AI artwork background matching story theme
+            update_video_progress(0.50 + i * 0.04, f"AI đang tạo hình nền nghệ thuật ({asp})...")
+            bg_image_path = await StoryImageGenerator.generate_story_background(
+                story_id=story.id,
+                title=story.title,
+                content=story.content,
+                aspect_ratio=asp
+            )
+
+            if cls._is_job_cancelled(db, job.id):
+                return
+
+            def on_video_render_progress(render_pct: float, msg: str):
+                step_weight = 0.40 / len(ratios_to_render)
+                overall_pct = 0.58 + (i * step_weight) + (render_pct * step_weight)
+                update_video_progress(overall_pct, f"Render video {asp}: {msg}")
+
+            # 3. Render Video with AI background, live waveforms, and synchronized ASS subtitles
+            vp = await StoryVideoRenderer.render_audiobook_video(
+                story_id=story.id,
+                title=story.title,
+                author=story.author or "Khuyết danh",
+                audio_path=story.audio_path,
+                aspect_ratio=asp,
+                bg_image_path=bg_image_path,
+                subtitle_path=ass_path if os.path.exists(ass_path) else None,
+                progress_callback=on_video_render_progress
+            )
+            rendered_paths.append(vp)
+
+        # Main video path is the primary format (9:16 by default or selected)
+        story.video_aspect = "9:16 & 16:9" if len(ratios_to_render) > 1 else aspect_ratio
+        story.video_path = rendered_paths[0]
+        story.status = "completed"
+        story.error_message = None
+
+        job.status = "completed"
+        job.progress = 100
+        job.error_message = None
+        job.result = f"Render video truyện đa giọng ({story.video_aspect}) thành công!"
+        db.commit()
+        logger.info(f"Story #{story_id} video render completed -> {rendered_paths}")
+
+

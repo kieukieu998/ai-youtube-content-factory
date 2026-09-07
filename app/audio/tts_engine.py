@@ -23,25 +23,44 @@ class TTSEngine:
     
     @staticmethod
     def get_audio_duration(audio_file_path: str) -> float:
-        """Extract exact duration in seconds using ffprobe."""
+        """Extract exact duration in seconds using ffprobe or ffmpeg metadata parser."""
+        import re
+        import shutil
+
+        # 1. Try ffprobe if found
         ffprobe_bin = settings.FFPROBE_PATH
-        cmd = [
-            ffprobe_bin,
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            str(audio_file_path)
-        ]
+        if shutil.which(ffprobe_bin) or (os.path.isabs(ffprobe_bin) and os.path.exists(ffprobe_bin)):
+            try:
+                cmd = [
+                    ffprobe_bin,
+                    "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    str(audio_file_path)
+                ]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                if res.returncode == 0 and res.stdout.strip():
+                    return float(res.stdout.strip())
+            except Exception:
+                pass
+
+        # 2. Try ffmpeg -i info
+        ffmpeg_bin = settings.FFMPEG_PATH
         try:
+            cmd = [ffmpeg_bin, "-i", str(audio_file_path)]
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            return float(res.stdout.strip())
+            match = re.search(r'Duration:\s*(\d+):(\d+):(\d+\.?\d*)', res.stderr)
+            if match:
+                hours, mins, secs = match.groups()
+                return float(hours) * 3600 + float(mins) * 60 + float(secs)
         except Exception as e:
-            logger.warning(f"Could not get audio duration via ffprobe: {e}")
-            # Fallback estimation: file size based
-            if os.path.exists(audio_file_path):
-                size_kb = os.path.getsize(audio_file_path) / 1024
-                return max(1.0, size_kb / 16.0) # ~16KB/s for 128kbps mp3
-            return 5.0
+            logger.warning(f"Could not probe duration via ffmpeg: {e}")
+
+        # 3. Fallback estimation: file size based
+        if os.path.exists(audio_file_path):
+            size_kb = os.path.getsize(audio_file_path) / 1024
+            return max(1.0, size_kb / 16.0) # ~16KB/s for 128kbps mp3
+        return 5.0
 
     @staticmethod
     def _split_text_into_chunks(text: str, max_chars: int = 1200) -> List[str]:

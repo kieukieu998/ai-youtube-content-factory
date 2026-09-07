@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.templates import templates
 from app.database.session import get_db
-from app.database.models import Job, Movie, Episode
+from app.database.models import Job, Movie, Episode, Story
 from app.scheduler.job_worker import JobWorker
 
 router = APIRouter()
@@ -49,6 +49,18 @@ def enrich_job_info(jobs, db: Session):
                 display_name = f"🛡️ Lách Bản Quyền 1:1: {video_title}"
                 sub_info = f"Tỉ lệ: {ratio_label} — Pitch: {pitch:+.2f}x"
                 target_url = "/transform"
+            elif j.job_type in ["StoryVideoRenderJob", "StoryAudioJob"]:
+                from app.database.models import Story
+                story_id = payload.get("story_id")
+                story = db.query(Story).filter(Story.id == story_id).first() if story_id else None
+                aspect = payload.get("aspect_ratio", "16:9")
+                if j.job_type == "StoryVideoRenderJob":
+                    display_name = f"📖 Render Video Truyện: {story.title if story else f'Truyện #{story_id}'}"
+                else:
+                    display_name = f"🎙️ Lồng Tiếng Đa Giọng: {story.title if story else f'Truyện #{story_id}'}"
+                author_str = f"Tác giả: {story.author}" if (story and story.author) else "Tác giả: Khuyết danh"
+                sub_info = f"{author_str} — Tỉ lệ: {aspect}"
+                target_url = "/stories"
             elif j.job_type == "TestJob":
                 display_name = "🧪 Kiểm Thử Hệ Thống (TestJob)"
         except Exception:
@@ -104,6 +116,19 @@ async def cancel_job(job_id: int, db: Session = Depends(get_db)):
     
     job.status = "cancelled"
     job.error_message = "Đã hủy bởi người dùng"
+
+    if job.job_type in ["StoryVideoRenderJob", "StoryAudioJob"]:
+        try:
+            payload_data = json.loads(job.payload) if job.payload else {}
+            sid = payload_data.get("story_id")
+            if sid:
+                st = db.query(Story).filter(Story.id == sid).first()
+                if st:
+                    st.status = "failed"
+                    st.error_message = "Đã hủy bởi người dùng"
+        except Exception:
+            pass
+
     db.commit()
     return JSONResponse({"status": "success", "message": f"Đã hủy tác vụ #{job.id}!"})
 
@@ -153,5 +178,29 @@ async def retry_job(job_id: int, db: Session = Depends(get_db)):
     job.status = "pending"
     job.progress = 0
     job.error_message = None
+
+    if job.job_type in ["StoryVideoRenderJob", "StoryAudioJob"]:
+        try:
+            payload_data = json.loads(job.payload) if job.payload else {}
+            sid = payload_data.get("story_id")
+            if sid:
+                st = db.query(Story).filter(Story.id == sid).first()
+                if st:
+                    st.status = "rendering_video" if job.job_type == "StoryVideoRenderJob" else "processing_audio"
+                    st.error_message = None
+        except Exception:
+            pass
+
     db.commit()
     return JSONResponse({"status": "success", "message": f"Đã đưa tác vụ #{job.id} trở lại hàng đợi xử lý!"})
+
+@router.get("/api/v1/jobs/worker-status")
+async def get_worker_status(db: Session = Depends(get_db)):
+    pending_count = db.query(Job).filter(Job.status == "pending").count()
+    processing_count = db.query(Job).filter(Job.status == "processing").count()
+    return JSONResponse({
+        "is_running": JobWorker._is_running,
+        "emergency_stop": JobWorker._emergency_stop,
+        "pending_count": pending_count,
+        "processing_count": processing_count
+    })

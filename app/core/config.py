@@ -15,6 +15,22 @@ except ImportError:
     class ConfigBase(BaseModel):
         pass
 
+def _resolve_ffmpeg_binary() -> str:
+    import shutil
+    env_val = os.getenv("FFMPEG_PATH")
+    if env_val and (shutil.which(env_val) or os.path.exists(env_val)):
+        return env_val
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and os.path.exists(exe):
+            return exe
+    except Exception:
+        pass
+    return "ffmpeg"
+
 class Settings(ConfigBase):
     # App General Settings
     APP_NAME: str = os.getenv("APP_NAME", "AI Movie Content Factory")
@@ -48,7 +64,7 @@ class Settings(ConfigBase):
     DEFAULT_TTS_SPEED: float = float(os.getenv("DEFAULT_TTS_SPEED", "1.0"))
     
     # Video & FFmpeg
-    FFMPEG_PATH: str = os.getenv("FFMPEG_PATH", "ffmpeg")
+    FFMPEG_PATH: str = _resolve_ffmpeg_binary()
     FFPROBE_PATH: str = os.getenv("FFPROBE_PATH", "ffprobe")
     
     # TikTok Publishing API
@@ -60,9 +76,11 @@ class Settings(ConfigBase):
     DAILY_BUDGET_LIMIT_USD: float = float(os.getenv("DAILY_BUDGET_LIMIT_USD", "0.0"))
     OPERATION_MODE: str = os.getenv("OPERATION_MODE", "semi_auto")
     TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")
-    TELEGRAM_CHAT_ID: Optional[str] = os.getenv("TELEGRAM_CHAT_ID")
+    def model_post_init(self, __context):
+        self.FFMPEG_PATH = _resolve_ffmpeg_binary()
 
 settings = Settings()
+settings.FFMPEG_PATH = _resolve_ffmpeg_binary()
 
 # Ensure directories exist
 for directory in [

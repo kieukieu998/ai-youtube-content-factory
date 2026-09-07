@@ -1,0 +1,1022 @@
+{% extends "base.html" %}
+
+{% block title %}Tạo Video Truyện Đa Giọng AI - 1-Click Studio{% endblock %}
+
+{% block content %}
+<div class="space-y-6 w-full">
+    <!-- Header Banner -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-card p-6 rounded-3xl border border-slate-800/80 bg-gradient-to-r from-slate-900/90 via-purple-950/30 to-slate-900/90 shadow-2xl">
+        <div class="space-y-1.5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-pink-500/20 text-white">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                    Studio Tạo Video Truyện Đa Giọng AI
+                    <span class="badge badge-sm badge-success font-mono text-[10px] font-bold uppercase tracking-wider">1-Click Auto AI</span>
+                </h1>
+            </div>
+            <p class="text-sm text-slate-400">
+                Chỉ cần dán nội dung truyện → <span class="text-pink-400 font-semibold">AI tự động phân vai & lồng tiếng đa nhân vật</span> (Nam, Nữ, Người già, Trẻ em, Dẫn chuyện) → <span class="text-indigo-400 font-semibold">Render Video Sóng Âm MP4</span>.
+            </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button onclick="resetStoryForm()" class="btn btn-outline border-slate-700 hover:bg-slate-800 text-slate-300 rounded-xl px-4 flex items-center gap-2 text-sm">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Nhập Truyện Mới
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Workspace: 2-Column Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Side: Story Input (7 Cols) -->
+        <div class="lg:col-span-7 space-y-6">
+            <div class="glass-card rounded-3xl border border-slate-800 p-6 space-y-4">
+                <input type="hidden" id="current_story_id" value="">
+                
+                <!-- Title & Author -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="md:col-span-2">
+                        <label class="text-xs font-semibold text-slate-400 mb-1 block">Tiêu Đề Truyện / Chương</label>
+                        <input type="text" id="story_title" placeholder="VD: Cô Bé Bán Diêm, Cây Tre Trăm Đốt..." class="input input-bordered w-full text-sm font-semibold text-white" />
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 mb-1 block">Tác Giả</label>
+                        <input type="text" id="story_author" placeholder="Khuyết danh" value="Khuyết danh" class="input input-bordered w-full text-sm" />
+                    </div>
+                </div>
+
+                <!-- Aspect Ratio Selector -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-semibold text-slate-400">Định Dạng Video Xuất Bản (Chọn 1 hoặc cả 2)</label>
+                        <span id="aspect_status_badge" class="text-[11px] text-pink-400 font-medium">Đang chọn: 9:16 Dọc</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Card 1: 9:16 Khung Dọc -->
+                        <div id="aspect_card_9x16" onclick="toggleAspect('9:16')" class="cursor-pointer select-none border-2 border-pink-500/90 bg-pink-950/30 p-3 rounded-2xl flex items-center justify-between transition-all duration-200 shadow-md shadow-pink-950/30">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center shrink-0">
+                                    <i data-lucide="smartphone" class="w-5 h-5 text-pink-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">9:16 Khung Dọc</div>
+                                    <div class="text-[10px] text-slate-400">TikTok / Shorts / Reels</div>
+                                </div>
+                            </div>
+                            <div id="aspect_check_9x16" class="w-6 h-6 rounded-full bg-pink-600 text-white flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
+                                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: 16:9 Khung Ngang -->
+                        <div id="aspect_card_16x9" onclick="toggleAspect('16:9')" class="cursor-pointer select-none border border-slate-700/80 bg-slate-900/60 opacity-60 hover:opacity-100 p-3 rounded-2xl flex items-center justify-between transition-all duration-200">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                                    <i data-lucide="tv" class="w-5 h-5 text-indigo-400"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">16:9 Khung Ngang</div>
+                                    <div class="text-[10px] text-slate-400">YouTube / Web / Facebook</div>
+                                </div>
+                            </div>
+                            <div id="aspect_check_16x9" class="w-6 h-6 rounded-full border border-slate-600 bg-slate-800 text-transparent flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
+                                <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="video_aspect_input" value="9:16">
+                </div>
+
+                <!-- Story Textarea -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs font-semibold text-slate-400">Nội Dung Truyện</label>
+                            <span id="word_count_badge" class="badge badge-neutral text-[10px] font-mono text-slate-300">0 từ</span>
+                            <span id="duration_badge" class="badge badge-ghost text-[10px] font-mono text-emerald-400">~0:00</span>
+                        </div>
+                        <label for="txt_file_input" class="cursor-pointer text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Tải file .txt
+                        </label>
+                        <input type="file" id="txt_file_input" accept=".txt" class="hidden" onchange="handleTxtUpload(event)" />
+                    </div>
+                    <textarea id="story_content" rows="13" oninput="calculateStats()" placeholder="Dán hoặc gõ nội dung câu chuyện tại đây... (AI sẽ tự động đọc hiểu toàn bộ câu chuyện, nhận diện nhân vật nam/nữ/già/trẻ em và lồng tiếng tương ứng)." class="textarea textarea-bordered w-full text-sm leading-relaxed font-sans placeholder:text-slate-600 resize-y"></textarea>
+                </div>
+
+                <!-- 1-Click Action Button -->
+                <div class="pt-2">
+                    <button id="create_video_btn" onclick="trigger1ClickVideo()" class="btn btn-primary bg-gradient-to-r from-pink-600 via-indigo-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white w-full border-0 rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-2.5 font-bold py-4 text-base tracking-wide transition-all transform hover:-translate-y-0.5">
+                        <i data-lucide="wand-2" class="w-5 h-5"></i> TẠO VIDEO TỰ ĐỘNG (1-CLICK)
+                    </button>
+                    <p class="text-center text-[11px] text-slate-500 mt-2">
+                        ✨ AI tự động phân vai • Tự đổi giọng nhân vật • Tự ghép nhạc nền • Tự render video
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Side: Video Player & AI Characters (5 Cols) -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- AI Characters Detected Box -->
+            <div class="glass-card rounded-3xl border border-slate-800 p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <i data-lucide="users" class="w-4 h-4 text-pink-400"></i> Dàn Nhân Vật AI Nhận Diện
+                    </h3>
+                    <span id="cast_count_badge" class="badge badge-neutral text-[10px]">Tự động</span>
+                </div>
+
+                <div id="ai_cast_container" class="flex flex-wrap gap-1.5 min-h-[45px] items-center p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                    <span class="text-xs text-slate-500 italic">Dàn nhân vật sẽ xuất hiện tại đây sau khi AI phân tích câu chuyện...</span>
+                </div>
+            </div>
+
+            <!-- Video Player Output Card -->
+            <div class="glass-card rounded-3xl border border-slate-800 p-6 space-y-4 bg-gradient-to-b from-slate-900/70 to-indigo-950/30">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <i data-lucide="video" class="w-4 h-4 text-indigo-400"></i> Video Hoàn Thiện
+                    </h3>
+                    <span id="video_status_badge" class="badge badge-neutral text-xs">Chờ tạo</span>
+                </div>
+
+                <!-- Video Display Area -->
+                <div id="video_empty_placeholder" class="rounded-2xl border border-dashed border-slate-700 bg-slate-950/50 p-8 flex flex-col items-center justify-center text-center gap-2 text-slate-500">
+                    <i data-lucide="film" class="w-10 h-10 text-slate-600"></i>
+                    <p class="text-xs">Chưa có video. Nhập nội dung truyện và bấm <b class="text-indigo-400">"Tạo Video Tự Động"</b> để bắt đầu.</p>
+                </div>
+
+                <div id="video_preview_box" class="hidden space-y-3">
+                    <!-- Format Switcher Tabs -->
+                    <div id="video_format_tabs" class="flex items-center justify-between gap-2 pb-1 border-b border-slate-800/80">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-slate-400 font-semibold">Khung hình:</span>
+                            <button type="button" id="tab_btn_9x16" onclick="switchVideoFormat('9:16')" class="btn btn-xs rounded-lg font-bold gap-1 bg-pink-600 hover:bg-pink-500 text-white border-0">
+                                <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> 9:16 TikTok
+                            </button>
+                            <button type="button" id="tab_btn_16x9" onclick="switchVideoFormat('16:9')" class="btn btn-xs rounded-lg font-bold gap-1 btn-outline border-slate-700 text-slate-300">
+                                <i data-lucide="tv" class="w-3.5 h-3.5"></i> 16:9 YouTube
+                            </button>
+                        </div>
+                        <span id="current_aspect_label" class="text-[11px] font-mono text-pink-400 font-semibold">9:16 TikTok</span>
+                    </div>
+
+                    <div id="video_player_wrapper" class="relative rounded-2xl overflow-hidden border border-slate-700 bg-black aspect-video max-h-[500px] flex items-center justify-center transition-all">
+                        <video id="rendered_video_player" controls class="w-full h-full object-contain">
+                            <source id="rendered_video_source" src="" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="badge badge-xs bg-indigo-950 border border-indigo-700/60 text-indigo-300 text-[10px] py-1 px-2">✨ Ảnh Nền AI</span>
+                            <span class="badge badge-xs bg-pink-950 border border-pink-700/60 text-pink-300 text-[10px] py-1 px-2">💬 Phụ Đề Đồng Bộ</span>
+                            <span class="badge badge-xs bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] py-1 px-2">🔊 Sóng Âm Thanh</span>
+                            <span id="current_video_size_badge" class="badge badge-xs bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] py-1 px-2 font-mono flex items-center gap-1 hidden">
+                                <i data-lucide="hard-drive" class="w-3 h-3 text-cyan-400"></i> <span id="current_video_size_val">0 MB</span>
+                            </span>
+                        </div>
+                        <a id="video_download_link" href="#" download class="btn btn-sm bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 font-semibold shrink-0">
+                            <i data-lucide="download" class="w-4 h-4"></i> <span id="download_btn_text">Tải Video MP4</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Audio Track Player (Optional Preview) -->
+                <div id="audio_track_box" class="hidden pt-3 border-t border-slate-800/80 space-y-2">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span class="flex items-center gap-1"><i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i> File Âm Thanh Kịch (MP3):</span>
+                        <a id="audio_download_link" href="#" download class="text-indigo-400 hover:underline">Tải MP3</a>
+                    </div>
+                    <audio id="main_audio_player" controls class="w-full h-8 custom-audio-player">
+                        <source id="main_audio_source" src="" type="audio/mpeg">
+                    </audio>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Bottom Section: Story Library / Danh Sách Truyện -->
+    <div class="glass-card rounded-3xl border border-slate-800 p-6 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="folder" class="w-5 h-5 text-amber-400"></i> Kho Truyện & Video Đã Tạo
+                </h2>
+                <p class="text-xs text-slate-400">Danh sách các video truyện lồng tiếng đa giọng AI.</p>
+            </div>
+            <span class="badge badge-neutral text-xs font-mono" id="total_stories_badge">{{ stories|length }} truyện</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="table w-full text-sm">
+                <thead>
+                    <tr class="text-slate-400 border-b border-slate-800">
+                        <th>ID</th>
+                        <th>Tiêu Đề</th>
+                        <th>Tác Giả</th>
+                        <th>Độ Dài</th>
+                        <th>Nhân Vật AI</th>
+                        <th>Trạng Thái</th>
+                        <th>Thời Gian</th>
+                        <th class="text-right">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="story_table_body">
+                    {% for item in stories_data %}
+                    {% set s = item.story %}
+                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
+                        <td class="font-mono text-xs text-slate-500">#{{ s.id }}</td>
+                        <td>
+                            <div class="font-bold text-white cursor-pointer hover:text-indigo-400 transition" onclick="loadStory({{ s.id }})">{{ s.title }}</div>
+                            <div class="mt-1 flex flex-wrap items-center gap-1">
+                                {% if item.is_both %}
+                                    <span class="badge badge-xs bg-pink-950/90 border border-pink-700/60 text-pink-300 text-[10px] font-mono">9:16 Dọc</span>
+                                    <span class="badge badge-xs bg-indigo-950/90 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">16:9 Ngang</span>
+                                {% elif s.video_aspect == '9:16' or (item.has_9x16 and not item.has_16x9) %}
+                                    <span class="badge badge-xs bg-pink-950/90 border border-pink-700/60 text-pink-300 text-[10px] font-mono">9:16 Dọc</span>
+                                {% else %}
+                                    <span class="badge badge-xs bg-indigo-950/90 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">16:9 Ngang</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-slate-300">{{ s.author or 'Khuyết danh' }}</td>
+                        <td>
+                            <div class="text-xs text-slate-300 font-mono">{{ s.word_count }} từ</div>
+                            <div class="text-[11px] text-emerald-400 font-mono">~{{ (s.duration_seconds / 60)|round(1) }} phút</div>
+                            {% if item.video_size_9x16 and item.video_size_16x9 %}
+                            <div class="text-[10px] text-cyan-300 font-mono space-y-0.5 mt-1" title="Dung lượng 2 định dạng video">
+                                <div class="flex items-center gap-1"><i data-lucide="hard-drive" class="w-3 h-3 text-pink-400"></i> 9:16: {{ item.video_size_9x16 }}</div>
+                                <div class="flex items-center gap-1"><i data-lucide="hard-drive" class="w-3 h-3 text-indigo-400"></i> 16:9: {{ item.video_size_16x9 }}</div>
+                            </div>
+                            {% elif item.video_size %}
+                            <div class="text-[10px] text-cyan-300 font-mono flex items-center gap-1 mt-1" title="Dung lượng file video">
+                                <i data-lucide="hard-drive" class="w-3 h-3 text-cyan-400"></i> {{ item.video_size }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.characters and item.characters|length > 0 %}
+                            <div class="flex flex-wrap gap-1">
+                                {% for c in item.characters %}
+                                <span class="badge badge-xs bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] py-0.5 px-1.5">{{ c }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="badge badge-xs badge-neutral text-[10px]">Đa giọng AI</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if s.status == 'completed' %}
+                            <span class="badge badge-success badge-sm text-[11px] font-semibold">Video Sẵn Sàng</span>
+                            {% elif s.status == 'audio_ready' %}
+                            <span class="badge badge-info badge-sm text-[11px]">Audio Sẵn Sàng</span>
+                            {% elif s.status == 'failed' or s.status == 'cancelled' %}
+                            <span class="badge badge-error badge-sm text-[11px] font-semibold" title="{{ s.error_message or 'Tác vụ gặp lỗi' }}">Lỗi</span>
+                            {% elif s.status == 'rendering_video' or s.status == 'processing_audio' %}
+                            <span class="badge badge-warning badge-sm text-[11px] animate-pulse">Đang Render...</span>
+                            {% else %}
+                            <span class="badge badge-neutral badge-sm text-[11px]">Bản Nháp</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs text-slate-400">{{ s.created_at.strftime('%d/%m/%Y %H:%M') if s.created_at else '' }}</td>
+                        <td class="text-right space-x-1 whitespace-nowrap">
+                            {% if s.video_path or s.status == 'completed' %}
+                            <button onclick="loadStory({{ s.id }})" class="btn btn-xs bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-lg gap-1 shadow-md shadow-emerald-600/20 font-bold" title="Xem và phát video truyện">
+                                <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video
+                            </button>
+                            {% endif %}
+                            <button onclick="viewStoryContent({{ s.id }})" class="btn btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg gap-1" title="Đọc toàn bộ nội dung truyện">
+                                <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Đọc
+                            </button>
+                            <button onclick="loadStory({{ s.id }})" class="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800" title="Mở vào trình soạn thảo & phát video">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Sửa
+                            </button>
+                            <button onclick="deleteStory({{ s.id }})" class="btn btn-xs btn-ghost text-rose-400 hover:bg-rose-950/50" title="Xóa truyện">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr id="empty_stories_row">
+                        <td colspan="8" class="text-center py-8 text-slate-500 italic">
+                            Chưa có truyện nào trong kho. Hãy nhập nội dung truyện và bấm "Tạo Video Tự Động" phía trên!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Đọc & Xem Lại Nội Dung Truyện -->
+    <dialog id="story_reader_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box bg-slate-900 border border-slate-700/80 rounded-3xl max-w-4xl p-6 text-slate-200 shadow-2xl space-y-4">
+            <div class="flex items-start justify-between border-b border-slate-800 pb-3">
+                <div class="space-y-1">
+                    <h3 id="modal_story_title" class="text-xl font-black text-white flex items-center gap-2"></h3>
+                    <div class="flex items-center gap-3 text-xs text-slate-400">
+                        <span id="modal_story_author" class="text-pink-400 font-semibold"></span>
+                        <span>•</span>
+                        <span id="modal_story_stats" class="font-mono text-emerald-400"></span>
+                    </div>
+                </div>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost text-slate-400 hover:text-white">✕</button>
+                </form>
+            </div>
+
+            <!-- AI Characters in Modal -->
+            <div id="modal_story_characters_box" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs items-center">
+                <span class="text-slate-500 font-semibold">Dàn nhân vật AI:</span>
+                <div id="modal_story_characters_list" class="flex flex-wrap gap-1"></div>
+            </div>
+
+            <!-- Story Full Content Reader -->
+            <div id="modal_story_content" class="bg-slate-950/90 rounded-2xl p-6 border border-slate-800/80 max-h-[60vh] overflow-y-auto space-y-3.5 text-slate-200 text-base leading-loose font-serif">
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="modal-action flex justify-between items-center pt-2 border-t border-slate-800">
+                <div class="flex items-center gap-2">
+                    <button id="modal_play_video_btn" onclick="loadStoryFromModal()" class="btn btn-sm bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-emerald-600/30 font-bold">
+                        <i data-lucide="play-circle" class="w-4 h-4"></i> Xem & Phát Video Truyện Này
+                    </button>
+                    <button onclick="loadStoryFromModal()" class="btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-indigo-600/30 font-semibold">
+                        <i data-lucide="edit" class="w-4 h-4"></i> Sửa Truyện
+                    </button>
+                </div>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-outline border-slate-700 text-slate-300 rounded-xl">Đóng</button>
+                </form>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+</div>
+
+<style>
+.active-aspect {
+    border-color: #6366f1 !important;
+    background: rgba(99, 102, 241, 0.15) !important;
+}
+.custom-audio-player::-webkit-media-controls-panel {
+    background-color: #0f172a;
+}
+</style>
+
+<script>
+let pollJobInterval = null;
+
+$(document).ready(function() {
+    // Restore preferred aspect ratio from localStorage if available
+    const savedAspect = localStorage.getItem('preferred_story_aspect');
+    if (savedAspect) {
+        if (savedAspect === 'both') {
+            selectedAspects = new Set(['9:16', '16:9']);
+        } else if (savedAspect === '16:9') {
+            selectedAspects = new Set(['16:9']);
+        } else {
+            selectedAspects = new Set(['9:16']);
+        }
+        updateAspectUI();
+    }
+
+    lucide.createIcons();
+    calculateStats();
+    
+    // Auto-load most recent story if available
+    {% if latest_story_id %}
+    loadStory({{ latest_story_id }});
+    {% endif %}
+
+    // Periodic auto-sync for story table
+    setInterval(() => {
+        refreshStoryTable();
+    }, 3500);
+});
+
+function calculateStats() {
+    const text = $('#story_content').val() || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    $('#word_count_badge').text(`${words} từ`);
+    
+    // ~175 words per minute
+    const totalSecs = Math.round((words / 175) * 60);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    const formatted = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    $('#duration_badge').text(`~${formatted}`);
+}
+
+function handleTxtUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        $('#story_content').val(text);
+        if (!$('#story_title').val()) {
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
+            $('#story_title').val(fileName);
+        }
+        calculateStats();
+        Swal.fire({
+            icon: 'success',
+            title: 'Tải File Thành Công',
+            text: `Đã nhập nội dung từ file "${file.name}"`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+let selectedAspects = new Set(['9:16']);
+
+function toggleAspect(format) {
+    if (selectedAspects.has(format)) {
+        if (selectedAspects.size === 1) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Giữ lại ít nhất 1 định dạng',
+                text: 'Bạn cần chọn ít nhất 1 định dạng (9:16 hoặc 16:9) để xuất video.',
+                timer: 1800,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+            return;
+        }
+        selectedAspects.delete(format);
+    } else {
+        selectedAspects.add(format);
+    }
+    updateAspectUI();
+}
+
+function updateAspectUI() {
+    const has916 = selectedAspects.has('9:16');
+    const has169 = selectedAspects.has('16:9');
+
+    // Update hidden input & status text
+    const curVal = (has916 && has169) ? 'both' : (has916 ? '9:16' : '16:9');
+    $('#video_aspect_input').val(curVal);
+    try { localStorage.setItem('preferred_story_aspect', curVal); } catch(e) {}
+
+    if (has916 && has169) {
+        $('#aspect_status_badge').text('Đang chọn: Cả 2 Định Dạng (9:16 + 16:9)').removeClass('text-pink-400 text-indigo-400').addClass('text-purple-400 font-bold');
+    } else if (has916) {
+        $('#aspect_status_badge').text('Đang chọn: 9:16 Dọc (TikTok)').removeClass('text-purple-400 text-indigo-400').addClass('text-pink-400 font-medium');
+    } else {
+        $('#aspect_status_badge').text('Đang chọn: 16:9 Ngang (YouTube)').removeClass('text-purple-400 text-pink-400').addClass('text-indigo-400 font-medium');
+    }
+
+    // 9:16 Card styling
+    const card916 = $('#aspect_card_9x16');
+    const check916 = $('#aspect_check_9x16');
+    if (has916) {
+        card916.removeClass('border-slate-700/80 bg-slate-900/60 opacity-60')
+               .addClass('border-2 border-pink-500/90 bg-pink-950/30 opacity-100 shadow-md shadow-pink-950/30');
+        check916.removeClass('border border-slate-600 bg-slate-800 text-transparent')
+                .addClass('bg-pink-600 text-white');
+    } else {
+        card916.removeClass('border-2 border-pink-500/90 bg-pink-950/30 opacity-100 shadow-md shadow-pink-950/30')
+               .addClass('border border-slate-700/80 bg-slate-900/60 opacity-60');
+        check916.removeClass('bg-pink-600 text-white')
+                .addClass('border border-slate-600 bg-slate-800 text-transparent');
+    }
+
+    // 16:9 Card styling
+    const card169 = $('#aspect_card_16x9');
+    const check169 = $('#aspect_check_16x9');
+    if (has169) {
+        card169.removeClass('border-slate-700/80 bg-slate-900/60 opacity-60')
+               .addClass('border-2 border-indigo-500/90 bg-indigo-950/30 opacity-100 shadow-md shadow-indigo-950/30');
+        check169.removeClass('border border-slate-600 bg-slate-800 text-transparent')
+                .addClass('bg-indigo-600 text-white');
+    } else {
+        card169.removeClass('border-2 border-indigo-500/90 bg-indigo-950/30 opacity-100 shadow-md shadow-indigo-950/30')
+               .addClass('border border-slate-700/80 bg-slate-900/60 opacity-60');
+        check169.removeClass('bg-indigo-600 text-white')
+                .addClass('border border-slate-600 bg-slate-800 text-transparent');
+    }
+
+    lucide.createIcons();
+}
+
+function resetStoryForm() {
+    // 1. Explicitly pause and reset video player
+    const vidEl = $('#rendered_video_player')[0];
+    if (vidEl) {
+        vidEl.pause();
+        vidEl.currentTime = 0;
+        vidEl.src = '';
+        $('#rendered_video_source').attr('src', '');
+        try { vidEl.load(); } catch (e) {}
+    }
+
+    // 2. Explicitly pause and reset audio player
+    const audEl = $('#main_audio_player')[0];
+    if (audEl) {
+        audEl.pause();
+        audEl.currentTime = 0;
+        audEl.src = '';
+        $('#main_audio_source').attr('src', '');
+        try { audEl.load(); } catch (e) {}
+    }
+
+    // 3. Clear form inputs
+    $('#current_story_id').val('');
+    $('#story_title').val('');
+    $('#story_author').val('Khuyết danh');
+    $('#story_content').val('');
+    $('#txt_file_input').val('');
+    
+    // 4. Reset aspect ratio selection to default 9:16 TikTok
+    selectedAspects = new Set(['9:16']);
+    updateAspectUI();
+
+    // 5. Hide preview boxes & reset placeholders
+    $('#video_empty_placeholder').removeClass('hidden');
+    $('#video_preview_box').addClass('hidden');
+    $('#audio_track_box').addClass('hidden');
+    $('#video_status_badge').text('Chờ tạo').removeClass('badge-success badge-warning').addClass('badge-neutral');
+    $('#ai_cast_container').html('<span class="text-xs text-slate-500 italic">Dàn nhân vật sẽ xuất hiện tại đây sau khi AI phân tích câu chuyện...</span>');
+    $('#cast_count_badge').text('Tự động');
+    
+    currentStoryVideoSizes = {};
+    $('#current_video_size_badge').addClass('hidden');
+    calculateStats();
+    $('#story_title').focus();
+}
+
+let currentStoryVideos = {};
+let currentStoryVideoSizes = {};
+
+function switchVideoFormat(format) {
+    const src = currentStoryVideos[format];
+    if (!src) return;
+
+    const vidEl = $('#rendered_video_player')[0];
+    if (vidEl) {
+        const isPlaying = !vidEl.paused;
+        const curTime = vidEl.currentTime;
+        vidEl.src = src;
+        vidEl.load();
+        try {
+            vidEl.currentTime = curTime;
+        } catch (e) {}
+        if (isPlaying) {
+            vidEl.play().catch(e => {});
+        }
+    }
+    $('#video_download_link').attr('href', src);
+
+    const size = currentStoryVideoSizes[format];
+    if (size) {
+        $('#current_video_size_val').text(size);
+        $('#current_video_size_badge').removeClass('hidden');
+        $('#download_btn_text').text(`Tải Video (${format} • ${size})`);
+    } else {
+        $('#current_video_size_badge').addClass('hidden');
+        $('#download_btn_text').text(`Tải Video (${format})`);
+    }
+
+    if (format === '9:16') {
+        $('#tab_btn_9x16').removeClass('btn-outline border-slate-700 text-slate-300').addClass('bg-pink-600 hover:bg-pink-500 text-white border-0');
+        $('#tab_btn_16x9').removeClass('bg-indigo-600 hover:bg-indigo-500 text-white border-0').addClass('btn-outline border-slate-700 text-slate-300');
+        $('#current_aspect_label').text('9:16 TikTok').removeClass('text-indigo-400').addClass('text-pink-400');
+        $('#video_player_wrapper').removeClass('aspect-video max-w-full').addClass('aspect-[9/16] max-h-[500px] mx-auto');
+    } else {
+        $('#tab_btn_16x9').removeClass('btn-outline border-slate-700 text-slate-300').addClass('bg-indigo-600 hover:bg-indigo-500 text-white border-0');
+        $('#tab_btn_9x16').removeClass('bg-pink-600 hover:bg-pink-500 text-white border-0').addClass('btn-outline border-slate-700 text-slate-300');
+        $('#current_aspect_label').text('16:9 YouTube').removeClass('text-pink-400').addClass('text-indigo-400');
+        $('#video_player_wrapper').removeClass('aspect-[9/16] max-h-[500px] mx-auto').addClass('aspect-video max-w-full');
+    }
+    lucide.createIcons();
+}
+
+async function trigger1ClickVideo() {
+    const title = $('#story_title').val().trim() || 'Truyện chưa đặt tên';
+    const author = $('#story_author').val().trim() || 'Khuyết danh';
+    const content = $('#story_content').val().trim();
+    const aspect = $('#video_aspect_input').val() || '9:16';
+    const aspectLabel = aspect === 'both' ? 'Cả 2 Định Dạng (9:16 + 16:9)' : (aspect === '16:9' ? '16:9 Khung Ngang' : '9:16 Khung Dọc');
+
+    if (!content) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Nội Dung Trống',
+            text: 'Vui lòng dán hoặc nhập nội dung truyện trước khi tạo video.'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'AI Đang Xử Lý Toàn Diện...',
+        html: `
+            <div class="space-y-3 text-left text-xs text-slate-300 py-2">
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500 animate-ping"></span> 1. Đọc hiểu & phân tách nhân vật (Nam, Nữ, Già, Trẻ em)...</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> 2. Lồng tiếng đa giọng & mix nhạc nền...</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> 3. Render video sóng âm thanh (${aspectLabel})...</div>
+            </div>
+        `,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const res = await fetch('/api/stories/quick-create-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                author: author,
+                content: content,
+                video_aspect: aspect
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            $('#current_story_id').val(data.story_id);
+            pollJobStatus(data.job_id, () => {
+                loadStory(data.story_id);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tạo Video Hoàn Tất!',
+                    text: 'AI đã phân vai lồng tiếng đa giọng và render video thành công! Bạn có thể xem ngay hoặc tải MP4 về máy.',
+                    confirmButtonColor: '#6366f1'
+                });
+            });
+        } else {
+            throw new Error(data.detail || 'Lỗi khi gửi yêu cầu tạo video');
+        }
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Thất Bại', text: err.message });
+    }
+}
+
+function pollJobStatus(jobId, onComplete) {
+    if (pollJobInterval) clearInterval(pollJobInterval);
+
+    pollJobInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/jobs/${jobId}/status`);
+            if (!res.ok) return;
+            const job = await res.json();
+
+            if (job.status === 'completed') {
+                clearInterval(pollJobInterval);
+                if (onComplete) onComplete();
+            } else if (job.status === 'failed') {
+                clearInterval(pollJobInterval);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Tác Vụ Thất Bại',
+                    text: job.error_message || 'Đã có lỗi xảy ra trong quá trình xử lý.'
+                });
+            } else if (job.status === 'processing') {
+                if (Swal.isVisible()) {
+                    Swal.update({
+                        text: `${job.result || 'Đang xử lý...'} (${job.progress}%)`
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Polling error:", e);
+        }
+    }, 2000);
+}
+
+async function loadStory(storyId) {
+    try {
+        const res = await fetch(`/api/stories/${storyId}`);
+        if (!res.ok) throw new Error('Không thể tải thông tin truyện');
+        const s = await res.json();
+
+        // Pause previous playback
+        const prevVid = $('#rendered_video_player')[0];
+        if (prevVid) { prevVid.pause(); }
+        const prevAud = $('#main_audio_player')[0];
+        if (prevAud) { prevAud.pause(); }
+
+        $('#current_story_id').val(s.id);
+        $('#story_title').val(s.title);
+        $('#story_author').val(s.author || 'Khuyết danh');
+        $('#story_content').val(s.content);
+        
+        // Synchronize Aspect Ratio cards with the story's saved aspect ratio
+        if (s.video_aspect === 'both' || s.is_both || (s.video_aspect && (s.video_aspect.includes('&') || s.video_aspect.includes('+'))) || (s.video_path_9x16 && s.video_path_16x9) || (s.video_size_9x16 && s.video_size_16x9)) {
+            selectedAspects = new Set(['9:16', '16:9']);
+        } else if (s.video_aspect === '16:9' || (!s.video_path_9x16 && s.video_path_16x9)) {
+            selectedAspects = new Set(['16:9']);
+        } else {
+            selectedAspects = new Set(['9:16']);
+        }
+        updateAspectUI();
+
+        calculateStats();
+
+        // Display AI Characters
+        if (s.characters && s.characters.length > 0) {
+            let castHtml = '';
+            s.characters.forEach(c => {
+                castHtml += `<span class="badge badge-sm badge-info text-[11px] font-medium py-1 px-2.5 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${escapeHtml(c)}</span>`;
+            });
+            $('#ai_cast_container').html(castHtml);
+            $('#cast_count_badge').text(`${s.characters.length} nhân vật`);
+        } else {
+            $('#ai_cast_container').html('<span class="text-xs text-slate-500 italic">Người dẫn chuyện</span>');
+            $('#cast_count_badge').text('1 nhân vật');
+        }
+
+        // Video Player & Multiple Format Handling
+        currentStoryVideos = {};
+        currentStoryVideoSizes = {};
+        if (s.video_path_9x16) {
+            currentStoryVideos['9:16'] = `/${s.video_path_9x16}?t=${Date.now()}`;
+            currentStoryVideoSizes['9:16'] = s.video_size_9x16;
+        }
+        if (s.video_path_16x9) {
+            currentStoryVideos['16:9'] = `/${s.video_path_16x9}?t=${Date.now()}`;
+            currentStoryVideoSizes['16:9'] = s.video_size_16x9;
+        }
+        if (s.video_path) {
+            const is9x16 = s.video_path.includes('9x16') || s.video_aspect === '9:16';
+            const asp = is9x16 ? '9:16' : '16:9';
+            if (!currentStoryVideos[asp]) {
+                currentStoryVideos[asp] = `/${s.video_path}?t=${Date.now()}`;
+                currentStoryVideoSizes[asp] = s.video_size || (asp === '9:16' ? s.video_size_9x16 : s.video_size_16x9);
+            }
+        }
+
+        const has9x16 = !!currentStoryVideos['9:16'];
+        const has16x9 = !!currentStoryVideos['16:9'];
+
+        if (has9x16 || has16x9) {
+            $('#video_empty_placeholder').addClass('hidden');
+            $('#video_preview_box').removeClass('hidden');
+            $('#video_status_badge').text('Video Sẵn Sàng').removeClass('badge-neutral badge-warning').addClass('badge-success');
+
+            if (has9x16 && has16x9) {
+                $('#video_format_tabs').removeClass('hidden');
+            } else {
+                $('#video_format_tabs').addClass('hidden');
+            }
+
+            // Default to 9:16 TikTok if available, otherwise 16:9
+            const activeFmt = has9x16 ? '9:16' : '16:9';
+            switchVideoFormat(activeFmt);
+        } else {
+            $('#video_preview_box').addClass('hidden');
+            $('#video_empty_placeholder').removeClass('hidden');
+            if (s.status === 'failed' || s.status === 'cancelled') {
+                $('#video_status_badge').text('Lỗi').removeClass('badge-success badge-warning badge-neutral').addClass('badge-error');
+            } else if (s.status.includes('rendering') || s.status.includes('processing')) {
+                $('#video_status_badge').text('Đang Render...').removeClass('badge-success badge-error badge-neutral').addClass('badge-warning');
+            } else {
+                $('#video_status_badge').text('Chờ tạo').removeClass('badge-success badge-warning badge-error').addClass('badge-neutral');
+            }
+        }
+
+        // Audio Player
+        if (s.audio_path) {
+            const audioSrc = `/${s.audio_path}?t=${Date.now()}`;
+            $('#main_audio_source').attr('src', audioSrc);
+            const audEl = $('#main_audio_player')[0];
+            if (audEl) {
+                audEl.src = audioSrc;
+                audEl.load();
+            }
+            $('#audio_download_link').attr('href', audioSrc);
+            $('#audio_track_box').removeClass('hidden');
+        } else {
+            $('#audio_track_box').addClass('hidden');
+        }
+
+        refreshStoryTable();
+        lucide.createIcons();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+    }
+}
+
+async function deleteStory(storyId) {
+    const confirm = await Swal.fire({
+        title: 'Xác Nhận Xóa?',
+        text: 'Truyện và file video đã tạo sẽ bị xóa vĩnh viễn.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#334155',
+        confirmButtonText: 'Xóa Vĩnh Viễn',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+        const res = await fetch(`/api/stories/${storyId}`, { method: 'DELETE' });
+        if (res.ok) {
+            Swal.fire({ icon: 'success', title: 'Đã Xóa', text: 'Truyện đã được xóa thành công', timer: 1200, showConfirmButton: false });
+            if ($('#current_story_id').val() == storyId) {
+                resetStoryForm();
+            }
+            refreshStoryTable();
+        } else {
+            throw new Error('Lỗi khi xóa truyện');
+        }
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+    }
+}
+
+async function refreshStoryTable() {
+    try {
+        const res = await fetch('/api/stories');
+        if (!res.ok) return;
+        const stories = await res.json();
+
+        $('#total_stories_badge').text(`${stories.length} truyện`);
+
+        if (stories.length === 0) {
+            $('#story_table_body').html(`
+                <tr id="empty_stories_row">
+                    <td colspan="8" class="text-center py-8 text-slate-500 italic">
+                        Chưa có truyện nào trong kho. Hãy nhập nội dung truyện và bấm "Tạo Video Tự Động" phía trên!
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        let html = '';
+        stories.forEach(s => {
+            let statusBadge = '<span class="badge badge-neutral badge-sm text-[11px]">Bản Nháp</span>';
+            if (s.status === 'completed') {
+                statusBadge = '<span class="badge badge-success badge-sm text-[11px] font-semibold">Video Sẵn Sàng</span>';
+            } else if (s.status === 'audio_ready') {
+                statusBadge = '<span class="badge badge-info badge-sm text-[11px]">Audio Sẵn Sàng</span>';
+            } else if (s.status === 'failed' || s.status === 'cancelled') {
+                statusBadge = `<span class="badge badge-error badge-sm text-[11px] font-semibold" title="${escapeHtml(s.error_message || 'Tác vụ gặp lỗi')}">Lỗi</span>`;
+            } else if (s.status.includes('processing') || s.status.includes('rendering')) {
+                statusBadge = '<span class="badge badge-warning badge-sm text-[11px] animate-pulse">Đang Render...</span>';
+            }
+
+            let charBadges = '';
+            if (s.characters && s.characters.length > 0) {
+                charBadges = `<div class="flex flex-wrap gap-1">` + s.characters.map(c => `<span class="badge badge-xs bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] py-0.5 px-1.5">${escapeHtml(c)}</span>`).join('') + `</div>`;
+            } else {
+                charBadges = `<span class="badge badge-xs badge-neutral text-[10px]">Đa giọng AI</span>`;
+            }
+
+            let watchVideoBtn = '';
+            if (s.video_path || s.status === 'completed') {
+                watchVideoBtn = `
+                    <button onclick="loadStory(${s.id})" class="btn btn-xs bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-lg gap-1 shadow-md shadow-emerald-600/20 font-bold" title="Xem và phát video truyện">
+                        <i data-lucide="play-circle" class="w-3.5 h-3.5"></i> Xem Video
+                    </button>
+                `;
+            }
+
+            const isBoth = s.is_both || (s.video_aspect && (s.video_aspect === 'both' || s.video_aspect.includes('&') || s.video_aspect.includes('+'))) || (s.video_size_9x16 && s.video_size_16x9);
+            
+            let aspectBadge = '';
+            if (isBoth) {
+                aspectBadge = `
+                    <div class="flex flex-wrap items-center gap-1 mt-1">
+                        <span class="badge badge-xs bg-pink-950/90 border border-pink-700/60 text-pink-300 text-[10px] font-mono">9:16 Dọc</span>
+                        <span class="badge badge-xs bg-indigo-950/90 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">16:9 Ngang</span>
+                    </div>
+                `;
+            } else if (s.video_aspect === '16:9' || (!s.video_size_9x16 && s.video_size_16x9)) {
+                aspectBadge = `<div class="mt-1"><span class="badge badge-xs bg-indigo-950/90 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">16:9 Ngang</span></div>`;
+            } else {
+                aspectBadge = `<div class="mt-1"><span class="badge badge-xs bg-pink-950/90 border border-pink-700/60 text-pink-300 text-[10px] font-mono">9:16 Dọc</span></div>`;
+            }
+
+            let sizeHtml = '';
+            if (s.video_size_9x16 && s.video_size_16x9) {
+                sizeHtml = `
+                    <div class="text-[10px] text-cyan-300 font-mono space-y-0.5 mt-1" title="Dung lượng 2 định dạng video">
+                        <div class="flex items-center gap-1"><i data-lucide="hard-drive" class="w-3 h-3 text-pink-400"></i> 9:16: ${s.video_size_9x16}</div>
+                        <div class="flex items-center gap-1"><i data-lucide="hard-drive" class="w-3 h-3 text-indigo-400"></i> 16:9: ${s.video_size_16x9}</div>
+                    </div>
+                `;
+            } else if (s.video_size) {
+                sizeHtml = `<div class="text-[10px] text-cyan-300 font-mono flex items-center gap-1 mt-1" title="Dung lượng file video"><i data-lucide="hard-drive" class="w-3 h-3 text-cyan-400"></i> ${s.video_size}</div>`;
+            }
+
+            html += `
+                <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
+                    <td class="font-mono text-xs text-slate-500">#${s.id}</td>
+                    <td>
+                        <div class="font-bold text-white cursor-pointer hover:text-indigo-400 transition" onclick="loadStory(${s.id})">${escapeHtml(s.title)}</div>
+                        ${aspectBadge}
+                    </td>
+                    <td class="text-slate-300">${escapeHtml(s.author || 'Khuyết danh')}</td>
+                    <td>
+                        <div class="text-xs text-slate-300 font-mono">${s.word_count} từ</div>
+                        <div class="text-[11px] text-emerald-400 font-mono">~${(s.duration_seconds / 60).toFixed(1)} phút</div>
+                        ${sizeHtml}
+                    </td>
+                    <td>${charBadges}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-xs text-slate-400">${s.created_at}</td>
+                    <td class="text-right space-x-1 whitespace-nowrap">
+                        ${watchVideoBtn}
+                        <button onclick="viewStoryContent(${s.id})" class="btn btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg gap-1" title="Đọc toàn bộ nội dung truyện">
+                            <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Đọc
+                        </button>
+                        <button onclick="loadStory(${s.id})" class="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800" title="Mở vào trình soạn thảo & phát video">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Sửa
+                        </button>
+                        <button onclick="deleteStory(${s.id})" class="btn btn-xs btn-ghost text-rose-400 hover:bg-rose-950/50" title="Xóa truyện">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        $('#story_table_body').html(html);
+        lucide.createIcons();
+
+    } catch (e) {
+        console.error("Refresh table error:", e);
+    }
+}
+
+let activeModalStoryId = null;
+
+async function viewStoryContent(storyId) {
+    try {
+        const res = await fetch(`/api/stories/${storyId}`);
+        if (!res.ok) throw new Error('Không thể tải thông tin truyện');
+        const s = await res.json();
+        activeModalStoryId = s.id;
+
+        $('#modal_story_title').text(s.title);
+        $('#modal_story_author').text(`Tác giả: ${s.author || 'Khuyết danh'}`);
+        $('#modal_story_stats').text(`${s.word_count} từ • ~${(s.duration_seconds / 60).toFixed(1)} phút nghe`);
+
+        // Render characters badges
+        if (s.characters && s.characters.length > 0) {
+            let castHtml = '';
+            s.characters.forEach(c => {
+                castHtml += `<span class="badge badge-sm badge-info text-[11px] font-medium py-1 px-2.5 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${escapeHtml(c)}</span>`;
+            });
+            $('#modal_story_characters_list').html(castHtml);
+            $('#modal_story_characters_box').removeClass('hidden');
+        } else {
+            $('#modal_story_characters_box').addClass('hidden');
+        }
+
+        // Render paragraphs
+        const paras = s.paragraphs || (s.content ? s.content.split('\n').filter(p => p.trim()) : []);
+        if (paras.length > 0) {
+            let phtml = '';
+            paras.forEach(p => {
+                phtml += `<p class="indent-6 text-justify">${escapeHtml(p)}</p>`;
+            });
+            $('#modal_story_content').html(phtml);
+        } else {
+            $('#modal_story_content').html('<p class="text-slate-500 italic text-center">Nội dung truyện trống.</p>');
+        }
+
+        lucide.createIcons();
+        document.getElementById('story_reader_modal').showModal();
+
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+    }
+}
+
+function loadStoryFromModal() {
+    if (activeModalStoryId) {
+        document.getElementById('story_reader_modal').close();
+        loadStory(activeModalStoryId);
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+</script>
+{% endblock %}

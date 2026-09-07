@@ -173,3 +173,27 @@ class AIRun(Base):
     total_cost_usd = Column(Float, default=0.0)
     execution_time_ms = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class Story(Base):
+    __tablename__ = "stories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), index=True, nullable=False)
+    author = Column(String(100), default="Khuyết danh")
+    genre = Column(String(100), default="Truyện ngắn")
+    content = Column(Text, nullable=False)
+    voice_name = Column(String(100), default="vi-VN-HoaiMyNeural")
+    speed_rate = Column(String(20), default="+0%")
+    bgm_name = Column(String(100), nullable=True)
+    video_aspect = Column(String(20), default="16:9") # 16:9 (Youtube/Web) or 9:16 (TikTok/Shorts)
+    audio_path = Column(String(500), nullable=True)
+    video_path = Column(String(500), nullable=True)
+    thumbnail_path = Column(String(500), nullable=True)
+    duration_seconds = Column(Float, default=0.0)
+    word_count = Column(Integer, default=0)
+    characters_json = Column(Text, nullable=True) # JSON list of detected characters
+    status = Column(String(50), default="draft", index=True) # draft, audio_ready, rendering_video, completed, failed
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

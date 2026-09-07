@@ -33,6 +33,16 @@ def init_db():
                 conn.execute(text("ALTER TABLE videos ADD COLUMN movie_id INTEGER REFERENCES movies(id)"))
                 conn.commit()
                 logger.info("Migrated column videos.movie_id")
+
+            # Check characters_json in stories
+            try:
+                cols_s = [c[1] for c in conn.execute(text("PRAGMA table_info(stories)")).fetchall()]
+                if "characters_json" not in cols_s and len(cols_s) > 0:
+                    conn.execute(text("ALTER TABLE stories ADD COLUMN characters_json TEXT"))
+                    conn.commit()
+                    logger.info("Migrated column stories.characters_json")
+            except Exception:
+                pass
     except Exception as e:
         logger.warning(f"Column migration notice: {e}")
     
