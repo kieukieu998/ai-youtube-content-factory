@@ -60,8 +60,40 @@ def init_db():
                         conn.execute(text("ALTER TABLE publishes ADD COLUMN privacy_status VARCHAR(50) DEFAULT 'public'"))
                     if "created_at" not in cols_p:
                         conn.execute(text("ALTER TABLE publishes ADD COLUMN created_at DATETIME"))
-                    conn.commit()
-                    logger.info("Migrated publishes table columns for YouTube integration")
+                    # Ensure video_id is nullable for story publishing
+                    table_info = conn.execute(text("PRAGMA table_info(publishes)")).fetchall()
+                    vid_col = next((c for c in table_info if c[1] == "video_id"), None)
+                    if vid_col and vid_col[3] == 1: # notnull == 1
+                        logger.info("Migrating publishes table to make video_id nullable for stories...")
+                        conn.execute(text("""
+                            CREATE TABLE IF NOT EXISTS publishes_new (
+                                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                                video_id INTEGER REFERENCES videos(id),
+                                story_id INTEGER REFERENCES stories(id),
+                                platform VARCHAR(50) DEFAULT 'youtube',
+                                title VARCHAR(255),
+                                description TEXT,
+                                hashtags TEXT,
+                                platform_video_id VARCHAR(100),
+                                tiktok_post_id VARCHAR(100),
+                                video_url VARCHAR(500),
+                                video_aspect VARCHAR(20),
+                                privacy_status VARCHAR(50) DEFAULT 'public',
+                                published_at DATETIME,
+                                status VARCHAR(50) DEFAULT 'scheduled',
+                                error_message TEXT,
+                                created_at DATETIME
+                            );
+                        """))
+                        conn.execute(text("""
+                            INSERT INTO publishes_new (id, video_id, story_id, platform, title, description, hashtags, platform_video_id, tiktok_post_id, video_url, video_aspect, privacy_status, published_at, status, error_message, created_at)
+                            SELECT id, video_id, story_id, platform, title, description, hashtags, platform_video_id, tiktok_post_id, video_url, video_aspect, privacy_status, published_at, status, error_message, created_at
+                            FROM publishes;
+                        """))
+                        conn.execute(text("DROP TABLE publishes;"))
+                        conn.execute(text("ALTER TABLE publishes_new RENAME TO publishes;"))
+                        conn.commit()
+                        logger.info("Migrated publishes table: video_id is now nullable.")
             except Exception as pe:
                 logger.warning(f"Publishes migration notice: {pe}")
     except Exception as e:

@@ -61,6 +61,67 @@ def enrich_job_info(jobs, db: Session):
                 author_str = f"Tác giả: {story.author}" if (story and story.author) else "Tác giả: Khuyết danh"
                 sub_info = f"{author_str} — Tỉ lệ: {aspect}"
                 target_url = "/stories"
+            elif j.job_type in ["YouTubePublishJob", "PublishJob"]:
+                import os, re
+                from app.database.models import Publish, Story, Video
+                pub_id = payload.get("publish_id")
+                story_id = payload.get("story_id")
+                video_id = payload.get("video_id")
+                aspect = payload.get("aspect_ratio") or ("9:16" if payload.get("is_shorts") else "16:9")
+                privacy = payload.get("privacy_status", "public")
+                title = payload.get("title", "")
+                
+                story = db.query(Story).filter(Story.id == story_id).first() if story_id else None
+                video = db.query(Video).filter(Video.id == video_id).first() if video_id else None
+                publish = db.query(Publish).filter(Publish.id == pub_id).first() if pub_id else None
+                
+                if not title:
+                    if publish and publish.title:
+                        title = publish.title
+                    elif story:
+                        title = story.title
+                    elif video:
+                        title = video.title or "Video"
+
+                is_shorts = (aspect == "9:16" or (publish and publish.platform == "youtube_shorts") or payload.get("is_shorts"))
+                format_label = "Shorts 9:16" if is_shorts else "Chuẩn 16:9"
+                icon = "📱" if is_shorts else "▶️"
+                
+                display_name = f"{icon} Đăng YouTube ({format_label}): {title}"
+                
+                privacy_map = {
+                    "private": "🔒 Riêng tư",
+                    "unlisted": "🔗 Không công khai",
+                    "public": "🌐 Công khai"
+                }
+                privacy_str = privacy_map.get(privacy, privacy)
+                
+                sub_parts = []
+                if story:
+                    sub_parts.append(f"Truyện: {story.title}")
+                    if story.author:
+                        sub_parts.append(f"Tác giả: {story.author}")
+                elif video:
+                    sub_parts.append(f"Video #{video.id}")
+                
+                sub_parts.append(f"Chế độ: {privacy_str}")
+                
+                file_path = payload.get("file_path")
+                if file_path and os.path.exists(file_path):
+                    size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                    sub_parts.append(f"{size_mb:.1f} MB")
+                
+                sub_info = " • ".join(sub_parts)
+                
+                video_url = None
+                if publish and publish.video_url:
+                    video_url = publish.video_url
+                elif j.result and "https://" in j.result:
+                    m = re.search(r'https://[^\s]+', j.result)
+                    if m:
+                        video_url = m.group(0)
+                
+                target_url = video_url or ("/stories" if story_id else "/videos")
             elif j.job_type == "TestJob":
                 display_name = "🧪 Kiểm Thử Hệ Thống (TestJob)"
         except Exception:

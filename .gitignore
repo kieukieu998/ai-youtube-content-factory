@@ -53,3 +53,15 @@ test_*.mp4
 *.mp3
 *.mp4
 
+# YouTube & OAuth Tokens / Config
+config/*.json
+config/*.txt
+!config/*.example.json
+
+# Temporary screenshots & recordings
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+

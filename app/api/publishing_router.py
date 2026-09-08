@@ -34,31 +34,88 @@ class GenerateSEORequest(BaseModel):
 
 @router.get("/youtube/status")
 async def get_youtube_status():
-    """Check YouTube connection and channel profile."""
+    """Get current YouTube channel connection state."""
     info = YouTubePublisher.get_channel_info()
-    return info
+    return {
+        "status": "success",
+        "data": info
+    }
+
+@router.post("/youtube/open-console")
+async def open_google_cloud_console():
+    """Launch user's default desktop browser directly to Google Cloud Credentials page."""
+    import subprocess
+    try:
+        subprocess.Popen(["cmd", "/c", "start", "https://console.cloud.google.com/apis/credentials"], shell=True)
+        return {"status": "success", "message": "Đã mở Google Cloud Console trên trình duyệt cá nhân của bạn."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@router.post("/youtube/toggle-demo")
+async def toggle_youtube_demo(payload: Dict[str, Any] = Body(...)):
+    """Toggle simulated demo mode for instant testing without Google Cloud setup."""
+    enabled = payload.get("enabled", True)
+    YouTubePublisher.set_demo_mode(enabled)
+    info = YouTubePublisher.get_channel_info()
+    return {
+        "status": "success",
+        "message": "Đã bật chế độ Kênh Thử Nghiệm (Demo Sandbox)!" if enabled else "Đã tắt chế độ Thử Nghiệm!",
+        "data": info
+    }
 
 @router.post("/youtube/client-secret")
 async def upload_client_secret(
     file: Optional[UploadFile] = File(None),
-    json_text: Optional[str] = Form(None)
+    json_text: Optional[str] = Form(None),
+    client_id: Optional[str] = Form(None),
+    client_secret: Optional[str] = Form(None)
 ):
-    """Upload or paste Google OAuth 2.0 client_secrets.json content."""
+    """Upload file, paste JSON content, or enter Client ID + Client Secret directly."""
     content_dict = None
     try:
         if file:
             raw_bytes = await file.read()
             content_dict = json.loads(raw_bytes.decode("utf-8"))
-        elif json_text:
+        elif json_text and json_text.strip():
             content_dict = json.loads(json_text.strip())
+        elif client_id and client_secret and client_id.strip() and client_secret.strip():
+            content_dict = {
+                "web": {
+                    "client_id": client_id.strip(),
+                    "client_secret": client_secret.strip(),
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "redirect_uris": [
+                        "http://127.0.0.1:8000/api/v1/publishing/youtube/callback",
+                        "http://localhost:8000/api/v1/publishing/youtube/callback"
+                    ]
+                }
+            }
         else:
-            raise HTTPException(status_code=400, detail="Vui lòng tải file hoặc dán nội dung JSON.")
+            raise HTTPException(status_code=400, detail="Vui lòng tải file JSON hoặc nhập Client ID & Client Secret.")
         
         if not ("web" in content_dict or "installed" in content_dict):
             raise HTTPException(
                 status_code=400, 
-                detail="File JSON không hợp lệ. Cần có khóa 'web' hoặc 'installed' từ Google Cloud Console."
+                detail="Cấu hình không hợp lệ. Cần có khóa 'web' hoặc 'installed' từ Google Cloud Console."
             )
+
+        # Ensure redirect_uris includes our callback
+        target_key = "web" if "web" in content_dict else "installed"
+        if "redirect_uris" in content_dict[target_key]:
+            uris = content_dict[target_key]["redirect_uris"]
+            cb_127 = "http://127.0.0.1:8000/api/v1/publishing/youtube/callback"
+            cb_loc = "http://localhost:8000/api/v1/publishing/youtube/callback"
+            if cb_127 not in uris:
+                uris.append(cb_127)
+            if cb_loc not in uris:
+                uris.append(cb_loc)
+        else:
+            content_dict[target_key]["redirect_uris"] = [
+                "http://127.0.0.1:8000/api/v1/publishing/youtube/callback",
+                "http://localhost:8000/api/v1/publishing/youtube/callback"
+            ]
 
         success = YouTubePublisher.save_client_secret(content_dict)
         if not success:

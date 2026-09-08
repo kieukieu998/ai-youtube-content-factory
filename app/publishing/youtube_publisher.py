@@ -22,16 +22,48 @@ class YouTubePublisher:
     CONFIG_DIR = Path("config")
     CLIENT_SECRET_FILE = CONFIG_DIR / "youtube_client_secret.json"
     TOKEN_FILE = CONFIG_DIR / "youtube_token.json"
+    DEMO_MODE_FILE = CONFIG_DIR / "youtube_demo_mode.json"
+
+    @classmethod
+    def is_demo_mode(cls) -> bool:
+        """Check if simulated test/demo mode is active."""
+        if not cls.DEMO_MODE_FILE.exists():
+            return False
+        try:
+            with open(cls.DEMO_MODE_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("enabled", False)
+        except Exception:
+            return False
+
+    @classmethod
+    def set_demo_mode(cls, enabled: bool = True) -> bool:
+        """Enable or disable simulated test/demo mode."""
+        try:
+            cls.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            with open(cls.DEMO_MODE_FILE, "w", encoding="utf-8") as f:
+                json.dump({"enabled": enabled}, f, indent=2)
+            logger.info(f"YouTube Demo Mode set to: {enabled}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to toggle demo mode: {e}")
+            return False
 
     @classmethod
     def is_client_secret_configured(cls) -> bool:
-        """Check if client_secrets.json file exists and is valid JSON."""
+        """Check if client_secrets.json file exists, has valid structure and is not a placeholder dummy."""
         if not cls.CLIENT_SECRET_FILE.exists():
             return False
         try:
             with open(cls.CLIENT_SECRET_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return "web" in data or "installed" in data
+                client_dict = data.get("web") or data.get("installed")
+                if not client_dict:
+                    return False
+                cid = client_dict.get("client_id", "")
+                if not cid or "demo-client-id" in cid or "placeholder" in cid:
+                    return False
+                return True
         except Exception:
             return False
 
@@ -42,7 +74,8 @@ class YouTubePublisher:
             cls.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             with open(cls.CLIENT_SECRET_FILE, "w", encoding="utf-8") as f:
                 json.dump(secret_data, f, indent=2, ensure_ascii=False)
-            logger.info("Successfully saved youtube_client_secret.json")
+            cls.set_demo_mode(False)
+            logger.info("Successfully saved youtube_client_secret.json and disabled demo mode.")
             return True
         except Exception as e:
             logger.error(f"Failed to save client_secret: {e}")
@@ -70,6 +103,8 @@ class YouTubePublisher:
     @classmethod
     def is_authenticated(cls) -> bool:
         """Check if user has an active, valid authentication token."""
+        if cls.is_demo_mode():
+            return True
         creds = cls.get_credentials()
         return creds is not None and creds.valid
 
@@ -92,6 +127,11 @@ class YouTubePublisher:
             include_granted_scopes="true",
             prompt="consent"
         )
+        # Persist PKCE code_verifier across stateless redirect
+        if getattr(flow, "code_verifier", None):
+            cls.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            with open(cls.CONFIG_DIR / "youtube_code_verifier.txt", "w", encoding="utf-8") as vf:
+                vf.write(flow.code_verifier)
         return auth_url
 
     @classmethod
@@ -106,12 +146,27 @@ class YouTubePublisher:
                 scopes=cls.SCOPES,
                 redirect_uri=redirect_uri
             )
-            flow.fetch_token(code=code)
+            # Restore PKCE code_verifier
+            verifier = None
+            verifier_file = cls.CONFIG_DIR / "youtube_code_verifier.txt"
+            if verifier_file.exists():
+                try:
+                    verifier = verifier_file.read_text(encoding="utf-8").strip()
+                except Exception:
+                    pass
+
+            flow.fetch_token(code=code, code_verifier=verifier)
             creds = flow.credentials
 
             cls.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             with open(cls.TOKEN_FILE, "w", encoding="utf-8") as f:
                 f.write(creds.to_json())
+
+            if verifier_file.exists():
+                try:
+                    verifier_file.unlink()
+                except Exception:
+                    pass
 
             logger.info("Successfully saved YouTube OAuth credentials to youtube_token.json")
             return True
@@ -134,6 +189,21 @@ class YouTubePublisher:
     @classmethod
     def get_channel_info(cls) -> Dict[str, Any]:
         """Fetch connected YouTube channel profile and subscriber metrics."""
+        if cls.is_demo_mode():
+            return {
+                "connected": True,
+                "is_demo": True,
+                "has_secret": True,
+                "channel_id": "UC_DEMO_AI_STUDIO_TEST_CHANNEL",
+                "title": "Kênh Thử Nghiệm (AI Studio Demo Channel)",
+                "custom_url": "@ai_movie_content_factory_test",
+                "description": "Kênh demo thử nghiệm quy trình xuất bản video tự động.",
+                "avatar_url": "https://www.gstatic.com/youtube/img/branding/favicon/favicon_144x144.png",
+                "subscriber_count": 125000,
+                "video_count": 48,
+                "view_count": 9850000
+            }
+
         creds = cls.get_credentials()
         if not creds:
             return {
@@ -200,10 +270,6 @@ class YouTubePublisher:
         Upload video to YouTube with resumable chunked upload & live progress stream.
         Automatically appends #Shorts for vertical 9:16 videos.
         """
-        creds = cls.get_credentials()
-        if not creds:
-            raise RuntimeError("Chưa kết nối tài khoản YouTube hoặc token đã hết hạn.")
-
         video_file = Path(file_path).resolve()
         if not video_file.exists():
             raise FileNotFoundError(f"Không tìm thấy file video: {file_path}")
@@ -214,6 +280,36 @@ class YouTubePublisher:
         clean_title = title.strip()
         if is_shorts and "#Shorts" not in clean_title and "#shorts" not in clean_title:
             clean_title = f"{clean_title} #Shorts"
+
+        if cls.is_demo_mode():
+            import time
+            import uuid
+            logger.info(f"[DEMO MODE] Simulating YouTube upload for: {clean_title} ({file_size / (1024*1024):.1f} MB)...")
+            simulated_steps = [
+                (0.15, "Đang khởi tạo kết nối tải lên YouTube (Demo Mode)..."),
+                (0.35, "Đang truyền tải dữ liệu video chunks (35%)..."),
+                (0.65, "Đang xử lý phụ đề và định dạng chuẩn (65%)..."),
+                (0.90, "Đang tối ưu metadata và kiểm tra bản quyền (90%)..."),
+                (1.00, "Đã tải lên YouTube thành công (100%)!")
+            ]
+            for prog, msg in simulated_steps:
+                if progress_callback:
+                    try:
+                        progress_callback(prog, msg)
+                    except Exception:
+                        pass
+                time.sleep(1.0)
+
+            demo_vid = f"demo_{uuid.uuid4().hex[:8]}"
+            return {
+                "success": True,
+                "video_id": demo_vid,
+                "video_url": f"https://youtube.com/shorts/{demo_vid}" if is_shorts else f"https://youtu.be/{demo_vid}",
+                "title": clean_title,
+                "privacy": privacy_status,
+                "is_shorts": is_shorts,
+                "is_demo": True
+            }
 
         tags_list = tags or ["AI Content", "Audiobook", "Review Phim"]
         if is_shorts and "Shorts" not in tags_list:
@@ -231,6 +327,10 @@ class YouTubePublisher:
                 "selfDeclaredMadeForKids": False
             }
         }
+
+        creds = cls.get_credentials()
+        if not creds:
+            raise RuntimeError("Chưa kết nối tài khoản YouTube hoặc token đã hết hạn.")
 
         youtube = build("youtube", "v3", credentials=creds)
 
@@ -264,7 +364,8 @@ class YouTubePublisher:
                 pct = min(0.95, max(0.05, progress_float))
                 uploaded_mb = (progress_float * file_size) / (1024 * 1024)
                 total_mb = file_size / (1024 * 1024)
-                msg = f"Đang upload lên YouTube: {int(pct*100)}% ({uploaded_mb:.1f}/{total_mb:.1f} MB)"
+                fmt_tag = "Shorts 9:16" if is_shorts else "Chuẩn 16:9"
+                msg = f"Đang tải lên YouTube ({fmt_tag}): {int(pct*100)}% ({uploaded_mb:.1f}/{total_mb:.1f} MB)"
                 logger.debug(msg)
                 if progress_callback:
                     try:

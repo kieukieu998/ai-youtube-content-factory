@@ -127,10 +127,23 @@
                             <input type="checkbox" value="{{ j.id }}" onchange="updateSelectedJobsCount()" class="job-checkbox checkbox checkbox-xs checkbox-primary rounded" />
                         </td>
                         <td class="font-mono text-xs text-slate-400">#{{ j.id }}</td>
-                        <td class="max-w-[280px]">
-                            <div class="font-bold text-white text-sm truncate" title="{{ j.display_name }}">{{ j.display_name }}</div>
+                        <td class="max-w-[340px]">
+                            <div class="font-bold text-white text-sm truncate" title="{{ j.display_name }}">
+                                {% if j.target_url %}
+                                <a href="{{ j.target_url }}" {% if 'youtu' in j.target_url %}target="_blank"{% endif %} class="hover:text-rose-400 transition inline-flex items-center gap-1.5">
+                                    <span>{{ j.display_name }}</span>
+                                    {% if 'youtu' in j.target_url %}
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60 shrink-0"></i>
+                                    {% endif %}
+                                </a>
+                                {% else %}
+                                {{ j.display_name }}
+                                {% endif %}
+                            </div>
                             {% if j.sub_info %}
-                            <div class="text-xs text-slate-400 mt-0.5 truncate max-w-[270px]" title="{{ j.sub_info }}">{{ j.sub_info }}</div>
+                            <div class="text-xs text-slate-400 mt-1 truncate max-w-[320px]" title="{{ j.sub_info }}">
+                                {{ j.sub_info }}
+                            </div>
                             {% endif %}
                         </td>
                         <td class="whitespace-nowrap">
@@ -168,8 +181,18 @@
                                 </span>
                             </div>
                         </td>
-                        <td class="text-xs text-slate-300 max-w-[220px] truncate font-medium" title="{{ j.error_message or j.result or '' }}">
-                            {{ j.error_message or j.result or '-' }}
+                        <td class="text-xs text-slate-300 max-w-[240px] truncate font-medium">
+                            {% if j.status == 'completed' and j.target_url and 'youtu' in j.target_url %}
+                            <a href="{{ j.target_url }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-red-600/90 text-slate-200 hover:text-white border border-slate-700/80 hover:border-red-500 transition-all text-xs font-medium shadow-sm group" title="Mở xem video trên YouTube: {{ j.target_url }}">
+                                <svg class="w-3.5 h-3.5 text-red-500 group-hover:text-white fill-current transition-colors shrink-0" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                <span class="truncate max-w-[130px]">Xem trên YouTube</span>
+                                <i data-lucide="external-link" class="w-3 h-3 text-slate-400 group-hover:text-white transition-colors"></i>
+                            </a>
+                            {% else %}
+                            <span class="truncate block" title="{{ j.error_message or j.result or '' }}">
+                                {{ j.error_message or j.result or '-' }}
+                            </span>
+                            {% endif %}
                         </td>
                         <td class="text-xs text-slate-400 font-mono whitespace-nowrap">
                             {{ j.created_at.strftime('%H:%M:%S %d/%m') }}
@@ -192,6 +215,10 @@
                                     {% elif j.job_type == 'VideoTransformJob' %}
                                     <a href="{{ j.target_url or '/transform' }}" class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-purple-400 hover:text-purple-300 hover:bg-purple-500/15 transition" title="Mở trang Lách Bản Quyền 1:1">
                                         <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                    </a>
+                                    {% elif j.job_type in ['YouTubePublishJob', 'PublishJob'] %}
+                                    <a href="{{ j.target_url or 'https://youtube.com' }}" target="_blank" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-800 hover:bg-red-600 text-red-500 hover:text-white border border-slate-700 hover:border-red-500 transition shadow-sm" title="Mở xem video trên YouTube">
+                                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                                     </a>
                                     {% endif %}
                                 {% elif j.status in ['pending', 'processing'] %}

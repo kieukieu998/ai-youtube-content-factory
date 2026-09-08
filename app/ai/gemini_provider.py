@@ -84,12 +84,15 @@ class GeminiProvider(BaseAIProvider):
         for model in models_to_try:
             try:
                 logger.info(f"Calling Gemini API with model: {model}...")
-                response = await loop.run_in_executor(
-                    None,
-                    lambda m=model: self.client.models.generate_content(
-                        model=m,
-                        contents=full_prompt
-                    )
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None,
+                        lambda m=model: self.client.models.generate_content(
+                            model=m,
+                            contents=full_prompt
+                        )
+                    ),
+                    timeout=25.0
                 )
                 if response and response.text:
                     return response.text.strip()
