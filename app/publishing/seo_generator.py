@@ -94,3 +94,75 @@ YÊU CẦU ĐẦU RA JSON CHÍNH XÁC (không markdown ngoài, chỉ JSON hợp 
                 "tags": ["truyen ngan", "audiobook", "truyen audio", "truyen dem khuya", title.lower()],
                 "hashtags": ["#truyenngan", "#audiobook", "#viral"] + (["#shorts"] if is_shorts else [])
             }
+
+    @classmethod
+    async def generate_tiktok_seo(
+        cls,
+        title: str,
+        content: str,
+        author: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate optimized TikTok caption and viral hashtags.
+        TikTok captions work best when short, punchy (hook) with trending tags.
+        """
+        excerpt = content[:1000] if len(content) > 1000 else content
+        author_name = author or "Khuyết danh"
+
+        prompt = f"""
+Bạn là chuyên gia sáng tạo nội dung TikTok triệu view (viral creator).
+Hãy phân tích nội dung câu chuyện sau và tạo caption TikTok hấp dẫn nhất bằng Tiếng Việt:
+
+- Tiêu đề gốc: {title}
+- Tác giả: {author_name}
+- Trích đoạn nội dung:
+{excerpt}
+
+YÊU CẦU ĐẦU RA JSON CHÍNH XÁC (chỉ JSON, không markdown ngoài):
+{{
+    "caption": "Đoạn caption hoàn chỉnh cho TikTok (dưới 300 ký tự gồm câu hook cực sốc, kêu gọi xem hết video và 4-6 hashtag viral như #fyp #xuhuong #truyenngan #reviewphim)",
+    "hook": "Câu mở đầu giật gân (hook)",
+    "alternative_captions": [
+        "Caption gợi ý 2 kèm hashtags",
+        "Caption gợi ý 3 kèm hashtags"
+    ],
+    "hashtags": ["#fyp", "#xuhuong", "#truyenngan", "#audiobook", "#viral"]
+}}
+"""
+        try:
+            provider = get_ai_provider()
+            response = await provider.generate_text(
+                prompt=prompt,
+                system_prompt="Bạn là chuyên gia TikTok Content Creator hàng đầu. Luôn xuất dữ liệu dạng JSON thuần túy.",
+                temperature=0.7
+            )
+
+            clean_res = response.strip()
+            if clean_res.startswith("```json"):
+                clean_res = clean_res[7:]
+            if clean_res.startswith("```"):
+                clean_res = clean_res[3:]
+            if clean_res.endswith("```"):
+                clean_res = clean_res[:-3]
+            clean_res = clean_res.strip()
+
+            parsed = json.loads(clean_res)
+            return {
+                "caption": parsed.get("caption", f"🔥 {title} | Nghe đến cuối để biết sự thật rùng mình! #fyp #xuhuong #truyenngan #audiobook"),
+                "hook": parsed.get("hook", f"Liệu cái kết của {title} có khiến bạn bất ngờ?"),
+                "alternative_captions": parsed.get("alternative_captions", []),
+                "hashtags": parsed.get("hashtags", ["#fyp", "#xuhuong", "#truyenngan", "#audiobook", "#viral"])
+            }
+        except Exception as e:
+            logger.warning(f"Error generating TikTok SEO: {e}. Using fallback.")
+            default_caption = f"🔥 {title} - Tác giả: {author_name} | Cái kết khiến ai cũng phải lặng người... Nghe hết nhé! #fyp #xuhuong #truyenngan #audiobook #viral"
+            return {
+                "caption": default_caption,
+                "hook": f"Cái kết bất ngờ của {title}...",
+                "alternative_captions": [
+                    f"Nghe trọn bộ {title} đa giọng cực cuốn 🔥 #xuhuong #truyenhay #fyp",
+                    f"Bạn có tin vào câu chuyện này? {title} 😱 #truyenngan #fyp #viral"
+                ],
+                "hashtags": ["#fyp", "#xuhuong", "#truyenngan", "#audiobook", "#viral"]
+            }
+

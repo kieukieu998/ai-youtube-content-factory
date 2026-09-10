@@ -122,6 +122,60 @@ def enrich_job_info(jobs, db: Session):
                         video_url = m.group(0)
                 
                 target_url = video_url or ("/stories" if story_id else "/videos")
+            elif j.job_type == "TikTokPublishJob":
+                import os, re
+                from app.database.models import Publish, Story, Video
+                pub_id = payload.get("publish_id")
+                story_id = payload.get("story_id")
+                video_id = payload.get("video_id")
+                privacy = payload.get("privacy_level", "PUBLIC_TO_EVERYONE")
+                caption = payload.get("caption", "")
+
+                story = db.query(Story).filter(Story.id == story_id).first() if story_id else None
+                video = db.query(Video).filter(Video.id == video_id).first() if video_id else None
+                publish = db.query(Publish).filter(Publish.id == pub_id).first() if pub_id else None
+
+                title = caption[:55] + ("..." if len(caption) > 55 else "")
+                if not title:
+                    if publish and publish.title:
+                        title = publish.title
+                    elif story:
+                        title = story.title
+
+                display_name = f"🎵 Đăng TikTok (9:16): {title}"
+
+                privacy_map = {
+                    "PUBLIC_TO_EVERYONE": "🌐 Công khai",
+                    "MUTUAL_FOLLOW_FRIENDS": "👥 Bạn bè",
+                    "FOLLOWER_OF_CREATOR": "👤 Follower",
+                    "SELF_ONLY": "🔒 Riêng tư"
+                }
+                privacy_str = privacy_map.get(privacy, privacy)
+
+                sub_parts = []
+                if story:
+                    sub_parts.append(f"Truyện: {story.title}")
+                elif video:
+                    sub_parts.append(f"Video #{video.id}")
+
+                sub_parts.append(f"Chế độ: {privacy_str}")
+
+                file_path = payload.get("file_path")
+                if file_path and os.path.exists(file_path):
+                    size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                    sub_parts.append(f"{size_mb:.1f} MB")
+
+                sub_info = " • ".join(sub_parts)
+
+                video_url = None
+                if publish and publish.video_url:
+                    video_url = publish.video_url
+                elif j.result and "https://" in j.result:
+                    m = re.search(r'https://[^\s]+', j.result)
+                    if m:
+                        video_url = m.group(0)
+
+                target_url = video_url or ("/stories" if story_id else "/videos")
             elif j.job_type == "TestJob":
                 display_name = "🧪 Kiểm Thử Hệ Thống (TestJob)"
         except Exception:
@@ -141,9 +195,14 @@ def enrich_job_info(jobs, db: Session):
         })
     return enriched
 
+def prune_finished_jobs_beyond_limit(db: Session, max_keep: int = 100) -> int:
+    return JobWorker.prune_finished_jobs(db, max_keep=max_keep)
+
 @router.get("/jobs", response_class=HTMLResponse)
 async def jobs_page(request: Request, db: Session = Depends(get_db)):
-    jobs = db.query(Job).order_by(Job.created_at.desc()).limit(50).all()
+    # Auto prune old finished jobs beyond the latest 100
+    JobWorker.prune_finished_jobs(db, max_keep=100)
+    jobs = db.query(Job).order_by(Job.created_at.desc()).limit(100).all()
     enriched_jobs = enrich_job_info(jobs, db)
     return templates.TemplateResponse(
         request=request, 
@@ -223,12 +282,12 @@ async def bulk_delete_jobs(req: BulkDeleteJobRequest, db: Session = Depends(get_
 
 @router.post("/api/v1/jobs/clear-finished")
 async def clear_finished_jobs(db: Session = Depends(get_db)):
-    finished = db.query(Job).filter(Job.status.in_(["completed", "cancelled", "failed"])).all()
+    finished = db.query(Job).filter(Job.status.notin_(["pending", "processing"])).all()
     count = len(finished)
     for j in finished:
         db.delete(j)
     db.commit()
-    return JSONResponse({"status": "success", "message": f"Đã dọn dẹp {count} tác vụ đã xong/hủy!"})
+    return JSONResponse({"status": "success", "message": f"Đã dọn dẹp toàn bộ {count} tác vụ đã hoàn thành, lỗi hoặc hủy!"})
 
 @router.post("/api/v1/jobs/{job_id}/retry")
 async def retry_job(job_id: int, db: Session = Depends(get_db)):

@@ -171,37 +171,35 @@
                             <source id="rendered_video_source" src="" type="video/mp4">
                         </video>
                     </div>
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-1">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="badge badge-xs bg-indigo-950 border border-indigo-700/60 text-indigo-300 text-[10px] py-1 px-2">✨ Ảnh Nền AI</span>
-                            <span class="badge badge-xs bg-pink-950 border border-pink-700/60 text-pink-300 text-[10px] py-1 px-2">💬 Phụ Đề Đồng Bộ</span>
-                            <span class="badge badge-xs bg-emerald-950 border border-emerald-700/60 text-emerald-300 text-[10px] py-1 px-2">🔊 Sóng Âm Thanh</span>
-                            <span id="current_video_size_badge" class="badge badge-xs bg-cyan-950 border border-cyan-700/60 text-cyan-300 text-[10px] py-1 px-2 font-mono flex items-center gap-1 hidden">
+                    <!-- Action & Info Panel (2 Rows) -->
+                    <div class="flex flex-col gap-2.5 pt-2 border-t border-slate-800/80">
+                        <!-- Dòng 1: Video Feature & Size Badges -->
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="badge badge-xs bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-[11px] py-1 px-2.5 font-medium">✨ Ảnh Nền AI</span>
+                                <span class="badge badge-xs bg-pink-950/80 border border-pink-700/60 text-pink-300 text-[11px] py-1 px-2.5 font-medium">💬 Phụ Đề Đồng Bộ</span>
+                                <span class="badge badge-xs bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px] py-1 px-2.5 font-medium">🔊 Sóng Âm Thanh</span>
+                            </div>
+                            <span id="current_video_size_badge" class="badge badge-xs bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 text-[11px] py-1 px-2.5 font-mono flex items-center gap-1 hidden">
                                 <i data-lucide="hard-drive" class="w-3 h-3 text-cyan-400"></i> <span id="current_video_size_val">0 MB</span>
                             </span>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button id="open_yt_modal_btn" onclick="openYouTubePublishModalCurrent()" class="btn btn-sm bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-0 rounded-xl flex items-center gap-2 shadow-lg shadow-red-600/30 font-bold shrink-0 transition" title="Đăng video này trực tiếp lên YouTube">
+
+                        <!-- Dòng 2: Main Publishing Action Buttons (Đăng YouTube & Đăng TikTok) -->
+                        <div class="grid grid-cols-2 gap-2.5 w-full">
+                            <button id="open_yt_modal_btn" onclick="openYouTubePublishModalCurrent()" class="btn btn-sm bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-0 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-red-600/30 font-bold transition px-3" title="Đăng video này trực tiếp lên YouTube">
                                 <svg class="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                                <span>Đăng YouTube</span>
+                                <span class="truncate">Đăng YouTube</span>
                             </button>
-                            <a id="video_download_link" href="#" download class="btn btn-sm bg-emerald-600 hover:bg-emerald-500 text-white border-0 rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 font-semibold shrink-0">
-                                <i data-lucide="download" class="w-4 h-4"></i> <span id="download_btn_text">Tải Video MP4</span>
-                            </a>
+                            <button id="open_tiktok_modal_btn" onclick="openTikTokPublishModalCurrent()" class="btn btn-sm bg-gradient-to-r from-cyan-600 via-teal-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white border-0 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-pink-600/30 font-bold transition px-3" title="Đăng video này lên TikTok (chuẩn 9:16 Dọc)">
+                                <svg class="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                                <span class="truncate">Đăng TikTok</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Audio Track Player (Optional Preview) -->
-                <div id="audio_track_box" class="hidden pt-3 border-t border-slate-800/80 space-y-2">
-                    <div class="flex items-center justify-between text-xs text-slate-400">
-                        <span class="flex items-center gap-1"><i data-lucide="volume-2" class="w-3.5 h-3.5 text-emerald-400"></i> File Âm Thanh Kịch (MP3):</span>
-                        <a id="audio_download_link" href="#" download class="text-indigo-400 hover:underline">Tải MP3</a>
-                    </div>
-                    <audio id="main_audio_player" controls class="w-full h-8 custom-audio-player">
-                        <source id="main_audio_source" src="" type="audio/mpeg">
-                    </audio>
-                </div>
+
             </div>
 
         </div>
@@ -300,6 +298,10 @@
                             <button onclick="openYouTubePublishModal({{ s.id }})" class="btn btn-xs bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white border border-slate-700 hover:border-red-500 rounded-lg gap-1.5 font-medium transition shadow-sm group" title="Mở hộp thoại đăng video này lên YouTube">
                                 <svg class="w-3.5 h-3.5 text-red-500 group-hover:text-white fill-current transition-colors shrink-0" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                                 <span>Đăng YT</span>
+                            </button>
+                            <button onclick="openTikTokPublishModal({{ s.id }})" class="btn btn-xs bg-slate-800 hover:bg-black text-slate-200 hover:text-white border border-slate-700 hover:border-pink-500 rounded-lg gap-1.5 font-medium transition shadow-sm group" title="Mở hộp thoại đăng video này lên TikTok (9:16 Dọc)">
+                                <svg class="w-3.5 h-3.5 fill-current text-[#25F4EE] group-hover:text-[#FE2C55] transition-colors shrink-0" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                                <span>Đăng TikTok</span>
                             </button>
                             {% endif %}
                             <button onclick="viewStoryContent({{ s.id }})" class="btn btn-xs bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-lg gap-1" title="Đọc toàn bộ nội dung truyện">
@@ -514,12 +516,17 @@
                         </button>
                     </div>
                     <input type="text" id="yt_video_title" maxlength="100" class="input input-sm input-bordered w-full bg-slate-900/90 text-white font-medium" placeholder="Nhập tiêu đề video..." />
-                    <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                    <div class="text-[11px] text-slate-500 mt-1">
                         <span id="yt_title_counter">0/100 ký tự</span>
-                        <div id="yt_alt_titles_box" class="hidden flex items-center gap-1.5">
-                            <span class="text-indigo-400">Gợi ý khác:</span>
-                            <span id="yt_alt_titles_list" class="space-x-1"></span>
+                    </div>
+
+                    <!-- Gợi ý tiêu đề thay thế từ AI (từng dòng riêng biệt) -->
+                    <div id="yt_alt_titles_box" class="hidden mt-2 p-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1.5">
+                        <div class="flex items-center gap-1.5 text-xs font-semibold text-indigo-400">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span>Gợi ý tiêu đề khác từ AI (Bấm để chọn):</span>
                         </div>
+                        <div id="yt_alt_titles_list" class="flex flex-col gap-1.5 w-full"></div>
                     </div>
                 </div>
 
@@ -553,6 +560,171 @@
                 </form>
                 <button id="btn_submit_publish_yt" type="button" onclick="submitPublishYouTube()" class="btn btn-sm bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-red-600/30 font-bold transition">
                     <i data-lucide="send" class="w-4 h-4"></i> Bắt Đầu Đăng YouTube
+                </button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- TikTok Publishing Modal -->
+    <dialog id="tiktok_publish_modal" class="modal">
+        <div class="modal-box bg-slate-900/95 border border-pink-500/30 max-w-2xl text-slate-200 shadow-2xl backdrop-blur-2xl rounded-3xl p-6 space-y-5">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-pink-500/40 flex items-center justify-center shadow-lg shadow-pink-500/20 shrink-0">
+                        <svg class="w-5 h-5 fill-current text-[#25F4EE]" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                            <span>Xuất Bản Video Lên TikTok</span>
+                            <span class="badge badge-xs bg-pink-500/20 text-pink-300 border-pink-500/40 font-mono">9:16 Mobile</span>
+                        </h3>
+                        <p class="text-xs text-slate-400">Đăng video chuẩn dọc (1080x1920) lên kênh TikTok với Caption & Hook tối ưu bởi AI.</p>
+                    </div>
+                </div>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost text-slate-400 hover:text-white">✕</button>
+                </form>
+            </div>
+
+            <!-- TikTok Channel Connection Banner -->
+            <div id="tiktok_channel_status_box" class="p-3.5 rounded-2xl bg-slate-800/60 border border-slate-700/60">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Đang kiểm tra kết nối tài khoản TikTok...</span>
+                </div>
+            </div>
+
+            <!-- Client Key Setup Box (Collapsible / If missing key) -->
+            <div id="tiktok_key_setup_box" class="p-4 rounded-2xl bg-slate-900/90 border border-pink-500/30 shadow-lg space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                            <i data-lucide="key" class="w-4 h-4"></i>
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div class="font-bold text-white flex items-center gap-2">
+                                <span>Cấu Hình TikTok Developer App (Dùng Kênh Thật)</span>
+                                <span class="badge badge-xs badge-info text-[10px]">1 lần duy nhất</span>
+                            </div>
+                            <p class="text-slate-400 leading-relaxed">
+                                Để liên kết trực tiếp với kênh TikTok cá nhân hoặc doanh nghiệp qua TikTok Content Posting API v2, bạn cần nhập <strong>Client Key</strong> & <strong>Client Secret</strong> từ TikTok Developer Portal.
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="toggleTikTokDemoMode(true)" class="btn btn-xs bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 rounded-lg gap-1 shrink-0 transition" title="Bật kênh test ảo để trải nghiệm ngay">
+                        <i data-lucide="play" class="w-3 h-3"></i> Kênh Test Ảo
+                    </button>
+                </div>
+
+                <!-- Input section -->
+                <div class="pt-2 border-t border-slate-800 space-y-2 text-xs">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                            <label class="font-bold text-slate-300 text-[11px] block mb-1">Client Key:</label>
+                            <input type="text" id="tiktok_client_key_input" placeholder="Nhập Client Key (vd: awxxxxxxxx)" class="input input-xs input-bordered bg-slate-950 text-white w-full font-mono" />
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-300 text-[11px] block mb-1">Client Secret:</label>
+                            <input type="password" id="tiktok_client_secret_input" placeholder="Nhập Client Secret" class="input input-xs input-bordered bg-slate-950 text-white w-full font-mono" />
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                        <div class="text-[10px] text-slate-400 flex items-center gap-1">
+                            <i data-lucide="info" class="w-3 h-3 text-pink-400 shrink-0"></i>
+                            <span>Redirect URI:</span>
+                            <code class="text-pink-300 bg-slate-950 px-1 py-0.5 rounded font-mono select-all">http://127.0.0.1:8000/api/v1/publishing/tiktok/callback</code>
+                        </div>
+                        <button type="button" onclick="saveTikTokClientKey()" class="btn btn-xs bg-pink-600 hover:bg-pink-500 text-white border-0 rounded-lg px-3 gap-1">
+                            <i data-lucide="save" class="w-3 h-3"></i> Lưu Cấu Hình Key
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Fields -->
+            <div class="space-y-4 text-xs">
+                <!-- Video Format Info Banner (TikTok 9:16 standard) -->
+                <div class="p-3 rounded-xl bg-slate-800/40 border border-pink-500/30 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-pink-500/15 text-pink-400 flex items-center justify-center font-bold">
+                            <i data-lucide="smartphone" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-white text-xs flex items-center gap-1.5">
+                                <span>Định dạng: Video Dọc (9:16 - 1080x1920)</span>
+                                <span class="badge badge-xs bg-pink-900/60 text-pink-300 font-mono">Bắt buộc</span>
+                            </div>
+                            <div class="text-[11px] text-slate-400">Hệ thống tự động sử dụng bản dựng video 9:16 tối ưu cho màn hình điện thoại.</div>
+                        </div>
+                    </div>
+                    <span id="tiktok_badge_size_916" class="text-xs font-mono font-bold text-pink-300 bg-pink-950/60 px-2 py-1 rounded-lg border border-pink-800/50"></span>
+                </div>
+
+                <!-- Caption & AI Suggestion -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-bold text-slate-300">Nội Dung Caption & Hashtag:</label>
+                        <button type="button" onclick="generateTikTokAISuggestions()" id="btn_tiktok_ai_seo" class="text-xs text-pink-400 hover:text-pink-300 flex items-center gap-1 font-semibold transition">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> AI Gợi Ý Caption & Hooks TikTok
+                        </button>
+                    </div>
+                    <textarea id="tiktok_video_caption" rows="3" maxlength="2200" class="textarea textarea-bordered w-full bg-slate-900/90 text-white text-xs leading-relaxed" placeholder="Nhập caption, lời bình, câu hỏi kích thích tương tác và các hashtag viral (#fyp, #xuhuong)..."></textarea>
+                    <div class="text-[11px] text-slate-500 mt-1">
+                        <span id="tiktok_caption_counter">0/2200 ký tự (Gợi ý: dưới 300 ký tự hiển thị trọn vẹn)</span>
+                    </div>
+
+                    <!-- Gợi ý caption thay thế từ AI (từng dòng riêng biệt) -->
+                    <div id="tiktok_alt_captions_box" class="hidden mt-2 p-2.5 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1.5">
+                        <div class="flex items-center gap-1.5 text-xs font-semibold text-pink-400">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                            <span>Gợi ý caption khác từ AI (Bấm để chọn):</span>
+                        </div>
+                        <div id="tiktok_alt_captions_list" class="flex flex-col gap-1.5 w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Privacy & Engagement Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-bold text-slate-300 mb-1 block">Quyền Riêng Tư (Privacy):</label>
+                        <select id="tiktok_privacy_level" class="select select-sm select-bordered w-full bg-slate-900/90 text-white font-medium">
+                            <option value="PUBLIC_TO_EVERYONE" selected>🌐 Công Khai (Ai cũng xem được)</option>
+                            <option value="MUTUAL_FOLLOW_FRIENDS">👥 Bạn Bè (Mutual Followers)</option>
+                            <option value="FOLLOWER_OF_CREATOR">👤 Người Theo Dõi (Followers)</option>
+                            <option value="SELF_ONLY">🔒 Chỉ Mình Tôi (Private)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-bold text-slate-300 mb-1 block">Tương Tác Cho Phép:</label>
+                        <div class="flex items-center gap-3 pt-1">
+                            <label class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-300">
+                                <input type="checkbox" id="tiktok_allow_comment" checked class="checkbox checkbox-xs checkbox-primary rounded" />
+                                <span>Bình luận</span>
+                            </label>
+                            <label class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-300">
+                                <input type="checkbox" id="tiktok_allow_duet" checked class="checkbox checkbox-xs checkbox-secondary rounded" />
+                                <span>Duet</span>
+                            </label>
+                            <label class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-300">
+                                <input type="checkbox" id="tiktok_allow_stitch" checked class="checkbox checkbox-xs checkbox-accent rounded" />
+                                <span>Stitch</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="flex items-center justify-between border-t border-slate-800 pt-4">
+                <form method="dialog">
+                    <button class="btn btn-sm btn-outline border-slate-700 text-slate-300 rounded-xl">Hủy</button>
+                </form>
+                <button id="btn_submit_publish_tiktok" type="button" onclick="submitPublishTikTok()" class="btn btn-sm bg-gradient-to-r from-cyan-600 via-teal-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white border-0 rounded-xl gap-2 shadow-lg shadow-pink-600/30 font-bold transition">
+                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                    <span>Bắt Đầu Đăng TikTok</span>
                 </button>
             </div>
         </div>
@@ -1094,6 +1266,10 @@ async function refreshStoryTable() {
                         <svg class="w-3.5 h-3.5 text-red-500 group-hover:text-white fill-current transition-colors shrink-0" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                         <span>Đăng YT</span>
                     </button>
+                    <button onclick="openTikTokPublishModal(${s.id})" class="btn btn-xs bg-slate-800 hover:bg-black text-slate-200 hover:text-white border border-slate-700 hover:border-pink-500 rounded-lg gap-1.5 font-medium transition shadow-sm group" title="Mở hộp thoại đăng video này lên TikTok (9:16 Dọc)">
+                        <svg class="w-3.5 h-3.5 fill-current text-[#25F4EE] group-hover:text-[#FE2C55] transition-colors shrink-0" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                        <span>Đăng TikTok</span>
+                    </button>
                 `;
             }
 
@@ -1606,8 +1782,13 @@ async function generateAISuggestions() {
 
         if (meta.alternative_titles && meta.alternative_titles.length > 0) {
             let altHtml = '';
-            meta.alternative_titles.forEach(t => {
-                altHtml += `<button type="button" onclick="selectAltTitle(this)" class="btn btn-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-normal" title="Bấm để chọn tiêu đề này">${escapeHtml(t)}</button>`;
+            meta.alternative_titles.forEach((t, idx) => {
+                altHtml += `
+                    <button type="button" onclick="selectAltTitle(this)" class="w-full text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 hover:border-indigo-500/60 border border-slate-700/60 text-slate-200 text-xs leading-relaxed transition flex items-start gap-2 group shadow-sm" title="${escapeHtml(t)}">
+                        <span class="badge badge-xs bg-indigo-950 text-indigo-300 border-indigo-700/60 text-[10px] mt-0.5 shrink-0 group-hover:bg-indigo-900 font-mono font-semibold">#${idx + 1}</span>
+                        <span class="flex-1 whitespace-normal break-words alt-title-text">${escapeHtml(t)}</span>
+                    </button>
+                `;
             });
             $('#yt_alt_titles_list').html(altHtml);
             $('#yt_alt_titles_box').removeClass('hidden');
@@ -1624,9 +1805,10 @@ async function generateAISuggestions() {
 }
 
 function selectAltTitle(btn) {
-    const text = $(btn).text().trim();
+    const text = $(btn).find('.alt-title-text').text().trim() || $(btn).attr('title') || $(btn).text().trim();
     $('#yt_video_title').val(text);
     $('#yt_title_counter').text(`${text.length}/100 ký tự`);
+    Toast.fire({ icon: 'info', title: 'Đã áp dụng mẫu tiêu đề này!' });
 }
 
 async function submitPublishYouTube() {
@@ -1695,6 +1877,405 @@ async function submitPublishYouTube() {
         Swal.fire('Lỗi Xuất Bản', e.message, 'error');
     } finally {
         btn.html('<i data-lucide="send" class="w-4 h-4"></i> Bắt Đầu Đăng YouTube').prop('disabled', false);
+        lucide.createIcons();
+    }
+}
+
+// ==========================================
+// TIKTOK PUBLISHING STUDIO & OAUTH LOGIC
+// ==========================================
+let currentTikTokPublishStoryId = null;
+let currentTikTokPublishStoryData = null;
+let isTikTokConnected = false;
+
+function openTikTokPublishModalCurrent() {
+    const sid = $('#current_story_id').val();
+    if (!sid) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Chưa Chọn Truyện',
+            text: 'Vui lòng chọn hoặc tạo video truyện trước khi xuất bản lên TikTok.'
+        });
+        return;
+    }
+    openTikTokPublishModal(parseInt(sid));
+}
+
+async function openTikTokPublishModal(storyId) {
+    currentTikTokPublishStoryId = storyId;
+    try {
+        const res = await fetch(`/api/stories/${storyId}`);
+        if (!res.ok) throw new Error('Không thể tải dữ liệu truyện');
+        currentTikTokPublishStoryData = await res.json();
+        const s = currentTikTokPublishStoryData;
+
+        // TikTok strictly requires 9:16 vertical video
+        const has916 = !!s.video_path_9x16 || (s.video_path && (s.video_path.includes('9x16') || !s.video_path.includes('16x9')));
+        if (!has916 && !s.video_path) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa Có Video Dọc 9:16',
+                text: 'TikTok yêu cầu định dạng video dọc (9:16 - 1080x1920). Vui lòng chọn tỷ lệ 9:16 và bấm "Tạo Video" trước khi đăng!'
+            });
+            return;
+        }
+
+        $('#tiktok_badge_size_916').text(s.video_size_9x16 || s.video_size_16x9 || '9:16 Sẵn sàng');
+
+        // Pre-fill caption
+        const defaultCaption = `🔥 ${s.title} - Tác giả: ${s.author || 'Khuyết danh'} | Lắng nghe trọn bộ truyện cực cuốn! #fyp #xuhuong #truyenngan #audiobook #viral`;
+        $('#tiktok_video_caption').val(defaultCaption);
+        updateTikTokCaptionCounter();
+        $('#tiktok_alt_captions_box').addClass('hidden');
+
+        // Check TikTok channel status
+        await checkTikTokChannelStatus();
+
+        lucide.createIcons();
+        document.getElementById('tiktok_publish_modal').showModal();
+
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message });
+    }
+}
+
+function updateTikTokCaptionCounter() {
+    const len = $('#tiktok_video_caption').val().length;
+    $('#tiktok_caption_counter').text(`${len}/2200 ký tự (Gợi ý: dưới 300 ký tự hiển thị trọn vẹn)`);
+}
+
+$('#tiktok_video_caption').on('input', updateTikTokCaptionCounter);
+
+async function checkTikTokChannelStatus() {
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/status');
+        const resJson = await res.json();
+        const info = resJson.data || resJson;
+
+        if (info.connected) {
+            isTikTokConnected = true;
+            $('#tiktok_key_setup_box').addClass('hidden');
+
+            const avatar = info.avatar_url ? 
+                `<img src="${info.avatar_url}" class="w-8 h-8 rounded-full border border-pink-500/50 object-cover" />` : 
+                `<div class="w-8 h-8 rounded-full bg-slate-950 text-[#25F4EE] border border-pink-500 flex items-center justify-center font-bold text-xs">TT</div>`;
+
+            const badgeTag = info.is_demo ? 
+                `<span class="badge badge-xs badge-warning text-[10px] gap-1"><i data-lucide="flask-conical" class="w-2.5 h-2.5"></i> Test Sandbox</span>` : 
+                `<span class="badge badge-xs badge-success text-[10px] gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Đã Kết Nối</span>`;
+
+            const disconnectBtn = info.is_demo ?
+                `<button type="button" onclick="toggleTikTokDemoMode(false)" class="btn btn-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg gap-1" title="Tắt test sandbox để dùng kênh thật">
+                    <i data-lucide="toggle-right" class="w-3.5 h-3.5 text-amber-400"></i> Tắt Test Mode
+                </button>` :
+                `<button type="button" onclick="disconnectTikTokAccount()" class="btn btn-xs btn-ghost text-slate-400 hover:text-rose-400" title="Đổi tài khoản hoặc ngắt kết nối">
+                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Ngắt Kênh
+                </button>`;
+
+            const configBtn = `
+                <button type="button" onclick="$('#tiktok_key_setup_box').toggleClass('hidden')" class="btn btn-xs btn-ghost text-slate-400 hover:text-pink-400 gap-1" title="Cài đặt Client Key & Secret">
+                    <i data-lucide="key" class="w-3.5 h-3.5"></i> Cấu Hình App
+                </button>
+            `;
+
+            const followersStr = typeof info.follower_count === 'number' ? `${info.follower_count.toLocaleString()} follower` : '';
+            const likesStr = typeof info.likes_count === 'number' ? `${info.likes_count.toLocaleString()} thích` : '';
+            const statsStr = [followersStr, likesStr].filter(Boolean).join(' • ');
+
+            $('#tiktok_channel_status_box').html(`
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        ${avatar}
+                        <div>
+                            <div class="font-bold text-white flex items-center gap-1.5 text-xs">
+                                <span>${escapeHtml(info.display_name || info.username)}</span>
+                                ${badgeTag}
+                            </div>
+                            <div class="text-[11px] text-slate-400 font-mono">${statsStr || (info.username && info.username.startsWith('@') ? info.username : '@' + (info.username || 'creator'))}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${configBtn}
+                        ${disconnectBtn}
+                    </div>
+                </div>
+            `);
+        } else {
+            isTikTokConnected = false;
+            if (!info.has_key) {
+                $('#tiktok_key_setup_box').removeClass('hidden');
+            } else {
+                $('#tiktok_key_setup_box').addClass('hidden');
+            }
+
+            $('#tiktok_channel_status_box').html(`
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2 text-xs text-pink-300">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-pink-400 shrink-0"></i>
+                        <span>Chưa liên kết tài khoản TikTok.</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="toggleTikTokDemoMode(true)" class="btn btn-xs bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/30 rounded-lg gap-1 font-semibold transition" title="Bật kênh test ảo để trải nghiệm ngay">
+                            <i data-lucide="play" class="w-3 h-3"></i> Test Nhanh
+                        </button>
+                        <button type="button" onclick="connectTikTokAccount()" class="btn btn-xs bg-gradient-to-r from-cyan-600 to-pink-600 hover:from-cyan-500 hover:to-pink-500 text-white border-0 rounded-lg gap-1.5 font-bold shadow-md shadow-pink-600/30">
+                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i> Kết Nối TikTok
+                        </button>
+                    </div>
+                </div>
+            `);
+        }
+        lucide.createIcons();
+    } catch (err) {
+        console.error("Error checking TikTok status:", err);
+    }
+}
+
+async function toggleTikTokDemoMode(enabled) {
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/toggle-demo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enabled })
+        });
+        const data = await res.json();
+        Toast.fire({ icon: 'success', title: data.message || 'Đã cập nhật chế độ TikTok!' });
+        await checkTikTokChannelStatus();
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message });
+    }
+}
+
+async function saveTikTokClientKey() {
+    const key = $('#tiktok_client_key_input').val().trim();
+    const secret = $('#tiktok_client_secret_input').val().trim();
+    if (!key || !secret) {
+        Swal.fire('Vui lòng điền đủ', 'Nhập đầy đủ Client Key và Client Secret từ TikTok Developer Portal.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/client-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_key: key, client_secret: secret })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi khi lưu key');
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã Lưu TikTok Key!',
+            text: data.message
+        });
+        $('#tiktok_key_setup_box').addClass('hidden');
+        await checkTikTokChannelStatus();
+    } catch (e) {
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+async function connectTikTokAccount() {
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/auth-url');
+        const data = await res.json();
+        if (!res.ok) {
+            $('#tiktok_key_setup_box').removeClass('hidden');
+            Swal.fire({
+                icon: 'info',
+                title: 'Cần Client Key Thật',
+                html: `
+                    <div class="text-xs text-slate-300 space-y-3 text-left">
+                        <p class="text-pink-300 font-semibold">⚠️ ${escapeHtml(data.detail || 'Chưa cấu hình TikTok Developer App.')}</p>
+                        <p class="text-slate-300">
+                            Để bảo mật, bạn có thể tạo Developer App trên <strong>TikTok for Developers</strong> hoặc dùng ngay <strong>Kênh Test Sandbox</strong> để trải nghiệm tính năng.
+                        </p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Dùng Kênh Test Ảo',
+                confirmButtonColor: '#f59e0b',
+                cancelButtonText: 'Đóng'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await toggleTikTokDemoMode(true);
+                }
+            });
+            return;
+        }
+
+        const authWindow = window.open(data.auth_url, 'tiktok_oauth_popup', 'width=600,height=750,menubar=no,toolbar=no');
+        if (!authWindow) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bị Chặn Popup',
+                text: 'Trình duyệt đang chặn cửa sổ popup. Vui lòng cấp quyền mở popup cho trang này.'
+            });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Lỗi Kết Nối', text: e.message });
+    }
+}
+
+async function disconnectTikTokAccount() {
+    const confirm = await Swal.fire({
+        title: 'Ngắt kết nối TikTok?',
+        text: 'Bạn sẽ cần đăng nhập lại TikTok nếu muốn tiếp tục đăng video.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý ngắt',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#ef4444'
+    });
+
+    if (confirm.isConfirmed) {
+        await fetch('/api/v1/publishing/tiktok/disconnect', { method: 'POST' });
+        Toast.fire({ icon: 'info', title: 'Đã ngắt kết nối tài khoản TikTok.' });
+        checkTikTokChannelStatus();
+    }
+}
+
+window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'TIKTOK_CONNECTED') {
+        Toast.fire({
+            icon: 'success',
+            title: `Đã kết nối thành công với tài khoản TikTok: ${event.data.account || ''}!`
+        });
+        checkTikTokChannelStatus();
+    }
+});
+
+async function generateTikTokAISuggestions() {
+    if (!currentTikTokPublishStoryData) return;
+    const btn = $('#btn_tiktok_ai_seo');
+    const oldHtml = btn.html();
+    btn.html('<span class="loading loading-spinner loading-xs text-pink-400"></span> AI đang viết TikTok Caption...').prop('disabled', true);
+
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/seo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: currentTikTokPublishStoryData.title,
+                content: currentTikTokPublishStoryData.content,
+                author: currentTikTokPublishStoryData.author
+            })
+        });
+        const resJson = await res.json();
+        const meta = resJson.data || resJson;
+
+        if (meta.caption) {
+            $('#tiktok_video_caption').val(meta.caption);
+            updateTikTokCaptionCounter();
+        }
+
+        if (meta.alternative_captions && meta.alternative_captions.length > 0) {
+            let altHtml = '';
+            meta.alternative_captions.forEach((c, idx) => {
+                altHtml += `
+                    <button type="button" onclick="selectTikTokAltCaption(this)" class="w-full text-left p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 hover:border-pink-500/60 border border-slate-700/60 text-slate-200 text-xs leading-relaxed transition flex items-start gap-2 group shadow-sm" title="${escapeHtml(c)}">
+                        <span class="badge badge-xs bg-pink-950 text-pink-300 border-pink-700/60 text-[10px] mt-0.5 shrink-0 group-hover:bg-pink-900 font-mono font-semibold">#${idx + 1}</span>
+                        <span class="flex-1 whitespace-normal break-words alt-caption-text">${escapeHtml(c)}</span>
+                    </button>
+                `;
+            });
+            $('#tiktok_alt_captions_list').html(altHtml);
+            $('#tiktok_alt_captions_box').removeClass('hidden');
+        }
+
+        Toast.fire({ icon: 'success', title: 'AI đã tối ưu Caption & Hashtags TikTok!' });
+
+    } catch (e) {
+        Toast.fire({ icon: 'error', title: 'Không thể sinh caption TikTok AI' });
+    } finally {
+        btn.html(oldHtml).prop('disabled', false);
+        lucide.createIcons();
+    }
+}
+
+function selectTikTokAltCaption(btn) {
+    const text = $(btn).find('.alt-caption-text').text().trim() || $(btn).attr('title') || $(btn).text().trim();
+    $('#tiktok_video_caption').val(text);
+    updateTikTokCaptionCounter();
+    Toast.fire({ icon: 'info', title: 'Đã áp dụng mẫu caption này!' });
+}
+
+async function submitPublishTikTok() {
+    if (!isTikTokConnected) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Chưa Kết Nối TikTok',
+            text: 'Vui lòng bấm "Kết Nối TikTok" hoặc chọn "Kênh Test Ảo" ở trên trước khi bấm Đăng!'
+        });
+        return;
+    }
+
+    const caption = $('#tiktok_video_caption').val().trim();
+    if (!caption) {
+        Swal.fire('Thiếu Caption', 'Vui lòng nhập caption cho video TikTok.', 'warning');
+        return;
+    }
+
+    const privacy = $('#tiktok_privacy_level').val();
+    const allowComment = $('#tiktok_allow_comment').is(':checked');
+    const allowDuet = $('#tiktok_allow_duet').is(':checked');
+    const allowStitch = $('#tiktok_allow_stitch').is(':checked');
+
+    const btn = $('#btn_submit_publish_tiktok');
+    const oldHtml = btn.html();
+    btn.html('<span class="loading loading-spinner loading-xs"></span> Đang gửi tác vụ...').prop('disabled', true);
+
+    try {
+        const res = await fetch('/api/v1/publishing/tiktok/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                story_id: currentTikTokPublishStoryId,
+                aspect_ratio: '9:16',
+                caption: caption,
+                privacy_level: privacy,
+                disable_duet: !allowDuet,
+                disable_comment: !allowComment,
+                disable_stitch: !allowStitch
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi khi gửi yêu cầu đăng video lên TikTok');
+
+        // Copy caption to clipboard automatically
+        if (navigator.clipboard && caption) {
+            navigator.clipboard.writeText(caption).catch(() => {});
+        }
+
+        document.getElementById('tiktok_publish_modal').close();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã Thêm Vào Hàng Đợi TikTok!',
+            html: `
+                <div class="text-xs text-slate-300 space-y-2 text-left">
+                    <p>Tác vụ <strong>TikTokPublishJob #${data.job_id}</strong> đã được xếp vào hàng đợi xử lý ngầm.</p>
+                    <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-[11px] text-slate-400 space-y-1">
+                        <div class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Đã tự động sao chép Caption vào bộ nhớ tạm!</div>
+                        <div>Nếu tài khoản là <em>Tài khoản riêng tư</em>, video sẽ đăng tự động lên kênh kèm tiêu đề. Nếu tài khoản là <em>Công khai</em>, bạn chỉ cần mở thông báo trong app TikTok và nhấn <strong>Dán (Paste)</strong> vào ô mô tả!</div>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Xem Tiến Độ Ở Hàng Đợi',
+            cancelButtonText: 'Ở Lại Trang Này',
+            confirmButtonColor: '#ec4899',
+            cancelButtonColor: '#475569'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/jobs';
+            }
+        });
+
+    } catch (e) {
+        Swal.fire('Lỗi Xuất Bản TikTok', e.message, 'error');
+    } finally {
+        btn.html(oldHtml).prop('disabled', false);
         lucide.createIcons();
     }
 }

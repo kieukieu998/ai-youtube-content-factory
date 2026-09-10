@@ -62,6 +62,8 @@ config/*.txt
 *.png
 *.jpg
 *.jpeg
-*.webp
+# Binaries & Tunnel
+cloudflared.exe
+*.exe
 
 

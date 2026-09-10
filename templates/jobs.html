@@ -130,9 +130,9 @@
                         <td class="max-w-[340px]">
                             <div class="font-bold text-white text-sm truncate" title="{{ j.display_name }}">
                                 {% if j.target_url %}
-                                <a href="{{ j.target_url }}" {% if 'youtu' in j.target_url %}target="_blank"{% endif %} class="hover:text-rose-400 transition inline-flex items-center gap-1.5">
+                                <a href="{{ j.target_url }}" {% if 'youtu' in j.target_url or 'tiktok' in j.target_url %}target="_blank"{% endif %} class="hover:text-rose-400 transition inline-flex items-center gap-1.5">
                                     <span>{{ j.display_name }}</span>
-                                    {% if 'youtu' in j.target_url %}
+                                    {% if 'youtu' in j.target_url or 'tiktok' in j.target_url %}
                                     <i data-lucide="external-link" class="w-3.5 h-3.5 opacity-60 shrink-0"></i>
                                     {% endif %}
                                 </a>
@@ -159,24 +159,22 @@
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-500/15 text-sky-300 border border-sky-500/30">
                                 <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> Đang chờ
                             </span>
+                            {% elif j.status == 'failed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Thất bại
+                            </span>
                             {% elif j.status == 'cancelled' %}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700/60">
-                                <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Đã hủy
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-500/15 text-slate-400 border border-slate-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Đã hủy
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Lỗi
-                            </span>
+                            <span class="text-xs text-slate-400">{{ j.status }}</span>
                             {% endif %}
                         </td>
-                        <td class="w-48">
-                            <div class="flex items-center gap-2.5">
-                                <div class="animated-progress-bar flex-1">
-                                    <div class="animated-progress-fill {% if j.status == 'processing' %}progress-active{% elif j.status == 'completed' %}progress-completed{% elif j.status == 'failed' %}progress-failed{% else %}progress-pending{% endif %}"
-                                         style="width: {{ j.progress if j.progress > 0 else (10 if j.status == 'processing' else 0) }}%;">
-                                    </div>
-                                </div>
-                                <span class="text-xs font-mono font-bold whitespace-nowrap {% if j.status == 'completed' %}text-emerald-400{% elif j.status == 'processing' %}text-purple-300 animate-pulse{% elif j.status == 'failed' %}text-rose-400{% else %}text-slate-400{% endif %}">
+                        <td>
+                            <div class="flex items-center gap-2 max-w-[180px]">
+                                <progress class="progress {% if j.status == 'completed' %}progress-success{% elif j.status == 'failed' %}progress-error{% elif j.status == 'cancelled' %}progress-neutral{% else %}progress-primary{% endif %} w-full h-2 rounded-full bg-slate-800" value="{{ j.progress }}" max="100"></progress>
+                                <span class="text-xs font-mono text-slate-300 w-9 text-right shrink-0">
                                     {{ j.progress }}%
                                 </span>
                             </div>
@@ -188,8 +186,19 @@
                                 <span class="truncate max-w-[130px]">Xem trên YouTube</span>
                                 <i data-lucide="external-link" class="w-3 h-3 text-slate-400 group-hover:text-white transition-colors"></i>
                             </a>
+                            {% elif j.status == 'completed' and j.target_url and 'tiktok.com/@' in j.target_url and '/video/' in j.target_url %}
+                            <a href="{{ j.target_url }}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-black text-slate-200 hover:text-white border border-slate-700/80 hover:border-pink-500 transition-all text-xs font-medium shadow-sm group" title="Mở xem video trên TikTok: {{ j.target_url }}">
+                                <svg class="w-3.5 h-3.5 fill-current text-[#25F4EE] group-hover:text-[#FE2C55] transition-colors shrink-0" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                                <span class="truncate max-w-[130px]">Xem trên TikTok</span>
+                                <i data-lucide="external-link" class="w-3 h-3 text-slate-400 group-hover:text-white transition-colors"></i>
+                            </a>
+                            {% elif j.status == 'completed' and j.job_type == 'TikTokPublishJob' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-pink-950/60 text-pink-300 border border-pink-700/60 text-xs font-medium" title="Video đã gửi vào Hộp Thư / Bản Nháp trên điện thoại. Hãy mở app TikTok để xem và duyệt đăng!">
+                                <i data-lucide="inbox" class="w-3.5 h-3.5 text-pink-400 shrink-0"></i>
+                                <span>Trong Hộp Thư TikTok</span>
+                            </span>
                             {% else %}
-                            <span class="truncate block" title="{{ j.error_message or j.result or '' }}">
+                            <span class="truncate block {% if j.status == 'failed' %}text-rose-400{% endif %}" title="{{ j.error_message or j.result or '' }}">
                                 {{ j.error_message or j.result or '-' }}
                             </span>
                             {% endif %}
@@ -219,6 +228,10 @@
                                     {% elif j.job_type in ['YouTubePublishJob', 'PublishJob'] %}
                                     <a href="{{ j.target_url or 'https://youtube.com' }}" target="_blank" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-800 hover:bg-red-600 text-red-500 hover:text-white border border-slate-700 hover:border-red-500 transition shadow-sm" title="Mở xem video trên YouTube">
                                         <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                    </a>
+                                    {% elif j.job_type == 'TikTokPublishJob' %}
+                                    <a href="{{ j.target_url or 'https://tiktok.com' }}" target="_blank" class="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-800 hover:bg-black text-[#25F4EE] hover:text-[#FE2C55] border border-slate-700 hover:border-pink-500 transition shadow-sm" title="Mở xem video trên TikTok">
+                                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-1.01-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
                                     </a>
                                     {% endif %}
                                 {% elif j.status in ['pending', 'processing'] %}

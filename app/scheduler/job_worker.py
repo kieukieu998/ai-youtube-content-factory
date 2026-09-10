@@ -65,6 +65,37 @@ class JobWorker:
             return False
 
     @classmethod
+    def prune_finished_jobs(cls, db, max_keep: int = 100) -> int:
+        """
+        Automatically keeps only the most recent `max_keep` jobs.
+        Deletes finished jobs (all statuses except pending and processing) older than the top `max_keep`.
+        Active jobs are NEVER deleted.
+        """
+        try:
+            total_count = db.query(Job).count()
+            if total_count <= max_keep:
+                return 0
+
+            # Find the cutoff ID of the max_keep-th newest job
+            cutoff = db.query(Job.id).order_by(Job.id.desc()).offset(max_keep).limit(1).first()
+            if not cutoff:
+                return 0
+
+            cutoff_id = cutoff[0]
+            deleted_count = db.query(Job).filter(
+                Job.id <= cutoff_id,
+                Job.status.notin_(["pending", "processing"])
+            ).delete(synchronize_session=False)
+            db.commit()
+            if deleted_count > 0:
+                logger.info(f"Auto-pruned {deleted_count} old finished jobs beyond #{max_keep} retention limit.")
+            return deleted_count
+        except Exception as e:
+            logger.error(f"Error during auto-pruning jobs: {e}")
+            db.rollback()
+            return 0
+
+    @classmethod
     async def start_worker_loop(cls):
         """Infinite loop polling pending jobs from database."""
         cls._is_running = True
@@ -107,6 +138,8 @@ class JobWorker:
                 await cls._handle_story_video_render(db, job, payload)
             elif job.job_type in ["YouTubePublishJob", "PublishJob"]:
                 await cls._handle_youtube_publish(db, job, payload)
+            elif job.job_type == "TikTokPublishJob":
+                await cls._handle_tiktok_publish(db, job, payload)
             else:
                 job.status = "completed"
                 job.progress = 100
@@ -133,7 +166,7 @@ class JobWorker:
                             logger.error(f"Error syncing story status on job failure: {sync_err}")
 
                     # Also synchronize publish status if it's a publish job!
-                    if job.job_type in ["YouTubePublishJob", "PublishJob"]:
+                    if job.job_type in ["YouTubePublishJob", "PublishJob", "TikTokPublishJob"]:
                         try:
                             payload_data = json.loads(job.payload) if job.payload else {}
                             pub_id = payload_data.get("publish_id")
@@ -147,6 +180,10 @@ class JobWorker:
 
                     db.commit()
         finally:
+            try:
+                cls.prune_finished_jobs(db, max_keep=100)
+            except Exception as pe:
+                logger.error(f"Error auto-pruning jobs in worker: {pe}")
             db.close()
 
     @classmethod
@@ -1102,6 +1139,81 @@ class JobWorker:
         job.result = f"Đăng video lên YouTube thành công! Link: {video_url}"
         db.commit()
         logger.info(f"YouTubePublishJob #{job.id} completed successfully -> {video_url}")
+
+    @classmethod
+    async def _handle_tiktok_publish(cls, db: Session, job: Job, payload: Dict[str, Any]):
+        """Publish vertical 9:16 video to TikTok via Content Posting API."""
+        publish_id = payload.get("publish_id")
+        file_path = payload.get("file_path")
+        caption = payload.get("caption", "")
+        privacy_level = payload.get("privacy_level", "PUBLIC_TO_EVERYONE")
+        disable_duet = payload.get("disable_duet", False)
+        disable_comment = payload.get("disable_comment", False)
+        disable_stitch = payload.get("disable_stitch", False)
+
+        if not file_path or not os.path.exists(file_path):
+            raise FileNotFoundError(f"File video không tồn tại: {file_path}")
+
+        publish = db.query(Publish).filter(Publish.id == publish_id).first() if publish_id else None
+        if publish:
+            publish.status = "publishing"
+            db.commit()
+
+        def update_pub_progress(pct: float, message: str):
+            try:
+                progress_val = min(98, max(5, int(pct * 100)))
+                with SessionLocal() as progress_db:
+                    pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                    if pj:
+                        pj.status = "processing"
+                        pj.progress = progress_val
+                        pj.result = message
+                        progress_db.commit()
+            except Exception:
+                pass
+
+        update_pub_progress(0.08, "Đang kết nối TikTok API & khởi tạo phiên đăng tải...")
+
+        if cls._is_job_cancelled(db, job.id):
+            logger.warning(f"TikTokPublishJob #{job.id} cancelled before upload.")
+            return
+
+        from app.publishing.tiktok_publisher import TikTokPublisher
+
+        upload_res = await asyncio.to_thread(
+            TikTokPublisher.upload_video,
+            file_path=file_path,
+            title=caption,
+            privacy_level=privacy_level,
+            disable_duet=disable_duet,
+            disable_comment=disable_comment,
+            disable_stitch=disable_stitch,
+            progress_callback=update_pub_progress
+        )
+
+        post_id = upload_res.get("post_id")
+        post_url = upload_res.get("video_url") or f"https://www.tiktok.com/@creator/video/{post_id}"
+
+        if publish:
+            publish.status = "published"
+            publish.tiktok_post_id = str(post_id)
+            publish.platform_video_id = str(post_id)
+            publish.video_url = post_url
+            publish.published_at = datetime.utcnow()
+            publish.error_message = None
+            db.commit()
+
+        is_inbox = upload_res.get("is_inbox", False)
+        job.status = "completed"
+        job.progress = 100
+        job.error_message = None
+        if is_inbox:
+            job.result = "Đã gửi vào Hộp Thư / Bản Nháp TikTok! Hãy mở app TikTok trên điện thoại để duyệt đăng."
+        else:
+            job.result = f"Đăng video lên TikTok thành công! Link: {post_url}"
+        db.commit()
+        logger.info(f"TikTokPublishJob #{job.id} completed successfully -> {post_url}")
+
 
 
 
