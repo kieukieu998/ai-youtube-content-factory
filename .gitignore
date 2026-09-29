@@ -45,8 +45,7 @@ logs/*
 Thumbs.db
 *.code-workspace
 
-# Agent & AI tool configurations
-.agents/
+# AI tool configurations (scratch only)
 scratch/
 test_*.mp3
 test_*.mp4
