@@ -59,6 +59,12 @@ class Settings(ConfigBase):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     ANTHROPIC_API_KEY: Optional[str] = os.getenv("ANTHROPIC_API_KEY")
     
+    # Video Generative AI (Seedance 2.5, OpenAI Videos, Pollinations, Motion Engine)
+    VIDEO_AI_PROVIDER: str = os.getenv("VIDEO_AI_PROVIDER", "motion_engine")
+    VIDEO_AI_API_KEY: Optional[str] = os.getenv("VIDEO_AI_API_KEY")
+    VIDEO_AI_BASE_URL: str = os.getenv("VIDEO_AI_BASE_URL", "https://api.openai.com/v1")
+    VIDEO_AI_MODEL: str = os.getenv("VIDEO_AI_MODEL", "seedance-2-5")
+    
     # Audio TTS
     DEFAULT_TTS_VOICE: str = os.getenv("DEFAULT_TTS_VOICE", "vi-VN-HoaiMyNeural")
     DEFAULT_TTS_SPEED: float = float(os.getenv("DEFAULT_TTS_SPEED", "1.0"))

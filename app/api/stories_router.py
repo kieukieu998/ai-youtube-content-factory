@@ -2,7 +2,7 @@ import os
 import json
 from typing import Optional, List
 from pathlib import Path
-from fastapi import APIRouter, Depends, Request, Form, HTTPException
+from fastapi import APIRouter, Depends, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -13,6 +13,7 @@ from app.database.session import get_db
 from app.database.models import Story, Job, Setting
 from app.story.story_service import StoryService
 from app.story.audiobook_generator import AudiobookGenerator
+from app.story.story_animation_engine import StoryAnimationEngine
 
 router = APIRouter()
 
@@ -55,7 +56,7 @@ def format_file_size(path: Optional[str]) -> Optional[str]:
 def sync_story_status_with_job(story: Story, db: Session):
     """Ensure story status matches the actual background Job status."""
     related_job = db.query(Job).filter(
-        Job.job_type.in_(["StoryVideoRenderJob", "StoryAudioJob"]),
+        Job.job_type.in_(["StoryVideoRenderJob", "StoryAudioJob", "StoryAnimationJob"]),
         Job.payload.like(f'%"story_id": {story.id}%')
     ).order_by(Job.id.desc()).first()
     if not related_job:
@@ -365,6 +366,130 @@ async def generate_video_job(
     db.refresh(job)
 
     return {"status": "success", "job_id": job.id, "message": "Đã bắt đầu tác vụ render video nghe truyện..."}
+
+@router.post("/api/stories/{story_id}/upload-comic-reference")
+async def upload_comic_reference(
+    story_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Upload comic/reference image for multi-shot scene breakdown and character modeling."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    upload_dir = Path("media/working/stories/references")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    ext = Path(file.filename or "image.png").suffix.lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        ext = ".png"
+
+    dest_file = upload_dir / f"comic_ref_{story_id}{ext}"
+    content = await file.read()
+    with open(dest_file, "wb") as f:
+        f.write(content)
+
+    rel_path = str(dest_file).replace("\\", "/")
+    return {
+        "status": "success",
+        "file_path": rel_path,
+        "url": f"/{rel_path}",
+        "message": "Tải ảnh truyện tranh tham chiếu thành công!"
+    }
+
+@router.post("/api/stories/{story_id}/breakdown-storyboard")
+async def breakdown_storyboard(
+    story_id: int,
+    reference_image_path: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Parses story into Character Bible and discrete Storyboard Shots with camera cues and preview frames.
+    """
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    ref_img = reference_image_path
+    if not ref_img:
+        # Check if default uploaded reference exists
+        for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+            candidate = Path(f"media/working/stories/references/comic_ref_{story_id}{ext}")
+            if candidate.exists():
+                ref_img = str(candidate).replace("\\", "/")
+                break
+
+    try:
+        storyboard = await StoryAnimationEngine.generate_storyboard_breakdown(
+            story_id=story.id,
+            title=story.title,
+            content=story.content,
+            reference_image_path=ref_img
+        )
+        # Cache characters to story model if not present
+        if not story.characters_json and storyboard.get("characters"):
+            story.characters_json = json.dumps(storyboard["characters"], ensure_ascii=False)
+            db.commit()
+
+        return {
+            "status": "success",
+            "storyboard": storyboard,
+            "message": f"Đã phân rã thành công {storyboard.get('total_shots', 0)} phân cảnh Storyboard!"
+        }
+    except Exception as e:
+        logger.error(f"Error generating storyboard for Story #{story_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Không thể tạo Storyboard: {e}")
+
+@router.post("/api/stories/{story_id}/render-animation")
+async def render_story_animation(
+    story_id: int,
+    aspect_ratio: Optional[str] = Form("9:16"),
+    video_engine: Optional[str] = Form("motion_25d"),
+    reference_image_path: Optional[str] = Form(None),
+    bgm_name: Optional[str] = Form("suspense_bgm.mp3"),
+    db: Session = Depends(get_db)
+):
+    """
+    Queue background job to render AI Multi-Shot Comic/Character Animation Video.
+    """
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    story.video_aspect = aspect_ratio
+    story.status = "rendering_video"
+    db.commit()
+
+    ref_img = reference_image_path
+    if not ref_img:
+        for ext in [".png", ".jpg", ".jpeg", ".webp"]:
+            candidate = Path(f"media/working/stories/references/comic_ref_{story_id}{ext}")
+            if candidate.exists():
+                ref_img = str(candidate).replace("\\", "/")
+                break
+
+    # Dispatch StoryAnimationJob
+    job = Job(
+        job_type="StoryAnimationJob",
+        status="pending",
+        progress=0,
+        payload=json.dumps({
+            "story_id": story.id,
+            "aspect_ratio": aspect_ratio or "9:16",
+            "video_engine": video_engine or "motion_25d",
+            "reference_image_path": ref_img,
+            "bgm_name": bgm_name or "suspense_bgm.mp3"
+        })
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    return {
+        "status": "success",
+        "job_id": job.id,
+        "message": "AI đã bắt đầu phân cảnh và render phim hoạt hình đa góc máy!"
+    }
 
 @router.delete("/api/stories/{story_id}")
 async def delete_story(story_id: int, db: Session = Depends(get_db)):

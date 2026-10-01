@@ -25,6 +25,7 @@ from app.video.scene_slicer import SceneSlicer
 from app.story.audiobook_generator import AudiobookGenerator
 from app.story.story_video_renderer import StoryVideoRenderer
 from app.story.story_image_generator import StoryImageGenerator
+from app.story.story_animation_engine import StoryAnimationEngine
 
 def format_duration_str(seconds: float | int | None) -> str:
     """Format duration into digital timecode format: MM:SS or H:MM:SS (e.g. 01:06, 17:51, 3:35:36)"""
@@ -136,6 +137,8 @@ class JobWorker:
                 await cls._handle_story_audio(db, job, payload)
             elif job.job_type == "StoryVideoRenderJob":
                 await cls._handle_story_video_render(db, job, payload)
+            elif job.job_type == "StoryAnimationJob":
+                await cls._handle_story_animation(db, job, payload)
             elif job.job_type in ["YouTubePublishJob", "PublishJob"]:
                 await cls._handle_youtube_publish(db, job, payload)
             elif job.job_type == "TikTokPublishJob":
@@ -153,7 +156,7 @@ class JobWorker:
                     job.error_message = str(e)
 
                     # Also synchronize story status if it's a story job!
-                    if job.job_type in ["StoryVideoRenderJob", "StoryAudioJob"]:
+                    if job.job_type in ["StoryVideoRenderJob", "StoryAudioJob", "StoryAnimationJob"]:
                         try:
                             payload_data = json.loads(job.payload) if job.payload else {}
                             sid = payload_data.get("story_id")
@@ -1071,6 +1074,63 @@ class JobWorker:
         job.result = f"Render video truyện đa giọng ({story.video_aspect}) thành công!"
         db.commit()
         logger.info(f"Story #{story_id} video render completed -> {rendered_paths}")
+
+    @classmethod
+    async def _handle_story_animation(cls, db, job: Job, payload: Dict[str, Any]):
+        """
+        Handle multi-shot sequential story animation (character dynamic motion, dialogue & cuts).
+        """
+        story_id = payload.get("story_id")
+        aspect_ratio = payload.get("aspect_ratio", "9:16")
+        video_engine = payload.get("video_engine", "motion_25d")
+        reference_image_path = payload.get("reference_image_path")
+        bgm_name = payload.get("bgm_name", "suspense_bgm.mp3")
+
+        story = db.query(Story).filter(Story.id == story_id).first()
+        if not story:
+            raise ValueError(f"Story ID {story_id} không tồn tại.")
+
+        if cls._is_job_cancelled(db, job.id):
+            return
+
+        def update_anim_progress(pct: float, message: str):
+            try:
+                progress_val = min(98, max(5, int(pct * 100)))
+                with SessionLocal() as progress_db:
+                    pj = progress_db.query(Job).filter(Job.id == job.id).first()
+                    if pj:
+                        pj.status = "processing"
+                        pj.progress = progress_val
+                        pj.result = message
+                        progress_db.commit()
+            except Exception:
+                pass
+
+        update_anim_progress(0.05, "Đang khởi tạo pipeline hoạt hình đa phân cảnh...")
+
+        final_video_path = await StoryAnimationEngine.render_story_animation(
+            story_id=story.id,
+            title=story.title,
+            content=story.content,
+            author=story.author or "Khuyết danh",
+            reference_image_path=reference_image_path,
+            aspect_ratio=aspect_ratio,
+            video_engine=video_engine,
+            bgm_name=bgm_name,
+            progress_callback=update_anim_progress
+        )
+
+        story.video_aspect = aspect_ratio
+        story.video_path = final_video_path
+        story.status = "completed"
+        story.error_message = None
+
+        job.status = "completed"
+        job.progress = 100
+        job.error_message = None
+        job.result = f"Tạo video hoạt hình đa cảnh ({aspect_ratio}) thành công!"
+        db.commit()
+        logger.info(f"Story Animation #{story_id} completed -> {final_video_path}")
 
     @classmethod
     async def _handle_youtube_publish(cls, db, job: Job, payload: Dict[str, Any]):

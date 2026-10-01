@@ -106,3 +106,56 @@ async def test_character_parser_with_camera_cues():
     for seg in parsed.segments:
         assert seg.camera_cue in ["wide_establishing", "medium_shot", "close_up", "low_angle", "tracking_shot"]
 
+@pytest.mark.asyncio
+async def test_story_animation_engine_breakdown_and_bible():
+    from app.story.story_animation_engine import StoryAnimationEngine
+    title = "Chiếc Bánh Sinh Nhật"
+    content = 'Cô bé khuấy bột bánh: "Bột thơm quá!"\nAnh trai cười lớn: "Chắc chắn sẽ ngon tuyệt cú mèo!"'
+
+    bible = await StoryAnimationEngine.generate_character_bible(title, content)
+    assert len(bible) >= 2
+    for char in bible:
+        assert "name" in char
+        assert "voice" in char
+        assert "visual_prompt" in char
+
+    shots = await StoryAnimationEngine.breakdown_story_to_shots(title, content)
+    assert len(shots) >= 2
+    for s in shots:
+        assert s["shot_no"] > 0
+        assert "camera_motion" in s
+        assert "text" in s
+
+@pytest.mark.asyncio
+async def test_storyboard_breakdown_api_route():
+    from fastapi.testclient import TestClient
+    from main import app
+
+    client = TestClient(app)
+    # Create story
+    create_res = client.post("/api/stories/create", json={
+        "title": "Chuyện Chú Mèo Con",
+        "content": 'Mèo con kêu: "Meo meo, đói bụng quá đi!"\nChủ nhân vuốt ve: "Ngoan nào bé cưng."',
+        "author": "Minh Phong"
+    })
+    assert create_res.status_code == 200
+    story_id = create_res.json()["story_id"]
+
+    # Test breakdown storyboard route
+    sb_res = client.post(f"/api/stories/{story_id}/breakdown-storyboard")
+    assert sb_res.status_code == 200
+    sb_data = sb_res.json()
+    assert sb_data["status"] == "success"
+    assert "storyboard" in sb_data
+    assert len(sb_data["storyboard"]["shots"]) >= 2
+
+    # Test render animation route dispatch
+    anim_res = client.post(f"/api/stories/{story_id}/render-animation", data={
+        "aspect_ratio": "9:16",
+        "video_engine": "motion_25d"
+    })
+    assert anim_res.status_code == 200
+    anim_data = anim_res.json()
+    assert anim_data["status"] == "success"
+    assert "job_id" in anim_data
+

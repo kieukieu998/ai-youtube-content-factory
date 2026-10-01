@@ -210,11 +210,110 @@
                     </div>
                 </div>
 
-
             </div>
-
         </div>
 
+    </div>
+
+    <!-- AI Storyboard & Multi-Shot Animation Studio (PRINTFILM Architecture) -->
+    <div id="animation_studio_section" class="glass-card rounded-3xl border border-indigo-500/40 p-6 space-y-6 bg-gradient-to-r from-slate-900/90 via-indigo-950/20 to-slate-900/90 shadow-2xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div class="space-y-1">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                        <i data-lucide="clapperboard" class="w-5 h-5"></i>
+                    </div>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">
+                        Studio Phim Hoạt Hình AI Đa Cảnh (PRINTFILM 漫剧 Engine)
+                        <span class="badge badge-sm badge-secondary font-mono text-[10px] font-bold">Multi-Shot I2V</span>
+                    </h2>
+                </div>
+                <p class="text-xs text-slate-400">
+                    Dựng nhân vật (<span class="text-indigo-400 font-semibold">Character Bible</span>) & bối cảnh phân cảnh (<span class="text-pink-400 font-semibold">Shot Breakdown</span>) từ truyện tranh hoặc kịch bản, sau đó diễn hoạt thành phim hoàn chỉnh.
+                </p>
+            </div>
+
+            <!-- Quick Engine Config -->
+            <div class="flex items-center gap-3 bg-slate-950/70 border border-slate-800 p-2.5 rounded-2xl">
+                <div class="text-xs">
+                    <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Engine Diễn Hoạt:</span>
+                    <select id="anim_video_engine" class="select select-xs select-bordered bg-slate-900 text-white font-medium focus:border-indigo-500">
+                        <option value="motion_25d" selected>🎬 FFmpeg 2.5D Ken Burns Cinematic (Zero-Cost Local)</option>
+                        <option value="seedance">⚡ Seedance 2.5 / OpenAI Videos (Generative AI)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls: Comic Reference & Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
+            <!-- Comic Image Reference Uploader -->
+            <div class="md:col-span-6 space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i data-lucide="image" class="w-4 h-4 text-pink-400"></i> Ảnh Truyện Tranh / Strip Minh Họa Tham Chiếu:</span>
+                    <button type="button" onclick="useSampleComic()" class="text-[11px] text-pink-400 hover:text-pink-300 font-medium flex items-center gap-1">
+                        <i data-lucide="sparkles" class="w-3 h-3"></i> Dùng ảnh mẫu truyện bánh kem
+                    </button>
+                </label>
+                <div class="flex items-center gap-3">
+                    <input type="file" id="comic_file_input" accept="image/*" onchange="handleComicUpload(event)" class="file-input file-input-bordered file-input-sm w-full bg-slate-900 text-xs" />
+                    <input type="hidden" id="comic_ref_path" value="media/working/stories/comic_cake_story.png" />
+                    <div id="comic_thumb_preview" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+                        <img id="comic_thumb_img" src="/media/working/stories/comic_cake_story.png" class="w-full h-full object-cover" onerror="this.src=''" alt="Comic" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="md:col-span-6 flex flex-wrap sm:flex-nowrap gap-2.5 items-end justify-end">
+                <button type="button" id="btn_generate_storyboard" onclick="generateStoryboard()" class="btn btn-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl border-0 flex items-center gap-2 font-bold px-4 py-2 shadow-lg shadow-indigo-600/30">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i> 1. Dựng Phân Cảnh (Storyboard)
+                </button>
+                <button type="button" id="btn_render_animation" onclick="renderStoryAnimation()" class="btn btn-sm bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white rounded-xl border-0 flex items-center gap-2 font-bold px-4 py-2 shadow-lg shadow-pink-600/30">
+                    <i data-lucide="film" class="w-4 h-4"></i> 2. Render Phim Hoạt Hình 9:16
+                </button>
+            </div>
+        </div>
+
+        <!-- Character Bible Display -->
+        <div id="character_bible_container" class="space-y-3 hidden">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i> Character Bible (Hồ Sơ Nhân Vật Nhất Quán)
+            </h3>
+            <div id="character_bible_cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Character cards rendered via JS -->
+            </div>
+        </div>
+
+        <!-- Storyboard Shots Grid -->
+        <div id="storyboard_shots_container" class="space-y-3 hidden">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <i data-lucide="layers" class="w-4 h-4 text-pink-400"></i> Lưới Phân Cảnh Hoạt Hình (Storyboard Shot List)
+                </h3>
+                <span id="storyboard_total_shots_badge" class="badge badge-neutral text-xs font-mono">0 Shots</span>
+            </div>
+            <div id="storyboard_shots_grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Shot cards rendered via JS -->
+            </div>
+        </div>
+
+        <!-- Animation Render Video Output Box -->
+        <div id="anim_video_result_box" class="space-y-3 hidden border-t border-slate-800 pt-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Kết Quả Phim Hoạt Hình Đa Cảnh Đã Render
+                </h3>
+                <a id="anim_video_download_btn" href="" download class="btn btn-xs btn-outline border-slate-700 text-slate-300 gap-1.5 rounded-lg">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Tải MP4 Hoạt Hình
+                </a>
+            </div>
+            <div class="max-w-[340px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden border border-slate-700 bg-black shadow-2xl">
+                <video id="anim_rendered_player" controls class="w-full h-full object-contain">
+                    <source id="anim_rendered_source" src="" type="video/mp4">
+                </video>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom Section: Story Library / Danh Sách Truyện -->
@@ -2289,6 +2388,296 @@ async function submitPublishTikTok() {
     } finally {
         btn.html(oldHtml).prop('disabled', false);
         lucide.createIcons();
+    }
+}
+
+/* ========================================================
+   AI Storyboard & Multi-Shot Animation Studio (PRINTFILM)
+   ======================================================== */
+
+function useSampleComic() {
+    const samplePath = 'media/working/stories/comic_cake_story.png';
+    $('#comic_ref_path').val(samplePath);
+    $('#comic_thumb_img').attr('src', `/${samplePath}?t=${Date.now()}`);
+    Swal.fire({
+        icon: 'success',
+        title: 'Đã Chọn Ảnh Truyện Tranh Mẫu',
+        text: 'Đã gắn ảnh 2-panel bánh kem sinh nhật làm tư liệu nhân vật & phân cảnh.',
+        timer: 1500,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+    });
+}
+
+async function handleComicUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    let storyId = $('#current_story_id').val();
+    if (!storyId) {
+        // Create draft story first if needed
+        const content = $('#story_content').val().trim() || 'Một câu chuyện thú vị';
+        const title = $('#story_title').val().trim() || 'Truyện Tranh Hoạt Hình';
+        try {
+            const createRes = await fetch('/api/stories/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content })
+            });
+            const createData = await createRes.json();
+            if (createRes.ok && createData.story_id) {
+                storyId = createData.story_id;
+                $('#current_story_id').val(storyId);
+            }
+        } catch (e) {
+            console.warn("Could not auto-create story for upload:", e);
+        }
+    }
+
+    if (!storyId) {
+        Swal.fire('Chú ý', 'Vui lòng nhập nội dung truyện trước khi tải ảnh tham chiếu.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch(`/api/stories/${storyId}/upload-comic-reference`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            $('#comic_ref_path').val(data.file_path);
+            $('#comic_thumb_img').attr('src', `${data.url}?t=${Date.now()}`);
+            Swal.fire({
+                icon: 'success',
+                title: 'Tải Ảnh Thành Công!',
+                text: 'AI sẽ dùng ảnh này để cắt và dựng hoạt hình nhân vật từng cảnh.',
+                timer: 1600,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        } else {
+            throw new Error(data.detail || 'Không thể tải ảnh');
+        }
+    } catch (e) {
+        Swal.fire('Lỗi Tải Ảnh', e.message, 'error');
+    }
+}
+
+async function generateStoryboard() {
+    let storyId = $('#current_story_id').val();
+    const content = $('#story_content').val().trim();
+    const title = $('#story_title').val().trim() || 'Truyện chưa đặt tên';
+
+    if (!content) {
+        Swal.fire('Nội Dung Trống', 'Vui lòng nhập hoặc dán nội dung truyện trước khi dựng phân cảnh.', 'warning');
+        return;
+    }
+
+    // Auto-save story if not existing
+    if (!storyId) {
+        try {
+            const createRes = await fetch('/api/stories/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content, video_aspect: '9:16' })
+            });
+            const createData = await createRes.json();
+            if (createRes.ok && createData.story_id) {
+                storyId = createData.story_id;
+                $('#current_story_id').val(storyId);
+            } else {
+                throw new Error(createData.detail || 'Lỗi khi lưu truyện');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi Lưu Truyện', e.message, 'error');
+            return;
+        }
+    }
+
+    const refPath = $('#comic_ref_path').val() || '';
+    const btn = $('#btn_generate_storyboard');
+    const oldHtml = btn.html();
+    btn.html('<span class="loading loading-spinner loading-xs"></span> Đang Phân Cảnh...').prop('disabled', true);
+
+    try {
+        const formData = new FormData();
+        if (refPath) formData.append('reference_image_path', refPath);
+
+        const res = await fetch(`/api/stories/${storyId}/breakdown-storyboard`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi dựng phân cảnh');
+
+        const sb = data.storyboard;
+
+        // 1. Render Character Bible
+        if (sb.characters && sb.characters.length > 0) {
+            let bibleHtml = '';
+            sb.characters.forEach((c, idx) => {
+                const colors = ['from-pink-500 to-rose-600', 'from-indigo-500 to-blue-600', 'from-purple-500 to-indigo-600', 'from-emerald-500 to-teal-600'];
+                const bgGrad = colors[idx % colors.length];
+                bibleHtml += `
+                    <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5 shadow-md hover:border-indigo-500/50 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${bgGrad} flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                ${escapeHtml(c.name.charAt(0).toUpperCase())}
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="font-bold text-white text-xs truncate">${escapeHtml(c.name)}</div>
+                                <span class="badge badge-xs bg-slate-800 border-slate-700 text-slate-300 text-[10px]">${escapeHtml(c.role)}</span>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-slate-400 space-y-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
+                            <div><span class="text-indigo-400 font-semibold">Giọng AI:</span> <code class="text-white text-[10px]">${c.voice.split('-').pop()}</code></div>
+                            <div class="truncate text-[10px] text-slate-500" title="${escapeHtml(c.visual_prompt)}">🎨 ${escapeHtml(c.visual_prompt)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            $('#character_bible_cards').html(bibleHtml);
+            $('#character_bible_container').removeClass('hidden');
+        }
+
+        // 2. Render Storyboard Shots Grid
+        if (sb.shots && sb.shots.length > 0) {
+            let shotsHtml = '';
+            sb.shots.forEach((s) => {
+                shotsHtml += `
+                    <div class="group rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-pink-500/50 overflow-hidden shadow-lg transition flex flex-col">
+                        <div class="relative aspect-[9/16] bg-slate-950 overflow-hidden">
+                            <img src="${s.thumbnail_url}?t=${Date.now()}" alt="Shot ${s.shot_no}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='/static/images/placeholder.jpg'" />
+                            <div class="absolute top-2 left-2 badge badge-sm bg-black/70 text-white border-0 font-mono text-[10px] font-bold">
+                                Shot #${s.shot_no}
+                            </div>
+                            <div class="absolute top-2 right-2 badge badge-xs bg-pink-900/80 text-pink-300 border-pink-700 font-mono text-[9px]">
+                                ${escapeHtml(s.camera_cue)}
+                            </div>
+                            <div class="absolute bottom-2 left-2 right-2 text-[10px] bg-black/80 backdrop-blur-sm p-1.5 rounded-lg border border-white/10 text-amber-300 font-mono flex items-center gap-1">
+                                <i data-lucide="video" class="w-3 h-3 text-pink-400 shrink-0"></i>
+                                <span class="truncate">${escapeHtml(s.camera_motion)}</span>
+                            </div>
+                        </div>
+                        <div class="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-bold text-white flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-indigo-400"></i> ${escapeHtml(s.speaker_name)}</span>
+                                <span class="badge badge-xs badge-ghost text-[10px] text-slate-400 font-sans">${escapeHtml(s.emotion || 'bình tĩnh')}</span>
+                            </div>
+                            <p class="text-xs text-slate-300 line-clamp-3 leading-relaxed bg-slate-950/40 p-2 rounded-xl border border-slate-800/80 italic">
+                                "${escapeHtml(s.text)}"
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+            $('#storyboard_shots_grid').html(shotsHtml);
+            $('#storyboard_total_shots_badge').text(`${sb.shots.length} Phân Cảnh (Shots)`);
+            $('#storyboard_shots_container').removeClass('hidden');
+        }
+
+        lucide.createIcons();
+        Swal.fire({
+            icon: 'success',
+            title: 'Dựng Storyboard Hoàn Tất!',
+            text: `Đã phân rã thành công ${sb.shots ? sb.shots.length : 0} phân cảnh kèm góc máy điện ảnh và nhân vật.`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+
+    } catch (e) {
+        Swal.fire('Lỗi Storyboard', e.message, 'error');
+    } finally {
+        btn.html(oldHtml).prop('disabled', false);
+        lucide.createIcons();
+    }
+}
+
+async function renderStoryAnimation() {
+    let storyId = $('#current_story_id').val();
+    const content = $('#story_content').val().trim();
+    const title = $('#story_title').val().trim() || 'Truyện chưa đặt tên';
+
+    if (!content) {
+        Swal.fire('Nội Dung Trống', 'Vui lòng nhập nội dung truyện trước khi render phim hoạt hình.', 'warning');
+        return;
+    }
+
+    if (!storyId) {
+        try {
+            const createRes = await fetch('/api/stories/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content, video_aspect: '9:16' })
+            });
+            const createData = await createRes.json();
+            if (createRes.ok && createData.story_id) {
+                storyId = createData.story_id;
+                $('#current_story_id').val(storyId);
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không thể khởi tạo truyện để render.', 'error');
+            return;
+        }
+    }
+
+    const videoEngine = $('#anim_video_engine').val() || 'motion_25d';
+    const refPath = $('#comic_ref_path').val() || '';
+
+    Swal.fire({
+        title: 'Đang Render Phim Hoạt Hình Đa Cảnh...',
+        html: `
+            <div class="space-y-3 text-left text-xs text-slate-300 py-2">
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500 animate-ping"></span> 1. Diễn hoạt chuyển động nhân vật & góc máy camera từng shot...</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> 2. Lồng tiếng đa giọng Edge-TTS & gắn subtitle từng thoại...</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> 3. Ghép nối đa cảnh & mix nhạc nền hoàn chỉnh (9:16)...</div>
+            </div>
+        `,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    try {
+        const formData = new FormData();
+        formData.append('aspect_ratio', '9:16');
+        formData.append('video_engine', videoEngine);
+        if (refPath) formData.append('reference_image_path', refPath);
+
+        const res = await fetch(`/api/stories/${storyId}/render-animation`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi khi gửi yêu cầu render hoạt hình');
+
+        pollJobStatus(data.job_id, () => {
+            const animVideoUrl = `/media/output/stories/story_${storyId}_9x16_anim.mp4?t=${Date.now()}`;
+            $('#anim_rendered_player')[0].src = animVideoUrl;
+            $('#anim_rendered_source').attr('src', animVideoUrl);
+            $('#anim_video_download_btn').attr('href', animVideoUrl);
+            $('#anim_video_result_box').removeClass('hidden');
+
+            // Scroll down smoothly to video result
+            document.getElementById('anim_video_result_box').scrollIntoView({ behavior: 'smooth' });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Render Phim Hoạt Hình Hoàn Tất!',
+                text: 'Video phim hoạt hình đa phân cảnh 9:16 đã sẵn sàng để xem và xuất bản!',
+                confirmButtonColor: '#ec4899'
+            });
+        });
+
+    } catch (e) {
+        Swal.fire('Lỗi Render Hoạt Hình', e.message, 'error');
     }
 }
 </script>
