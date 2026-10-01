@@ -38,6 +38,26 @@ class StoryUpdateSchema(BaseModel):
     content: Optional[str] = None
     video_aspect: Optional[str] = None
 
+def normalize_character_list(characters_raw) -> List[dict]:
+    """Normalizes characters into structured items: [{"name": "Mèo con", "role": "Nhân vật", "avatar": "M"}]"""
+    if not characters_raw:
+        return []
+    result = []
+    for c in characters_raw:
+        if isinstance(c, dict):
+            name = c.get("name") or c.get("speaker_name") or "Nhân vật"
+            role = c.get("role") or c.get("character_type") or "Nhân vật"
+        elif isinstance(c, str):
+            name = c.strip()
+            role = "Người dẫn chuyện" if name == "Người dẫn chuyện" else "Nhân vật"
+        else:
+            continue
+        if not name:
+            continue
+        avatar = name[0].upper()
+        result.append({"name": name, "role": role, "avatar": avatar})
+    return result
+
 def format_file_size(path: Optional[str]) -> Optional[str]:
     if not path or not os.path.exists(path):
         return None
@@ -100,6 +120,7 @@ async def get_stories_page(request: Request, db: Session = Depends(get_db)):
                 chars = json.loads(s.characters_json)
             except Exception:
                 pass
+        chars = normalize_character_list(chars)
         
         video_9x16 = f"media/output/stories/story_{s.id}_9x16.mp4"
         video_16x9 = f"media/output/stories/story_{s.id}_16x9.mp4"
@@ -148,6 +169,7 @@ async def list_stories(db: Session = Depends(get_db)):
                 characters = json.loads(s.characters_json)
             except Exception:
                 pass
+        characters = normalize_character_list(characters)
         
         video_9x16 = f"media/output/stories/story_{s.id}_9x16.mp4"
         video_16x9 = f"media/output/stories/story_{s.id}_16x9.mp4"
@@ -199,6 +221,7 @@ async def get_story_detail(story_id: int, db: Session = Depends(get_db)):
             characters = json.loads(story.characters_json)
         except Exception:
             pass
+    characters = normalize_character_list(characters)
     
     video_9x16 = f"media/output/stories/story_{story.id}_9x16.mp4"
     video_16x9 = f"media/output/stories/story_{story.id}_16x9.mp4"

@@ -377,9 +377,12 @@
                         </td>
                         <td>
                             {% if item.characters and item.characters|length > 0 %}
-                            <div class="flex flex-wrap gap-1">
+                            <div class="flex flex-wrap gap-1.5 max-w-[280px]">
                                 {% for c in item.characters %}
-                                <span class="badge badge-xs bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] py-0.5 px-1.5">{{ c }}</span>
+                                <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-indigo-500/30 text-slate-200 text-[11px] font-medium py-0.5 px-2 rounded-xl shadow-sm hover:border-pink-500/40 transition">
+                                    <span class="w-4 h-4 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-600 flex items-center justify-center text-white text-[9px] font-black shrink-0">{{ c.avatar }}</span>
+                                    <span class="truncate max-w-[110px]">{{ c.name }}</span>
+                                </span>
                                 {% endfor %}
                             </div>
                             {% else %}
@@ -1216,7 +1219,7 @@ async function loadStory(storyId) {
         if (s.characters && s.characters.length > 0) {
             let castHtml = '';
             s.characters.forEach(c => {
-                castHtml += `<span class="badge badge-sm badge-info text-[11px] font-medium py-1 px-2.5 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${escapeHtml(c)}</span>`;
+                castHtml += renderCharacterBadge(c);
             });
             $('#ai_cast_container').html(castHtml);
             $('#cast_count_badge').text(`${s.characters.length} nhân vật`);
@@ -1362,7 +1365,7 @@ async function refreshStoryTable() {
 
             let charBadges = '';
             if (s.characters && s.characters.length > 0) {
-                charBadges = `<div class="flex flex-wrap gap-1">` + s.characters.map(c => `<span class="badge badge-xs bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] py-0.5 px-1.5">${escapeHtml(c)}</span>`).join('') + `</div>`;
+                charBadges = `<div class="flex flex-wrap gap-1.5 max-w-[280px]">` + s.characters.map(c => renderCharacterBadge(c)).join('') + `</div>`;
             } else {
                 charBadges = `<span class="badge badge-xs badge-neutral text-[10px]">Đa giọng AI</span>`;
             }
@@ -1505,8 +1508,33 @@ function loadStoryFromModal() {
 }
 
 function escapeHtml(str) {
-    if (!str) return '';
+    if (str === null || str === undefined) return '';
+    if (typeof str !== 'string') {
+        if (typeof str === 'object') {
+            return escapeHtml(str.name || str.speaker_name || '');
+        }
+        str = String(str);
+    }
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function renderCharacterBadge(c) {
+    let name = '';
+    if (typeof c === 'string') {
+        name = c.trim();
+    } else if (c && typeof c === 'object') {
+        name = (c.name || c.speaker_name || 'Nhân vật').trim();
+    } else {
+        name = 'Nhân vật';
+    }
+    if (!name) name = 'Nhân vật';
+    const avatar = name.charAt(0).toUpperCase() || 'A';
+    return `
+        <span class="inline-flex items-center gap-1.5 bg-slate-900/90 border border-indigo-500/30 text-slate-200 text-[11px] font-medium py-0.5 px-2 rounded-xl shadow-sm hover:border-pink-500/40 transition">
+            <span class="w-4 h-4 rounded-full bg-gradient-to-tr from-pink-500 to-indigo-600 flex items-center justify-center text-white text-[9px] font-black shrink-0">${avatar}</span>
+            <span class="truncate max-w-[110px]" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+        </span>
+    `;
 }
 
 // ==========================================
