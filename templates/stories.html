@@ -285,16 +285,46 @@
             </div>
         </div>
 
-        <!-- Storyboard Shots Grid -->
-        <div id="storyboard_shots_container" class="space-y-3 hidden">
-            <div class="flex items-center justify-between">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <i data-lucide="layers" class="w-4 h-4 text-pink-400"></i> Lưới Phân Cảnh Hoạt Hình (Storyboard Shot List)
-                </h3>
-                <span id="storyboard_total_shots_badge" class="badge badge-neutral text-xs font-mono">0 Shots</span>
+        <!-- Storyboard Shots Table (PRINTFILM 分镜列表 Architecture) -->
+        <div id="storyboard_shots_container" class="space-y-4 hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <span>Danh Sách Phân Cảnh (分镜列表)</span>
+                            <span id="storyboard_total_shots_badge" class="badge badge-sm badge-neutral font-mono text-[10px]">0 Cảnh</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Tạo video độc lập cho từng phân cảnh rồi bấm nút ghép thành phim hoàn chỉnh.</p>
+                    </div>
+                </div>
+
+                <!-- Nút Ghép Thành Phim (拼接成片) -->
+                <button type="button" id="btn_concat_all_shots" onclick="concatAllShots()" class="btn btn-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl border-0 flex items-center gap-2 font-bold px-4 py-2 shadow-lg shadow-emerald-600/30">
+                    <i data-lucide="merge" class="w-4 h-4"></i> Ghép Thành Phim Hoàn Chỉnh (拼接成片)
+                </button>
             </div>
-            <div id="storyboard_shots_grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Shot cards rendered via JS -->
+
+            <!-- Bảng Danh Sách Phân Cảnh Table -->
+            <div class="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/70 shadow-xl">
+                <table class="table w-full text-xs">
+                    <thead>
+                        <tr class="text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider bg-slate-900/60">
+                            <th class="w-12 text-center">Cảnh</th>
+                            <th class="w-32">Khung hình</th>
+                            <th class="w-60">Lời bình / Thoại</th>
+                            <th>Phân rã chi tiết (逐段分镜)</th>
+                            <th class="w-20 text-center">Thời lượng</th>
+                            <th class="w-28 text-center">Trạng thái</th>
+                            <th class="w-32 text-right">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storyboard_shots_table_body" class="divide-y divide-slate-800/60">
+                        <!-- Rendered via JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -2574,38 +2604,71 @@ async function generateStoryboard() {
             $('#character_bible_container').removeClass('hidden');
         }
 
-        // 2. Render Storyboard Shots Grid
+        // 2. Render Storyboard Shots Table (PRINTFILM 分镜列表 Architecture)
         if (sb.shots && sb.shots.length > 0) {
-            let shotsHtml = '';
+            let tableHtml = '';
             sb.shots.forEach((s) => {
-                shotsHtml += `
-                    <div class="group rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-pink-500/50 overflow-hidden shadow-lg transition flex flex-col">
-                        <div class="relative aspect-[9/16] bg-slate-950 overflow-hidden">
-                            <img src="${s.thumbnail_url}?t=${Date.now()}" alt="Shot ${s.shot_no}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.src='/static/images/placeholder.jpg'" />
-                            <div class="absolute top-2 left-2 badge badge-sm bg-black/70 text-white border-0 font-mono text-[10px] font-bold">
-                                Shot #${s.shot_no}
+                const shotNoStr = String(s.shot_no).padStart(2, '0');
+                const isReady = s.status === 'ready';
+
+                tableHtml += `
+                    <tr class="hover:bg-slate-900/60 transition" id="shot_row_${s.shot_no}">
+                        <td class="text-center font-mono font-bold text-slate-400 text-sm">
+                            ${shotNoStr}
+                        </td>
+                        <td>
+                            <div class="relative w-24 h-14 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 shrink-0 group">
+                                <img src="${s.thumbnail_url}?t=${Date.now()}" class="w-full h-full object-cover" onerror="this.src='/static/images/placeholder.jpg'" />
+                                ${isReady ? `<button type="button" onclick="previewShotVideo('${s.clip_url}')" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition"><i data-lucide="play" class="w-5 h-5 fill-current"></i></button>` : ''}
                             </div>
-                            <div class="absolute top-2 right-2 badge badge-xs bg-pink-900/80 text-pink-300 border-pink-700 font-mono text-[9px]">
-                                ${escapeHtml(s.camera_cue)}
+                        </td>
+                        <td>
+                            <div class="space-y-1">
+                                <div class="font-bold text-white text-xs flex items-center gap-1.5">
+                                    <span class="text-pink-400 font-semibold">${escapeHtml(s.section_title || 'Phân cảnh')}</span>
+                                    <span class="badge badge-xs bg-slate-800 text-slate-400 text-[9px]">${escapeHtml(s.speaker_name)}</span>
+                                </div>
+                                <div class="text-slate-300 text-xs italic line-clamp-2 leading-relaxed">
+                                    “${escapeHtml(s.text)}”
+                                </div>
                             </div>
-                            <div class="absolute bottom-2 left-2 right-2 text-[10px] bg-black/80 backdrop-blur-sm p-1.5 rounded-lg border border-white/10 text-amber-300 font-mono flex items-center gap-1">
-                                <i data-lucide="video" class="w-3 h-3 text-pink-400 shrink-0"></i>
-                                <span class="truncate">${escapeHtml(s.camera_motion)}</span>
+                        </td>
+                        <td>
+                            <div class="space-y-1 text-[11px] font-mono">
+                                <div class="text-slate-400 flex items-center gap-1.5 text-[10px]">
+                                    <span class="text-indigo-400 font-semibold">Phụ đề:</span> Tự động sync câu thoại · BGM nhẹ nhàng
+                                </div>
+                                <div class="flex items-center gap-1.5 text-amber-300">
+                                    <span class="badge badge-xs bg-slate-800 text-amber-300 font-bold border-0 text-[10px]">${escapeHtml(s.camera_tag.split(']')[0])}]</span>
+                                    <span class="text-slate-200 truncate max-w-[320px]">${escapeHtml(s.camera_tag.split(']')[1] || '')}</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 text-emerald-400">
+                                    <span class="badge badge-xs bg-slate-800 text-emerald-400 font-bold border-0 text-[10px]">${escapeHtml(s.dialogue_tag.split(']')[0])}]</span>
+                                    <span class="text-slate-300 truncate max-w-[320px]">${escapeHtml(s.dialogue_tag.split(']')[1] || '')}</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="font-bold text-white flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-indigo-400"></i> ${escapeHtml(s.speaker_name)}</span>
-                                <span class="badge badge-xs badge-ghost text-[10px] text-slate-400 font-sans">${escapeHtml(s.emotion || 'bình tĩnh')}</span>
+                        </td>
+                        <td class="text-center font-mono text-xs text-slate-300 font-bold">
+                            ${s.duration_str}
+                        </td>
+                        <td class="text-center" id="shot_status_cell_${s.shot_no}">
+                            ${isReady ? 
+                                `<span class="badge badge-sm badge-success text-[10px] font-semibold gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Video ready</span>` : 
+                                `<span class="badge badge-sm badge-warning text-[10px] font-semibold">Need clip</span>`
+                            }
+                        </td>
+                        <td class="text-right">
+                            <div class="flex flex-col gap-1 items-end" id="shot_actions_${s.shot_no}">
+                                <button type="button" onclick="renderSingleShot(${s.shot_no})" class="btn btn-xs ${isReady ? 'btn-ghost text-indigo-300 hover:bg-indigo-950/60' : 'bg-pink-600 hover:bg-pink-500 text-white border-0 shadow-md'} rounded-lg gap-1">
+                                    <i data-lucide="${isReady ? 'rotate-cw' : 'video'}" class="w-3 h-3"></i>
+                                    <span>${isReady ? 'Trọng sinh video' : 'Xuất video'}</span>
+                                </button>
                             </div>
-                            <p class="text-xs text-slate-300 line-clamp-3 leading-relaxed bg-slate-950/40 p-2 rounded-xl border border-slate-800/80 italic">
-                                "${escapeHtml(s.text)}"
-                            </p>
-                        </div>
-                    </div>
+                        </td>
+                    </tr>
                 `;
             });
-            $('#storyboard_shots_grid').html(shotsHtml);
+            $('#storyboard_shots_table_body').html(tableHtml);
             $('#storyboard_total_shots_badge').text(`${sb.shots.length} Phân Cảnh (Shots)`);
             $('#storyboard_shots_container').removeClass('hidden');
         }
@@ -2707,6 +2770,118 @@ async function renderStoryAnimation() {
     } catch (e) {
         Swal.fire('Lỗi Render Hoạt Hình', e.message, 'error');
     }
+}
+
+async function renderSingleShot(shotNo) {
+    const storyId = $('#current_story_id').val();
+    if (!storyId) return;
+
+    const actionCell = $(`#shot_actions_${shotNo}`);
+    const statusCell = $(`#shot_status_cell_${shotNo}`);
+    const oldBtn = actionCell.html();
+    actionCell.html('<span class="loading loading-spinner loading-xs text-pink-400"></span> Đang tạo...');
+
+    try {
+        const formData = new FormData();
+        formData.append('shot_no', shotNo);
+        formData.append('video_engine', $('#anim_video_engine').val() || 'motion_25d');
+        formData.append('aspect_ratio', '9:16');
+
+        const res = await fetch(`/api/stories/${storyId}/render-single-shot`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi render clip');
+
+        // Update status and actions
+        statusCell.html('<span class="badge badge-sm badge-success text-[10px] font-semibold gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Video ready</span>');
+        actionCell.html(`
+            <button type="button" onclick="renderSingleShot(${shotNo})" class="btn btn-xs btn-ghost text-indigo-300 hover:bg-indigo-950/60 rounded-lg gap-1">
+                <i data-lucide="rotate-cw" class="w-3 h-3"></i> Trọng sinh video
+            </button>
+        `);
+        // Update thumbnail overlay to play button
+        const row = $(`#shot_row_${shotNo}`);
+        row.find('.group button').remove();
+        row.find('.group').append(`<button type="button" onclick="previewShotVideo('${data.clip_url}')" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition"><i data-lucide="play" class="w-5 h-5 fill-current"></i></button>`);
+        lucide.createIcons();
+
+        Swal.fire({
+            icon: 'success',
+            title: `Cảnh #${shotNo} Sẵn Sàng!`,
+            text: 'Đã hoàn thành render clip phân cảnh này.',
+            timer: 1500,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+
+    } catch (e) {
+        actionCell.html(oldBtn);
+        Swal.fire('Lỗi', e.message, 'error');
+    }
+}
+
+async function concatAllShots() {
+    const storyId = $('#current_story_id').val();
+    if (!storyId) {
+        Swal.fire('Chú ý', 'Vui lòng chọn hoặc phân cảnh truyện trước.', 'warning');
+        return;
+    }
+
+    const btn = $('#btn_concat_all_shots');
+    const oldHtml = btn.html();
+    btn.html('<span class="loading loading-spinner loading-xs"></span> Đang Ghép Phim...').prop('disabled', true);
+
+    try {
+        const formData = new FormData();
+        formData.append('aspect_ratio', '9:16');
+        formData.append('bgm_name', 'suspense_bgm.mp3');
+
+        const res = await fetch(`/api/stories/${storyId}/concat-shots`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Lỗi ghép phim');
+
+        // Show player
+        $('#anim_rendered_player')[0].src = data.video_url;
+        $('#anim_rendered_source').attr('src', data.video_url);
+        $('#anim_video_download_btn').attr('href', data.video_url);
+        $('#anim_video_result_box').removeClass('hidden');
+
+        document.getElementById('anim_video_result_box').scrollIntoView({ behavior: 'smooth' });
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Ghép Phim Hoàn Tất (拼接成片)!',
+            text: 'Tất cả các phân cảnh đã được ghép nối thành một phim hoạt hình 9:16 duy nhất.',
+            confirmButtonColor: '#10b981'
+        });
+
+    } catch (e) {
+        Swal.fire('Lỗi Ghép Phim', e.message, 'error');
+    } finally {
+        btn.html(oldHtml).prop('disabled', false);
+    }
+}
+
+function previewShotVideo(clipUrl) {
+    if (!clipUrl) return;
+    Swal.fire({
+        title: 'Xem Trước Phân Cảnh',
+        html: `
+            <div class="aspect-[9/16] max-h-[460px] mx-auto rounded-2xl overflow-hidden bg-black shadow-xl">
+                <video src="${clipUrl}" controls autoplay class="w-full h-full object-contain"></video>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        background: '#090d16',
+        color: '#fff'
+    });
 }
 </script>
 {% endblock %}

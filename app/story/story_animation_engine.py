@@ -192,12 +192,14 @@ class StoryAnimationEngine:
         reference_image_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Produces complete Storyboard Package for Studio Review:
+        Produces complete Storyboard Package for Studio Review (PRINTFILM 分镜列表 Architecture):
         - Character Bible
-        - Shot Breakdown with thumbnail frames and camera directives
+        - Detailed Shot Breakdown: titles, durations, camera motion tags, dialogue tags, clip readiness
         """
         work_dir = Path(f"media/working/stories/storyboard_{story_id}")
         work_dir.mkdir(parents=True, exist_ok=True)
+        anim_work_dir = Path(f"media/working/stories/anim_{story_id}")
+        anim_work_dir.mkdir(parents=True, exist_ok=True)
 
         characters = await cls.generate_character_bible(title, content)
         shots = await cls.breakdown_story_to_shots(title, content)
@@ -206,6 +208,15 @@ class StoryAnimationEngine:
         comic_slices: List[Path] = []
         if ref_path and ref_path.exists():
             comic_slices = cls.slice_comic_reference(ref_path, work_dir / "slices", len(shots))
+
+        shot_templates = [
+            "Mở đầu / Hook",
+            "Bối cảnh & Khám phá",
+            "Diễn biến 1",
+            "Diễn biến 2",
+            "Cao trào & Kịch tính",
+            "Kêu gọi & Kết thúc"
+        ]
 
         storyboard_shots: List[Dict[str, Any]] = []
         for idx, shot in enumerate(shots):
@@ -219,6 +230,26 @@ class StoryAnimationEngine:
                 if not thumb_path.exists():
                     StoryImageGenerator._create_fallback_gradient(thumb_path, 540, 960)
 
+            # Estimate duration based on word count (~3 words per second)
+            word_count = len(shot["text"].split())
+            dur_sec = max(4, min(14, int(round(word_count / 3.0 + 2))))
+            dur_str = f"00:{dur_sec:02d}"
+
+            # Check if this shot clip has already been rendered
+            clip_file = anim_work_dir / f"clip_{shot_no:02d}.mp4"
+            is_ready = clip_file.exists() and clip_file.stat().st_size > 2000
+            status = "ready" if is_ready else "need_clip"
+            clip_url = f"/media/working/stories/anim_{story_id}/clip_{shot_no:02d}.mp4?t={int(clip_file.stat().st_mtime)}" if is_ready else None
+
+            # Sub-segment breakdown tags (like PRINTFILM 逐段分镜: [3s] Camera motion, [5s] Dialogue)
+            motion_dur = max(2, int(dur_sec * 0.4))
+            speech_dur = dur_sec - motion_dur
+            v_voice_clean = shot["voice_cfg"]["voice"].split("-")[-1]
+
+            camera_tag = f"[{motion_dur}s] {shot['camera_cue']}: {shot['camera_motion']}"
+            dialogue_tag = f"[{speech_dur}s] 【{shot['speaker_name']} · Giọng {v_voice_clean} · Subtitle đồng bộ】"
+
+            title_label = shot_templates[idx % len(shot_templates)]
             visual_prompt = (
                 f"Cinematic {shot['camera_cue']} of {shot['speaker_name']}, emotion: {shot['emotion']}. "
                 f"Action: {shot['text'][:120]}"
@@ -226,6 +257,13 @@ class StoryAnimationEngine:
 
             storyboard_shots.append({
                 **shot,
+                "section_title": title_label,
+                "duration_str": dur_str,
+                "duration_sec": dur_sec,
+                "status": status,
+                "clip_url": clip_url,
+                "camera_tag": camera_tag,
+                "dialogue_tag": dialogue_tag,
                 "thumbnail_url": f"/{thumb_rel.replace('\\', '/')}",
                 "visual_prompt": visual_prompt
             })
@@ -237,6 +275,195 @@ class StoryAnimationEngine:
             "characters": characters,
             "shots": storyboard_shots
         }
+
+    @classmethod
+    async def render_single_shot(
+        cls,
+        story_id: int,
+        shot_no: int,
+        title: str,
+        content: str,
+        aspect_ratio: str = "9:16",
+        video_engine: str = "motion_25d",
+        reference_image_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Renders an individual shot clip (corresponding to PRINTFILM '出视频' / '重生视频' button).
+        """
+        shots = await cls.breakdown_story_to_shots(title, content)
+        target_shot = next((s for s in shots if s["shot_no"] == shot_no), None)
+        if not target_shot:
+            raise ValueError(f"Không tìm thấy phân cảnh #{shot_no}")
+
+        work_dir = Path(f"media/working/stories/anim_{story_id}")
+        work_dir.mkdir(parents=True, exist_ok=True)
+        sb_dir = Path(f"media/working/stories/storyboard_{story_id}")
+
+        width, height = (1080, 1920) if aspect_ratio == "9:16" else (1920, 1080)
+        ffmpeg_bin = settings.FFMPEG_PATH
+
+        # 1. Frame Image
+        shot_frame_path = work_dir / f"frame_{shot_no:02d}.jpg"
+        thumb_source = sb_dir / f"thumb_{shot_no:02d}.jpg"
+        if thumb_source.exists():
+            cls.fit_image_to_canvas(thumb_source, shot_frame_path, width, height)
+        else:
+            StoryImageGenerator._create_fallback_gradient(shot_frame_path, width, height)
+
+        # 2. Character Audio
+        audio_shot_path = work_dir / f"audio_{shot_no:02d}.mp3"
+        vcfg = target_shot["voice_cfg"]
+        _, _, shot_dur = await TTSEngine.generate_speech_with_timestamps(
+            text=target_shot["text"],
+            output_audio_path=str(audio_shot_path),
+            voice=vcfg["voice"],
+            pitch=vcfg["pitch"],
+            rate=vcfg["rate"]
+        )
+        if shot_dur <= 0:
+            shot_dur = 3.5
+
+        # 3. Subtitle
+        txt_path = work_dir / f"text_{shot_no:02d}.txt"
+        speaker_label = f"[{target_shot['speaker_name']}]: " if target_shot['character_type'] != "narrator" else ""
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(f"{speaker_label}{target_shot['text']}")
+        escaped_txt = str(txt_path.resolve()).replace("\\", "/").replace(":", "\\:")
+
+        font_path = StoryVideoRenderer._find_usable_font()
+        font_opt = f":fontfile='{font_path.replace(':', chr(92) + ':')}'" if font_path else ""
+
+        # 4. Render Clip
+        shot_vid_dest = work_dir / f"clip_{shot_no:02d}.mp4"
+        raw_shot_motion = work_dir / f"raw_motion_{shot_no:02d}.mp4"
+        use_ai_video = (video_engine in ["seedance", "ai_video", "openai_video"])
+
+        ai_video_success = False
+        if use_ai_video:
+            prompt_motion = f"Character {target_shot['speaker_name']} {target_shot['emotion']}, {target_shot['text'][:100]}"
+            ai_video_success = await AIVideoGenerator.generate_shot_video_clip(
+                image_path=shot_frame_path,
+                prompt=prompt_motion,
+                duration=shot_dur,
+                dest_path=raw_shot_motion,
+                aspect_ratio=aspect_ratio,
+                motion_pattern=shot_no - 1
+            )
+
+        sub_y = int(height * 0.82) if aspect_ratio == "9:16" else int(height * 0.85)
+        font_size = 32 if aspect_ratio == "9:16" else 36
+        box_h = int(height * 0.16) if aspect_ratio == "9:16" else int(height * 0.14)
+
+        if ai_video_success and raw_shot_motion.exists():
+            caption_vf = (
+                f"[0:v]drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
+                f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
+                f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
+            )
+            cmd = [
+                ffmpeg_bin, "-y", "-threads", "0",
+                "-i", str(raw_shot_motion.resolve()),
+                "-i", str(audio_shot_path.resolve()),
+                "-filter_complex", caption_vf,
+                "-map", "[v]", "-map", "1:a",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
+                "-c:a", "aac", "-pix_fmt", "yuv420p", "-t", f"{shot_dur:.3f}",
+                str(shot_vid_dest)
+            ]
+        else:
+            kb_filter = StoryVideoRenderer.build_ken_burns_filter(
+                width=width, height=height, duration=shot_dur,
+                pattern_idx=shot_no - 1, intensity=0.18, fps=24
+            )
+            caption_vf = (
+                f"[0:v]{kb_filter},"
+                f"drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
+                f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
+                f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
+            )
+            cmd = [
+                ffmpeg_bin, "-y", "-threads", "0",
+                "-loop", "1", "-i", str(shot_frame_path.resolve()),
+                "-i", str(audio_shot_path.resolve()),
+                "-filter_complex", caption_vf,
+                "-map", "[v]", "-map", "1:a",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
+                "-c:a", "aac", "-pix_fmt", "yuv420p", "-t", f"{shot_dur:.3f}",
+                str(shot_vid_dest)
+            ]
+
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
+        clip_rel = f"/media/working/stories/anim_{story_id}/clip_{shot_no:02d}.mp4?t={int(shot_vid_dest.stat().st_mtime)}"
+        return {
+            "status": "success",
+            "shot_no": shot_no,
+            "clip_url": clip_rel,
+            "duration": shot_dur,
+            "message": f"Render phân cảnh #{shot_no} thành công!"
+        }
+
+    @classmethod
+    async def concat_shots_to_movie(
+        cls,
+        story_id: int,
+        aspect_ratio: str = "9:16",
+        bgm_name: str = "suspense_bgm.mp3"
+    ) -> str:
+        """
+        Concatenates all rendered shot clips into a seamless master video (PRINTFILM '拼接成片' button).
+        """
+        work_dir = Path(f"media/working/stories/anim_{story_id}")
+        output_dir = Path("media/output/stories")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        final_video_path = output_dir / f"story_{story_id}_{aspect_ratio.replace(':', 'x')}_anim.mp4"
+        ffmpeg_bin = settings.FFMPEG_PATH
+
+        # Find all shot clips sorted by shot_no
+        shot_clips = sorted(work_dir.glob("clip_*.mp4"), key=lambda p: p.name)
+        if not shot_clips:
+            raise RuntimeError("Chưa có phân cảnh nào được render. Vui lòng tạo video cho các phân cảnh trước.")
+
+        concat_list_file = work_dir / "concat_final.txt"
+        concat_list_file.write_text(
+            "\n".join(f"file '{p.resolve().as_posix()}'" for p in shot_clips),
+            encoding="utf-8"
+        )
+        merged_video = work_dir / "merged_final.mp4"
+
+        concat_cmd = [
+            ffmpeg_bin, "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(concat_list_file),
+            "-c", "copy",
+            "-movflags", "+faststart",
+            str(merged_video)
+        ]
+        subprocess.run(concat_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
+
+        # Mix BGM
+        bgm_path = Path("media/bgm") / bgm_name
+        if bgm_path.exists():
+            mix_cmd = [
+                ffmpeg_bin, "-y",
+                "-i", str(merged_video),
+                "-stream_loop", "-1",
+                "-i", str(bgm_path.resolve()),
+                "-filter_complex", "[1:a]volume=0.18[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[a]",
+                "-map", "0:v",
+                "-map", "[a]",
+                "-c:v", "copy",
+                "-c:a", "aac",
+                "-movflags", "+faststart",
+                str(final_video_path)
+            ]
+            subprocess.run(mix_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
+        else:
+            if final_video_path.exists():
+                final_video_path.unlink()
+            merged_video.rename(final_video_path)
+
+        return str(final_video_path).replace("\\", "/")
 
     @classmethod
     async def render_story_animation(

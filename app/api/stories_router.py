@@ -514,6 +514,64 @@ async def render_story_animation(
         "message": "AI đã bắt đầu phân cảnh và render phim hoạt hình đa góc máy!"
     }
 
+@router.post("/api/stories/{story_id}/render-single-shot")
+async def render_single_shot_api(
+    story_id: int,
+    shot_no: int = Form(...),
+    video_engine: Optional[str] = Form("motion_25d"),
+    aspect_ratio: Optional[str] = Form("9:16"),
+    db: Session = Depends(get_db)
+):
+    """Renders a single shot clip (PRINTFILM '出视频' / '重生视频' feature)."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    res = await StoryAnimationEngine.render_single_shot(
+        story_id=story.id,
+        shot_no=shot_no,
+        title=story.title,
+        content=story.content,
+        aspect_ratio=aspect_ratio or "9:16",
+        video_engine=video_engine or "motion_25d"
+    )
+    return res
+
+@router.post("/api/stories/{story_id}/concat-shots")
+async def concat_shots_api(
+    story_id: int,
+    aspect_ratio: Optional[str] = Form("9:16"),
+    bgm_name: Optional[str] = Form("suspense_bgm.mp3"),
+    db: Session = Depends(get_db)
+):
+    """Concatenates all rendered shots into master movie (PRINTFILM '拼接成片' feature)."""
+    story = db.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    try:
+        final_video = await StoryAnimationEngine.concat_shots_to_movie(
+            story_id=story.id,
+            aspect_ratio=aspect_ratio or "9:16",
+            bgm_name=bgm_name or "suspense_bgm.mp3"
+        )
+        story.video_aspect = aspect_ratio
+        story.video_path = final_video
+        story.status = "completed"
+        story.error_message = None
+        db.commit()
+
+        mtime = int(Path(final_video).stat().st_mtime) if Path(final_video).exists() else 0
+        return {
+            "status": "success",
+            "video_path": final_video,
+            "video_url": f"/{final_video}?t={mtime}",
+            "message": "Ghép nối tất cả phân cảnh thành phim hoàn chỉnh thành công!"
+        }
+    except Exception as e:
+        logger.error(f"Error concatenating shots: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.delete("/api/stories/{story_id}")
 async def delete_story(story_id: int, db: Session = Depends(get_db)):
     """Delete a story and clean up its audio and video files."""
