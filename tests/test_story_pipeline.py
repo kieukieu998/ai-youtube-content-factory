@@ -62,3 +62,47 @@ def test_story_crud_and_quick_video_routes(client):
     del_res = client.delete(f"/api/stories/{story_id}")
     assert del_res.status_code == 200
     assert del_res.json()["status"] == "success"
+
+def test_ken_burns_filter_patterns():
+    from app.story.story_video_renderer import StoryVideoRenderer
+
+    # Verify 4 distinct cinematic patterns
+    for p in range(4):
+        f = StoryVideoRenderer.build_ken_burns_filter(
+            width=1080,
+            height=1920,
+            duration=5.0,
+            pattern_idx=p,
+            intensity=0.18,
+            fps=24
+        )
+        assert "zoompan=" in f
+        assert "s=1080x1920" in f
+        assert "fps=24" in f
+        assert "scale=" in f
+        assert "crop=" in f
+
+@pytest.mark.asyncio
+async def test_cinematic_shot_prompts():
+    from app.story.story_image_generator import StoryImageGenerator
+
+    segments = [
+        {"text": "Ngày xửa ngày xưa có một chàng tiều phu hiền lành.", "speaker_name": "Người dẫn chuyện", "emotion": "neutral"},
+        {"text": "Bà ơi cháu muốn giúp bà đốn củi!", "speaker_name": "Cậu bé", "emotion": "excited"}
+    ]
+    shot_prompts = await StoryImageGenerator.generate_cinematic_shot_prompts("Chuyện Tiều Phu", segments, aspect_ratio="9:16")
+    assert len(shot_prompts) == 2
+    assert shot_prompts[0]["shot_no"] == 1
+    assert "Cinematic" in shot_prompts[0]["prompt"]
+    assert "Chuyện Tiều Phu" in shot_prompts[0]["prompt"]
+    assert "Người dẫn chuyện" in shot_prompts[0]["speaker"]
+    assert "Cậu bé" in shot_prompts[1]["speaker"]
+
+@pytest.mark.asyncio
+async def test_character_parser_with_camera_cues():
+    content = 'Bà lão nhìn ra cửa sổ: "Ai ngoài đó đấy?"\nNgười lạ đáp: "Là tôi đây."'
+    parsed = await CharacterParser.parse_story(content)
+    assert len(parsed.segments) >= 2
+    for seg in parsed.segments:
+        assert seg.camera_cue in ["wide_establishing", "medium_shot", "close_up", "low_angle", "tracking_shot"]
+

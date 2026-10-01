@@ -3,33 +3,42 @@ import urllib.parse
 import urllib.request
 import asyncio
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from PIL import Image, ImageDraw
 from loguru import logger
 
 from app.ai.provider_factory import get_ai_provider
 
 class StoryImageGenerator:
-    """Generates story-specific background illustrations using AI."""
+    """
+    Generates story-specific background illustrations and cinematic shot visuals
+    using professional director-level prompting formulas (PRINTFILM standards).
+    """
+
+    CINEMATIC_PROMPT_SYSTEM = (
+        "You are an acclaimed Hollywood cinematic art director and concept artist. "
+        "Your task is to analyze the story title and excerpt and generate a professional, "
+        "highly detailed AI image prompt (Flux / Midjourney v6 style) in English.\n\n"
+        "Follow the 5-component Cinematic Formula:\n"
+        "1. [Subject & Expression]: Detailed main subject, pose, action, and authentic emotional expression.\n"
+        "2. [Scene & Environment]: Rich background worldbuilding, atmosphere, foreground & background depth.\n"
+        "3. [Camera Framing & Motion]: Shot type (cinematic wide establishing shot, medium low-angle, extreme close-up emotional portrait, anamorphic lens).\n"
+        "4. [Lighting & Palette]: Volumetric golden hour, moody chiaroscuro, cybernetic neon rim light, soft diffuse mist, 35mm film grain.\n"
+        "5. [Art Style & Quality]: Masterpiece digital illustration, cinematic concept art, octane render, 8k resolution, highly detailed textures, photorealistic.\n\n"
+        "STRICT RULE: Output ONLY the English prompt text directly without any preface, quotes, or markdown backticks."
+    )
 
     @classmethod
     async def generate_visual_prompt(cls, title: str, content: str) -> str:
-        """Use AI to craft an atmospheric visual art prompt from the story."""
+        """Use AI with cinematic director formula to craft an atmospheric visual prompt."""
         try:
             provider = get_ai_provider()
             story_sample = content[:1500] if len(content) > 1500 else content
 
-            sys_prompt = (
-                "You are an expert art director. Read the Vietnamese story title and excerpt below, "
-                "then generate a single concise image prompt in English for AI image generation (Flux/Midjourney style). "
-                "Describe the scene, mood, lighting, color palette, and artistic style (e.g. cinematic digital painting, anime watercolor, moody atmospheric, photorealistic, 8k). "
-                "Only return the English image prompt text without any explanation, quotes or markdown."
-            )
-            
             user_prompt = f"Story Title: {title}\nStory Excerpt:\n{story_sample}"
             prompt = await provider.generate_text(
                 prompt=user_prompt,
-                system_prompt=sys_prompt,
+                system_prompt=cls.CINEMATIC_PROMPT_SYSTEM,
                 temperature=0.7
             )
             clean_prompt = prompt.strip().replace('"', '').replace('\n', ' ')
@@ -38,12 +47,54 @@ class StoryImageGenerator:
         except Exception as e:
             logger.warning(f"Error generating visual prompt with AI: {e}")
         
-        # Fallback prompt based on title
-        return f"Cinematic atmospheric digital art illustration for story '{title}', moody lighting, emotional anime wallpaper, masterpiece, 8k resolution"
+        # Fallback cinematic prompt based on title
+        return (
+            f"Cinematic wide establishing shot for story '{title}', detailed character in atmospheric environment, "
+            f"volumetric lighting, dramatic chiaroscuro, golden hour rim light, 35mm film still, masterpiece digital painting, 8k"
+        )
+
+    @classmethod
+    async def generate_cinematic_shot_prompts(
+        cls,
+        title: str,
+        segments: List[Dict[str, Any]],
+        aspect_ratio: str = "9:16"
+    ) -> List[Dict[str, str]]:
+        """
+        Generates individual cinematic shot prompts for each scene/segment,
+        ensuring visual continuity and dynamic shot framing variation.
+        """
+        framing_types = [
+            "wide establishing landscape shot, slow push-in",
+            "medium shot focusing on character emotion and posture",
+            "dynamic low-angle shot with deep environmental depth",
+            "intimate close-up portrait highlighting facial expression",
+            "atmospheric tracking shot with foreground silhouettes"
+        ]
+
+        shot_prompts: List[Dict[str, str]] = []
+        for idx, seg in enumerate(segments):
+            text = seg.get("text", "")
+            speaker = seg.get("speaker_name", "Narrator")
+            emotion = seg.get("emotion", "neutral")
+            framing = framing_types[idx % len(framing_types)]
+
+            prompt = (
+                f"Cinematic {framing} for story '{title}'. "
+                f"Character: {speaker} showing {emotion} expression. Scene context: {text[:160]}. "
+                f"Volumetric atmosphere, cinematic color grade, 35mm film aesthetics, masterpiece, 8k resolution"
+            )
+            shot_prompts.append({
+                "shot_no": idx + 1,
+                "speaker": speaker,
+                "prompt": prompt,
+                "framing": framing
+            })
+        return shot_prompts
 
     @classmethod
     def _download_image_sync(cls, prompt: str, output_path: Path, width: int, height: int) -> bool:
-        """Download generated image from Pollinations AI (Flux/Turbo model)."""
+        """Download generated image from Pollinations AI (Flux model)."""
         encoded_prompt = urllib.parse.quote(prompt)
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&nologo=true&model=flux"
         
@@ -99,11 +150,10 @@ class StoryImageGenerator:
         output_dir.mkdir(parents=True, exist_ok=True)
         
         bg_path = output_dir / f"story_{story_id}_bg_{aspect_ratio.replace(':', 'x')}.jpg"
-
         width, height = (1920, 1080) if aspect_ratio == "16:9" else (1080, 1920)
 
-        # 1. Generate visual prompt
-        logger.info(f"Generating visual background prompt for Story #{story_id} ('{title}')...")
+        # 1. Generate visual prompt using cinematic director formula
+        logger.info(f"Generating cinematic visual prompt for Story #{story_id} ('{title}')...")
         prompt = await cls.generate_visual_prompt(title, content)
         logger.info(f"Visual Prompt: {prompt}")
 

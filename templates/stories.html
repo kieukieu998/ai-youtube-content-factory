@@ -88,6 +88,17 @@
                         </div>
                     </div>
                     <input type="hidden" id="video_aspect_input" value="9:16">
+                    <div class="flex items-center justify-between text-xs text-slate-400 bg-slate-900/60 border border-slate-800/80 px-3.5 py-2 rounded-xl mt-2">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-pink-400"></i>
+                            <span class="font-medium text-slate-300">Motion Engine:</span>
+                            <span class="text-pink-400 font-semibold flex items-center gap-1.5">
+                                <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                2.5D Ken Burns Cinematic (Dynamic Zoom & Pan)
+                            </span>
+                        </div>
+                        <span class="badge badge-xs bg-indigo-950 text-indigo-300 border-indigo-700/50 font-mono text-[10px]">Chuẩn PRINTFILM</span>
+                    </div>
                 </div>
 
                 <!-- Story Textarea -->
@@ -999,7 +1010,7 @@ async function trigger1ClickVideo() {
             <div class="space-y-3 text-left text-xs text-slate-300 py-2">
                 <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-500 animate-ping"></span> 1. Đọc hiểu & phân tách nhân vật (Nam, Nữ, Già, Trẻ em)...</div>
                 <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> 2. Lồng tiếng đa giọng & mix nhạc nền...</div>
-                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> 3. Render video sóng âm thanh (${aspectLabel})...</div>
+                <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> 3. Render video 2.5D Ken Burns Cinematic & sóng âm (${aspectLabel})...</div>
             </div>
         `,
         allowOutsideClick: false,
@@ -1016,7 +1027,8 @@ async function trigger1ClickVideo() {
                 title: title,
                 author: author,
                 content: content,
-                video_aspect: aspect
+                video_aspect: aspect,
+                motion_mode: 'ken_burns'
             })
         });
 

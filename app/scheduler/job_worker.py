@@ -1044,7 +1044,8 @@ class JobWorker:
                 overall_pct = 0.58 + (i * step_weight) + (render_pct * step_weight)
                 update_video_progress(overall_pct, f"Render video {asp}: {msg}")
 
-            # 3. Render Video with AI background, live waveforms, and synchronized ASS subtitles
+            motion_mode = payload.get("motion_mode", "ken_burns")
+            # 3. Render Video with AI background (2.5D Ken Burns motion), live waveforms, and synchronized ASS subtitles
             vp = await StoryVideoRenderer.render_audiobook_video(
                 story_id=story.id,
                 title=story.title,
@@ -1053,6 +1054,7 @@ class JobWorker:
                 aspect_ratio=asp,
                 bg_image_path=bg_image_path,
                 subtitle_path=ass_path if os.path.exists(ass_path) else None,
+                motion_mode=motion_mode,
                 progress_callback=on_video_render_progress
             )
             rendered_paths.append(vp)

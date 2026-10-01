@@ -28,6 +28,7 @@ class StoryQuickVideoSchema(BaseModel):
     author: Optional[str] = "Khuyết danh"
     content: str
     video_aspect: Optional[str] = "16:9"
+    motion_mode: Optional[str] = "ken_burns"
 
 class StoryUpdateSchema(BaseModel):
     title: Optional[str] = None
@@ -293,7 +294,8 @@ async def quick_create_video(data: StoryQuickVideoSchema, db: Session = Depends(
         progress=0,
         payload=json.dumps({
             "story_id": story.id,
-            "aspect_ratio": data.video_aspect or "16:9"
+            "aspect_ratio": data.video_aspect or "16:9",
+            "motion_mode": data.motion_mode or "ken_burns"
         })
     )
     db.add(job)
@@ -335,6 +337,7 @@ async def update_story(story_id: int, data: StoryUpdateSchema, db: Session = Dep
 async def generate_video_job(
     story_id: int,
     aspect_ratio: Optional[str] = Form("16:9"),
+    motion_mode: Optional[str] = Form("ken_burns"),
     db: Session = Depends(get_db)
 ):
     """Queue background job to render multi-voice audiobook listening video."""
@@ -353,7 +356,8 @@ async def generate_video_job(
         progress=0,
         payload=json.dumps({
             "story_id": story.id,
-            "aspect_ratio": aspect_ratio
+            "aspect_ratio": aspect_ratio,
+            "motion_mode": motion_mode or "ken_burns"
         })
     )
     db.add(job)

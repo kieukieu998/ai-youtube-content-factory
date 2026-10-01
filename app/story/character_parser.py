@@ -1,6 +1,6 @@
 import re
 import json
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from pydantic import BaseModel, Field
 from loguru import logger
 
@@ -14,13 +14,21 @@ class StorySegment(BaseModel):
     )
     emotion: str = Field(default="neutral", description="Cảm xúc câu thoại")
     text: str = Field(..., description="Nội dung lời nói hoặc lời dẫn")
+    camera_cue: Optional[str] = Field(
+        default="medium_shot",
+        description="Góc máy điện ảnh: wide_establishing, medium_shot, close_up, low_angle, tracking_shot"
+    )
+    scene_context: Optional[str] = Field(
+        default="",
+        description="Mô tả bối cảnh không gian/hành động ngắn gọn cho phân cảnh"
+    )
 
 class DramatizedStory(BaseModel):
     characters: List[str] = Field(default_factory=list, description="Danh sách các nhân vật được nhận diện")
     segments: List[StorySegment] = Field(default_factory=list, description="Danh sách các đoạn phân cảnh thoại")
 
 class CharacterParser:
-    """AI Agent to analyze stories, identify all characters, and split narrative into multi-voice dialogue segments."""
+    """AI Agent to analyze stories, identify all characters, and split narrative into multi-voice dialogue segments with cinematic camera cues."""
 
     VOICE_PROFILE_MAP = {
         "narrator": {
@@ -69,7 +77,8 @@ class CharacterParser:
     @classmethod
     async def parse_story(cls, text: str) -> DramatizedStory:
         """
-        Analyze story using AI to detect characters and split into dramatized speech segments.
+        Analyze story using AI to detect characters, split into dramatized speech segments,
+        and assign cinematic camera framing directions.
         Falls back to rule-based parser if AI is unavailable.
         """
         clean_content = text.strip()
@@ -83,16 +92,23 @@ class CharacterParser:
             ai_provider = get_ai_provider(stage="script")
             
             prompt = f"""
-Bạn là chuyên gia phân tích kịch bản và đạo diễn lồng tiếng kịch truyền thanh (Audiobook Drama).
-Nhiệm vụ của bạn: Hãy đọc câu chuyện dưới đây và tách thành từng câu/đoạn kèm danh tính nhân vật để lồng tiếng đa giọng.
+Bạn là chuyên gia phân tích kịch bản và đạo diễn điện ảnh kiêm đạo diễn lồng tiếng kịch truyền thanh (Audiobook & Animation Drama).
+Nhiệm vụ của bạn: Hãy đọc câu chuyện dưới đây và tách thành từng câu/đoạn kèm danh tính nhân vật, cảm xúc và gợi ý góc máy điện ảnh (camera_cue).
 
 CÁC LOẠI NHÂN VẬT (character_type):
-- "narrator": Lời dẫn chuyện, miêu tả khung cảnh, suy nghĩ nội tâm không nói thành tiếng.
+- "narrator": Lời dẫn chuyện, miêu tả khung cảnh, suy nghĩ nội tâm.
 - "male_young": Nam trẻ tuổi, thanh niên, chàng trai, hoàng tử, chàng thợ săn...
 - "male_elder": Ông lão, cụ già nam, sư phụ già, vua cha lớn tuổi...
 - "female_young": Nữ trẻ tuổi, thiếu nữ, công chúa, cô bé lớn, cô hầu gái...
 - "female_elder": Bà lão, cụ bà, người mẹ già, mụ phù thủy già...
 - "child": Trẻ em nhỏ tuổi, em bé, cậu bé/cô bé nhỏ tuổi lanh lợi.
+
+CÁC GÓC MÁY ĐIỆN ẢNH (camera_cue):
+- "wide_establishing": Cảnh toàn thiết lập bối cảnh không gian rộng lớn, đầu truyện hoặc chuyển cảnh.
+- "medium_shot": Cảnh trung bình thể hiện hành động nhân vật và tương tác.
+- "close_up": Cận cảnh biểu cảm gương mặt, nhấn mạnh cảm xúc cao trào hoặc thoại nội tâm.
+- "low_angle": Góc máy thấp ngước nhìn lên tạo cảm giác uy quyền, hùng vĩ hoặc kịch tính.
+- "tracking_shot": Máy quay theo chuyển động nhân vật bước đi, chạy trốn hoặc khám phá.
 
 HÃY TRẢ VỀ DUY NHẤT MỘT JSON OBJECT HỢP LỆ (KHÔNG THÊM BẤT KỲ VĂN BẢN NÀO NGOÀI JSON) THEO CẤU TRÚC:
 {{
@@ -102,19 +118,17 @@ HÃY TRẢ VỀ DUY NHẤT MỘT JSON OBJECT HỢP LỆ (KHÔNG THÊM BẤT KỲ
       "speaker_name": "Người dẫn chuyện",
       "character_type": "narrator",
       "emotion": "neutral",
+      "camera_cue": "wide_establishing",
+      "scene_context": "Khu rừng cổ thụ buổi hoàng hôn",
       "text": "Ngày xửa ngày xưa, trong một khu rừng nọ..."
     }},
     {{
       "speaker_name": "Cô bé",
       "character_type": "child",
       "emotion": "excited",
+      "camera_cue": "close_up",
+      "scene_context": "Cô bé mỉm cười chạy vào sân",
       "text": "Ôi bà ơi, cháu nhớ bà quá!"
-    }},
-    {{
-      "speaker_name": "Bà cụ",
-      "character_type": "female_elder",
-      "emotion": "loving",
-      "text": "Cháu ngoan của bà, vào đây với bà nào."
     }}
   ]
 }}
@@ -126,7 +140,7 @@ NỘI DUNG TRUYỆN:
             drama_result = await ai_provider.generate_structured(
                 prompt=prompt,
                 schema=DramatizedStory,
-                system_prompt="Bạn là chuyên gia đạo diễn lồng tiếng truyện. Chỉ trả về JSON hợp lệ."
+                system_prompt="Bạn là chuyên gia đạo diễn kịch bản điện ảnh. Chỉ trả về JSON hợp lệ."
             )
             
             if drama_result and drama_result.segments:
@@ -141,12 +155,12 @@ NỘI DUNG TRUYỆN:
 
     @classmethod
     def _rule_based_parse(cls, content: str) -> DramatizedStory:
-        """Fallback regex parser when AI is offline."""
+        """Fallback regex parser when AI is offline, enriched with cinematic camera cues."""
         paragraphs = content.split("\n")
         segments = []
         characters = set(["Người dẫn chuyện"])
 
-        for p in paragraphs:
+        for p_idx, p in enumerate(paragraphs):
             p = p.strip()
             if not p:
                 continue
@@ -159,7 +173,6 @@ NỘI DUNG TRUYỆN:
                     if not part:
                         continue
                     if i % 2 == 1: # Quoted speech
-                        # Heuristic detection for character type
                         lower_p = p.lower()
                         if any(w in lower_p for w in ["ông", "cụ ông", "lão"]):
                             ctype = "male_elder"
@@ -181,10 +194,36 @@ NỘI DUNG TRUYỆN:
                             name = "Nhân vật"
 
                         characters.add(name)
-                        segments.append(StorySegment(speaker_name=name, character_type=ctype, text=part))
+                        segments.append(
+                            StorySegment(
+                                speaker_name=name,
+                                character_type=ctype,
+                                emotion="expressive",
+                                camera_cue="close_up",
+                                scene_context=f"Đối thoại của {name}",
+                                text=part
+                            )
+                        )
                     else:
-                        segments.append(StorySegment(speaker_name="Người dẫn chuyện", character_type="narrator", text=part))
+                        segments.append(
+                            StorySegment(
+                                speaker_name="Người dẫn chuyện",
+                                character_type="narrator",
+                                camera_cue="medium_shot",
+                                scene_context="Lời dẫn bối cảnh",
+                                text=part
+                            )
+                        )
             else:
-                segments.append(StorySegment(speaker_name="Người dẫn chuyện", character_type="narrator", text=p))
+                cam = "wide_establishing" if p_idx == 0 else "medium_shot"
+                segments.append(
+                    StorySegment(
+                        speaker_name="Người dẫn chuyện",
+                        character_type="narrator",
+                        camera_cue=cam,
+                        scene_context="Dẫn chuyện truyện",
+                        text=p
+                    )
+                )
 
         return DramatizedStory(characters=list(characters), segments=segments)
