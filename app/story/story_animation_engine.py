@@ -254,6 +254,10 @@ class StoryAnimationEngine:
                 f"Cinematic {shot['camera_cue']} of {shot['speaker_name']}, emotion: {shot['emotion']}. "
                 f"Action: {shot['text'][:120]}"
             )
+            motion_prompt = (
+                f"Nhân vật {shot['speaker_name']} ({shot['emotion']}), "
+                f"chớp mắt, mấp máy môi nói, lay động cơ thể và thở sinh học, {shot['camera_motion']}"
+            )
 
             storyboard_shots.append({
                 **shot,
@@ -265,7 +269,8 @@ class StoryAnimationEngine:
                 "camera_tag": camera_tag,
                 "dialogue_tag": dialogue_tag,
                 "thumbnail_url": f"/{thumb_rel.replace('\\', '/')}",
-                "visual_prompt": visual_prompt
+                "visual_prompt": visual_prompt,
+                "motion_prompt": motion_prompt
             })
 
         return {
@@ -284,11 +289,14 @@ class StoryAnimationEngine:
         title: str,
         content: str,
         aspect_ratio: str = "9:16",
-        video_engine: str = "motion_25d",
+        video_engine: str = "living_character",
+        motion_prompt: Optional[str] = None,
+        video_ai_key: Optional[str] = None,
+        video_ai_base_url: Optional[str] = None,
         reference_image_path: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Renders an individual shot clip (corresponding to PRINTFILM '出视频' / '重生视频' button).
+        Renders an individual shot clip with ACTIVE CHARACTER MOTION (PRINTFILM '出视频' / '重生视频' feature).
         """
         shots = await cls.breakdown_story_to_shots(title, content)
         target_shot = next((s for s in shots if s["shot_no"] == shot_no), None)
@@ -333,64 +341,46 @@ class StoryAnimationEngine:
         font_path = StoryVideoRenderer._find_usable_font()
         font_opt = f":fontfile='{font_path.replace(':', chr(92) + ':')}'" if font_path else ""
 
-        # 4. Render Clip
+        # 4. Render Animated Video Clip with Active Character Motion
         shot_vid_dest = work_dir / f"clip_{shot_no:02d}.mp4"
         raw_shot_motion = work_dir / f"raw_motion_{shot_no:02d}.mp4"
-        use_ai_video = (video_engine in ["seedance", "ai_video", "openai_video"])
 
-        ai_video_success = False
-        if use_ai_video:
-            prompt_motion = f"Character {target_shot['speaker_name']} {target_shot['emotion']}, {target_shot['text'][:100]}"
-            ai_video_success = await AIVideoGenerator.generate_shot_video_clip(
-                image_path=shot_frame_path,
-                prompt=prompt_motion,
-                duration=shot_dur,
-                dest_path=raw_shot_motion,
-                aspect_ratio=aspect_ratio,
-                motion_pattern=shot_no - 1
-            )
+        actual_motion_prompt = motion_prompt or (
+            f"Anime character {target_shot['speaker_name']} {target_shot['emotion']}, "
+            f"talking mouth moving, blinking eyes, natural gestures and breathing, {target_shot['camera_motion']}"
+        )
+
+        await AIVideoGenerator.generate_shot_video_clip(
+            image_path=shot_frame_path,
+            prompt=actual_motion_prompt,
+            duration=shot_dur,
+            dest_path=raw_shot_motion,
+            aspect_ratio=aspect_ratio,
+            motion_pattern=shot_no - 1,
+            provider=video_engine,
+            api_key=video_ai_key,
+            base_url=video_ai_base_url
+        )
 
         sub_y = int(height * 0.82) if aspect_ratio == "9:16" else int(height * 0.85)
         font_size = 32 if aspect_ratio == "9:16" else 36
         box_h = int(height * 0.16) if aspect_ratio == "9:16" else int(height * 0.14)
 
-        if ai_video_success and raw_shot_motion.exists():
-            caption_vf = (
-                f"[0:v]drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
-                f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
-                f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
-            )
-            cmd = [
-                ffmpeg_bin, "-y", "-threads", "0",
-                "-i", str(raw_shot_motion.resolve()),
-                "-i", str(audio_shot_path.resolve()),
-                "-filter_complex", caption_vf,
-                "-map", "[v]", "-map", "1:a",
-                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
-                "-c:a", "aac", "-pix_fmt", "yuv420p", "-t", f"{shot_dur:.3f}",
-                str(shot_vid_dest)
-            ]
-        else:
-            kb_filter = StoryVideoRenderer.build_ken_burns_filter(
-                width=width, height=height, duration=shot_dur,
-                pattern_idx=shot_no - 1, intensity=0.18, fps=24
-            )
-            caption_vf = (
-                f"[0:v]{kb_filter},"
-                f"drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
-                f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
-                f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
-            )
-            cmd = [
-                ffmpeg_bin, "-y", "-threads", "0",
-                "-loop", "1", "-i", str(shot_frame_path.resolve()),
-                "-i", str(audio_shot_path.resolve()),
-                "-filter_complex", caption_vf,
-                "-map", "[v]", "-map", "1:a",
-                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
-                "-c:a", "aac", "-pix_fmt", "yuv420p", "-t", f"{shot_dur:.3f}",
-                str(shot_vid_dest)
-            ]
+        caption_vf = (
+            f"[0:v]drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
+            f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
+            f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
+        )
+        cmd = [
+            ffmpeg_bin, "-y", "-threads", "0",
+            "-i", str(raw_shot_motion.resolve()),
+            "-i", str(audio_shot_path.resolve()),
+            "-filter_complex", caption_vf,
+            "-map", "[v]", "-map", "1:a",
+            "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
+            "-c:a", "aac", "-pix_fmt", "yuv420p", "-t", f"{shot_dur:.3f}",
+            str(shot_vid_dest)
+        ]
 
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
         clip_rel = f"/media/working/stories/anim_{story_id}/clip_{shot_no:02d}.mp4?t={int(shot_vid_dest.stat().st_mtime)}"
@@ -399,7 +389,7 @@ class StoryAnimationEngine:
             "shot_no": shot_no,
             "clip_url": clip_rel,
             "duration": shot_dur,
-            "message": f"Render phân cảnh #{shot_no} thành công!"
+            "message": f"Render phân cảnh #{shot_no} nhân vật cử động thành công!"
         }
 
     @classmethod
@@ -563,86 +553,50 @@ class StoryAnimationEngine:
             font_path = StoryVideoRenderer._find_usable_font()
             font_opt = f":fontfile='{font_path.replace(':', chr(92) + ':')}'" if font_path else ""
 
-            # 2d. Render Animated Shot Video Clip
+            # 2d. Render Animated Shot Video Clip with Active Character Motion
             shot_vid_dest = work_dir / f"clip_{shot_no:02d}.mp4"
-            
-            # If AI Video Generator is chosen (Seedance / OpenAI Videos), try it
             raw_shot_motion = work_dir / f"raw_motion_{shot_no:02d}.mp4"
-            use_ai_video = (video_engine in ["seedance", "ai_video", "openai_video"])
-            
-            ai_video_success = False
-            if use_ai_video:
-                prompt_motion = f"Character {shot['speaker_name']} {shot['emotion']}, {shot['text'][:100]}"
-                ai_video_success = await AIVideoGenerator.generate_shot_video_clip(
-                    image_path=shot_frame_path,
-                    prompt=prompt_motion,
-                    duration=shot_dur,
-                    dest_path=raw_shot_motion,
-                    aspect_ratio=aspect_ratio,
-                    motion_pattern=idx
-                )
+
+            prompt_motion = (
+                f"Anime character {shot['speaker_name']} {shot['emotion']}, "
+                f"talking mouth moving, blinking eyes, natural body gestures and breathing, {shot['camera_motion']}"
+            )
+            await AIVideoGenerator.generate_shot_video_clip(
+                image_path=shot_frame_path,
+                prompt=prompt_motion,
+                duration=shot_dur,
+                dest_path=raw_shot_motion,
+                aspect_ratio=aspect_ratio,
+                motion_pattern=idx,
+                provider=video_engine
+            )
 
             # Styled bottom subtitle box
             sub_y = int(height * 0.82) if aspect_ratio == "9:16" else int(height * 0.85)
             font_size = 32 if aspect_ratio == "9:16" else 36
             box_h = int(height * 0.16) if aspect_ratio == "9:16" else int(height * 0.14)
 
-            if ai_video_success and raw_shot_motion.exists():
-                # Overlay audio & subtitles on AI Video clip
-                caption_vf = (
-                    f"[0:v]drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
-                    f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
-                    f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
-                )
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-threads", "0",
-                    "-i", str(raw_shot_motion.resolve()),
-                    "-i", str(audio_shot_path.resolve()),
-                    "-filter_complex", caption_vf,
-                    "-map", "[v]",
-                    "-map", "1:a",
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-crf", "20",
-                    "-c:a", "aac",
-                    "-pix_fmt", "yuv420p",
-                    "-t", f"{shot_dur:.3f}",
-                    str(shot_vid_dest)
-                ]
-            else:
-                # Resilient 2.5D Ken Burns Dynamic Camera Engine
-                kb_filter = StoryVideoRenderer.build_ken_burns_filter(
-                    width=width,
-                    height=height,
-                    duration=shot_dur,
-                    pattern_idx=idx,
-                    intensity=0.18,
-                    fps=24
-                )
-                caption_vf = (
-                    f"[0:v]{kb_filter},"
-                    f"drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
-                    f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
-                    f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
-                )
-                cmd = [
-                    ffmpeg_bin, "-y",
-                    "-threads", "0",
-                    "-loop", "1",
-                    "-i", str(shot_frame_path.resolve()),
-                    "-i", str(audio_shot_path.resolve()),
-                    "-filter_complex", caption_vf,
-                    "-map", "[v]",
-                    "-map", "1:a",
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-crf", "20",
-                    "-c:a", "aac",
-                    "-pix_fmt", "yuv420p",
-                    "-t", f"{shot_dur:.3f}",
-                    str(shot_vid_dest)
-                ]
+            caption_vf = (
+                f"[0:v]drawbox=x=0:y={sub_y - 20}:w=iw:h={box_h}:color=black@0.60:t=fill,"
+                f"drawtext=textfile='{escaped_txt}'{font_opt}:fontsize={font_size}:fontcolor=yellow:"
+                f"x=(w-text_w)/2:y={sub_y}:shadowcolor=black@0.9:shadowx=2:shadowy=2[v]"
+            )
+            cmd = [
+                ffmpeg_bin, "-y",
+                "-threads", "0",
+                "-i", str(raw_shot_motion.resolve()),
+                "-i", str(audio_shot_path.resolve()),
+                "-filter_complex", caption_vf,
+                "-map", "[v]",
+                "-map", "1:a",
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-crf", "20",
+                "-c:a", "aac",
+                "-pix_fmt", "yuv420p",
+                "-t", f"{shot_dur:.3f}",
+                str(shot_vid_dest)
+            ]
 
             res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
             if res.returncode == 0 and shot_vid_dest.exists() and shot_vid_dest.stat().st_size > 0:

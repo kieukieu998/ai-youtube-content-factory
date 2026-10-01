@@ -518,11 +518,14 @@ async def render_story_animation(
 async def render_single_shot_api(
     story_id: int,
     shot_no: int = Form(...),
-    video_engine: Optional[str] = Form("motion_25d"),
+    video_engine: Optional[str] = Form("living_character"),
     aspect_ratio: Optional[str] = Form("9:16"),
+    motion_prompt: Optional[str] = Form(None),
+    video_ai_key: Optional[str] = Form(None),
+    video_ai_base_url: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Renders a single shot clip (PRINTFILM '出视频' / '重生视频' feature)."""
+    """Renders a single shot clip with active character motion (PRINTFILM '出视频' / '重生视频' feature)."""
     story = db.query(Story).filter(Story.id == story_id).first()
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
@@ -533,7 +536,10 @@ async def render_single_shot_api(
         title=story.title,
         content=story.content,
         aspect_ratio=aspect_ratio or "9:16",
-        video_engine=video_engine or "motion_25d"
+        video_engine=video_engine or "living_character",
+        motion_prompt=motion_prompt,
+        video_ai_key=video_ai_key,
+        video_ai_base_url=video_ai_base_url
     )
     return res
 

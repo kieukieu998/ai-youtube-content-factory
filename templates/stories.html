@@ -234,13 +234,24 @@
             </div>
 
             <!-- Quick Engine Config -->
-            <div class="flex items-center gap-3 bg-slate-950/70 border border-slate-800 p-2.5 rounded-2xl">
+            <div class="flex flex-col gap-2 bg-slate-950/70 border border-slate-800 p-2.5 rounded-2xl min-w-[320px]">
                 <div class="text-xs">
-                    <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Engine Diễn Hoạt:</span>
-                    <select id="anim_video_engine" class="select select-xs select-bordered bg-slate-900 text-white font-medium focus:border-indigo-500">
-                        <option value="motion_25d" selected>🎬 FFmpeg 2.5D Ken Burns Cinematic (Zero-Cost Local)</option>
-                        <option value="seedance">⚡ Seedance 2.5 / OpenAI Videos (Generative AI)</option>
+                    <span class="text-slate-400 block text-[10px] uppercase font-bold tracking-wider mb-1">Engine Diễn Hoạt Nhân Vật:</span>
+                    <select id="anim_video_engine" onchange="handleVideoEngineChange()" class="select select-xs select-bordered bg-slate-900 text-white font-medium focus:border-indigo-500 w-full">
+                        <option value="living_character" selected>🎭 Living Character Puppet (Local - Nhân vật thở, cử động nói & lắc lư sinh học)</option>
+                        <option value="seedance">⚡ Seedance 2.5 / OpenAI Videos (TokenFree / Ark / Kling - Chuẩn PRINTFILM)</option>
+                        <option value="gemini_veo">✨ Google Gemini Veo 3.1 (Video Generative AI qua Gemini Key)</option>
                     </select>
+                </div>
+                <!-- Dynamic API Key inputs for Seedance / TokenFree / Ark -->
+                <div id="video_ai_config_box" class="hidden pt-2 border-t border-slate-800/80 space-y-1.5">
+                    <div class="text-[10px] text-pink-300 font-semibold flex items-center gap-1">
+                        <i data-lucide="key" class="w-3 h-3 text-pink-400"></i> Cấu hình TokenFree / Ark / OpenAI Video:
+                    </div>
+                    <div class="grid grid-cols-1 gap-1.5">
+                        <input type="password" id="video_ai_key" placeholder="Nhập API Key (vd: sk-...)" class="input input-xs input-bordered bg-slate-900 text-white font-mono text-[11px]" />
+                        <input type="text" id="video_ai_base_url" placeholder="Base URL (mặc định: https://api.tokenfree.ai/v1)" value="https://api.tokenfree.ai/v1" class="input input-xs input-bordered bg-slate-900 text-white font-mono text-[11px]" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -313,8 +324,9 @@
                     <thead>
                         <tr class="text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider bg-slate-900/60">
                             <th class="w-12 text-center">Cảnh</th>
-                            <th class="w-32">Khung hình</th>
-                            <th class="w-60">Lời bình / Thoại</th>
+                            <th class="w-28">Khung hình</th>
+                            <th class="w-56">Lời bình / Thoại</th>
+                            <th class="w-64">Cử động nhân vật (Motion)</th>
                             <th>Phân rã chi tiết (逐段分镜)</th>
                             <th class="w-20 text-center">Thời lượng</th>
                             <th class="w-28 text-center">Trạng thái</th>
@@ -2634,6 +2646,20 @@ async function generateStoryboard() {
                             </div>
                         </td>
                         <td>
+                            <div class="space-y-1 max-w-[260px]">
+                                <div class="flex items-center justify-between text-[10px] text-pink-400 font-semibold">
+                                    <span class="flex items-center gap-1"><i data-lucide="activity" class="w-3 h-3"></i> Cử động:</span>
+                                    <button type="button" onclick="editMotionPrompt(${s.shot_no})" class="text-indigo-400 hover:text-white transition flex items-center gap-0.5 text-[9px]" title="Sửa cử động nhân vật">
+                                        <i data-lucide="edit-3" class="w-3 h-3"></i> Sửa
+                                    </button>
+                                </div>
+                                <div class="text-[11px] text-slate-300 bg-slate-900/90 border border-slate-700/60 p-1.5 rounded-xl italic leading-relaxed line-clamp-2" id="motion_text_${s.shot_no}">
+                                    ${escapeHtml(s.motion_prompt || 'Nhân vật thở & cử động sinh học')}
+                                </div>
+                                <input type="hidden" id="motion_text_input_${s.shot_no}" value="${escapeHtml(s.motion_prompt || '')}" />
+                            </div>
+                        </td>
+                        <td>
                             <div class="space-y-1 text-[11px] font-mono">
                                 <div class="text-slate-400 flex items-center gap-1.5 text-[10px]">
                                     <span class="text-indigo-400 font-semibold">Phụ đề:</span> Tự động sync câu thoại · BGM nhẹ nhàng
@@ -2718,7 +2744,7 @@ async function renderStoryAnimation() {
         }
     }
 
-    const videoEngine = $('#anim_video_engine').val() || 'motion_25d';
+    const videoEngine = $('#anim_video_engine').val() || 'living_character';
     const refPath = $('#comic_ref_path').val() || '';
 
     Swal.fire({
@@ -2772,6 +2798,46 @@ async function renderStoryAnimation() {
     }
 }
 
+function handleVideoEngineChange() {
+    const engine = $('#anim_video_engine').val();
+    if (engine === 'seedance') {
+        $('#video_ai_config_box').removeClass('hidden');
+    } else {
+        $('#video_ai_config_box').addClass('hidden');
+    }
+}
+
+function editMotionPrompt(shotNo) {
+    const currentVal = $(`#motion_text_input_${shotNo}`).val() || $(`#motion_text_${shotNo}`).text().trim();
+    Swal.fire({
+        title: `Tùy Chỉnh Cử Động Nhân Vật - Cảnh #${shotNo}`,
+        input: 'textarea',
+        inputValue: currentVal,
+        inputLabel: 'Mô tả cử động, hành động & biểu cảm của nhân vật:',
+        inputPlaceholder: 'Ví dụ: Nhân vật mỉm cười, chớp mắt, miệng mấp máy nói, tay cử động quấy bánh, nghiêng đầu...',
+        showCancelButton: true,
+        confirmButtonText: 'Lưu Cử Động',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#ec4899',
+        background: '#0f172a',
+        color: '#fff'
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            $(`#motion_text_${shotNo}`).text(result.value);
+            $(`#motion_text_input_${shotNo}`).val(result.value);
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã Cập Nhật Cử Động!',
+                text: 'Hãy bấm "Xuất video" hoặc "Trọng sinh video" để render nhân vật cử động theo mô tả mới.',
+                timer: 1800,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+    });
+}
+
 async function renderSingleShot(shotNo) {
     const storyId = $('#current_story_id').val();
     if (!storyId) return;
@@ -2784,8 +2850,17 @@ async function renderSingleShot(shotNo) {
     try {
         const formData = new FormData();
         formData.append('shot_no', shotNo);
-        formData.append('video_engine', $('#anim_video_engine').val() || 'motion_25d');
+        formData.append('video_engine', $('#anim_video_engine').val() || 'living_character');
         formData.append('aspect_ratio', '9:16');
+        
+        const motionPrompt = $(`#motion_text_input_${shotNo}`).val() || $(`#motion_text_${shotNo}`).text().trim();
+        if (motionPrompt) formData.append('motion_prompt', motionPrompt);
+        
+        const apiKey = $('#video_ai_key').val();
+        if (apiKey) formData.append('video_ai_key', apiKey);
+        
+        const baseUrl = $('#video_ai_base_url').val();
+        if (baseUrl) formData.append('video_ai_base_url', baseUrl);
 
         const res = await fetch(`/api/stories/${storyId}/render-single-shot`, {
             method: 'POST',
@@ -2810,7 +2885,7 @@ async function renderSingleShot(shotNo) {
         Swal.fire({
             icon: 'success',
             title: `Cảnh #${shotNo} Sẵn Sàng!`,
-            text: 'Đã hoàn thành render clip phân cảnh này.',
+            text: 'Đã hoàn thành render clip với nhân vật cử động sống động.',
             timer: 1500,
             showConfirmButton: false,
             toast: true,
